@@ -12,7 +12,7 @@
 ; $D019 Not used in irq, but enabled when jumping into a song using own interrupt handler.
 ; $DC0D - The irq is a timer irq, so $dc0d must be read for each irq triggered.
 ;--------------------------------------------------------------
-DEF_REU		= 0	;1 = enable reu routines (for all versions)
+DEF_REU		= 1	;1 = enable reu routines (for all versions)
 def_currentdate	= 0	;1 = include current date and clock in setup
 def_illegal	= 1	;1 = use illegal opcodes
 def_colorselect	= 1	;use 1, 0 = for debugging new colors.
@@ -102,7 +102,7 @@ bincount	= bin+2 ;byte
 fname		= $0200
 playBuf		= $d000		;d000-d007
 editBuf		= $d008		;d008-d00f
-offs_cursor		= $d017		;Offset for filenames
+offs_cursor	= $d017		;Offset for filenames
 
 keydelay	= $d010
 seed		= $d01c
@@ -420,7 +420,7 @@ start                       		;JMP HERE ON FIRST TIME INIT.
       .if def_iec
 	    	.include src/reu-dir-iec.tas		;iec, ide64 ++
       .else		
-	    	.include src/dir-read1.tas		;serial 1541 ++
+	    	.include src/reu-dir-read1.tas		;serial 1541 ++
       .fi		
   .fi
 
@@ -446,6 +446,10 @@ start                       		;JMP HERE ON FIRST TIME INIT.
 		sta numb
             
 fileSelect	jsr wjs_display		;DisplayFiles+keys
+.if DEF_REU
+		lda #$36
+		sta $01
+.fi
 		lda #$1b		;Screen on
 		sta $d011
 		bne fileSelect		;JMP

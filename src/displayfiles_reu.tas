@@ -105,14 +105,15 @@ tx		lda gzp			;Next line
 +
 		lda rzp
 		clc
-		adc #$40
+		adc #filename_entry_size	;$40
 		sta rzp
 		bcc +
 		inc rzp+1
 +		
 
 
-tw		inc cmpzp
+tw		
+		inc cmpzp
 		lda cmpzp
 		cmp #maxDirY		;max files displayed
 		bcs tz

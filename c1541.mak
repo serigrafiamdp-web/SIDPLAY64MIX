@@ -15,5 +15,13 @@ write sids/smash_tv.sid		"smash_tv.sid"
 write sids/woexploding_fist.sid	"way of exploding"
 write sids/dark_tower.sid	"dark_tower.sid"
 write sids/david_music_demo.sid	"david_music_demo"
+write sids/alternative_fuel.sid	"alternative_fuel"
+write sids/invest_end.sid	"invest_end.sid"
+write sids/invest_intro.sid	"invest_intro.sid"
+write sids/lazy_jones.sid	"lazy_jones.sid"
+write sids/listen_twice.sid	"listen_twice.sid"
+write sids/newzealand_story.sid	"newzealand_story"
+write sids/remark_intro.sid	"remark_intro.sid"
+write sids/rambo3.sid		"rambo3.sid"
 quit
 ;--------------------------------1234567890123456
