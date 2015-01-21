@@ -1,0 +1,183 @@
+
+		tya
+		bne u2notback
+		lda #$80
+		bne dir_back
+u2notback
+
+		
+				;89abcde
+		lda #$2e	;|file: $042e
+		sta tzp
+		lda screenpos
+		sta tzp+1
+
+		lda pos_cursor	;zeropage
+		clc
+		adc offs_cursor	;d017 IO
+		tax
+
+		ldy #$38
+		sty $01
+
+		jsr getpos		;>dirpos
+		sta rzp+1
+		sty rzp
+		
+		
+		ldy #$10
+		lda #$2a		;"*" wildcard
+		.byte $2c		;falls through
+		;ldy #$0f
+plaz		lda (rzp),y
+
+setwildc
+		sta fname,y
+		
+		jsr convert_letter
+		cpy #$10
+		bcs *+4
+		sta (tzp),y		;Write filename to screen at "|PSID:    "
+		dey
+		bpl plaz
+		lda flengde,x		;A - falls through to setfname
+		
+		;returns flengde in A
+		
+		ldx #$36
+		stx $01
+
+
+;A = file length 1-10 for files or 81-90 for dirs
+
+dir_back		;A=80 for going back a dir on 1541u2
+		tay	;sta header
+		
+		jsr wait_for_idle	;X+Y free
+		lda #$01
+		sta U2_Command_data_register
+
+		tya	;lda header
+		asl			;get rid of bit 7 & set CLC
+		bcc loadfile
+		lsr			;return bits 0-6 to original state
+		bne gotodiru2
+;go one dir up here
+		lda #$11
+		sta U2_Command_data_register
+		lda #'.'
+		sta U2_Command_data_register
+		sta U2_Command_data_register
+		bne endcd
+
+gotodiru2
+; go to selected dir here
+		tax ;sta header
+	
+		lda plt_flag
+		cmp #2			;2=manual
+		bne file_error2
+
+		lda #$11
+		sta U2_Command_data_register
+		ldy #$00
+-		lda fname,y
+		sta U2_Command_data_register
+		iny
+		dex	;cpy header
+		bne -	;bne -
+		
+		lda #'*'
+		sta U2_Command_data_register
+endcd        
+		lda #_PUSH_CMD
+		sta U2_Control_register
+
+		jsr wjs_wait_while_busy		
+
+		lda #_DATA_ACC
+		sta U2_Control_register
+
+		jmp (wjp_dirselector)
+
+file_error2
+		bne file_error
+
+
+loadfile
+		
+
+;Load sid header
+
+		lsr
+		tax 	;sta header
+;		jsr wait_for_idle		
+;		lda #$01
+;		sta U2_Command_data_register		; this is already done before
+		lda #_DOS_CMD_OPEN_FILE
+		sta U2_Command_data_register
+		lda #_FA_READ
+		sta U2_Command_data_register
+		ldy #$00
+-		lda fname,y
+		sta U2_Command_data_register
+		iny
+		dex	;cpy header
+		bne -	;bne -
+		lda #'*'
+		sta U2_Command_data_register
+		lda #_PUSH_CMD
+		sta U2_Control_register
+		jsr wjs_wait_while_busy		
+		
+		jsr get_status
+		
+		lda #_DATA_ACC                  ; Go to next packet, if any
+		sta U2_Control_register
+
+		jsr wait_for_idle
+
+		ldy #$01
+		sty U2_Command_data_register
+		lda #_DOS_CMD_READ_DATA
+		sta U2_Command_data_register
+		lda #$7e
+		sta U2_Command_data_register	;7e read $007e bytes
+		dey
+		sty U2_Command_data_register	;00
+		lda #_PUSH_CMD
+		sta U2_Control_register
+
+;		ldy #0
+		
+		jsr wjs_wait_while_busy
+		
+-		lda U2_Status_register          ; any data left to process int this packet ?
+		bpl nomorechars1
+		lda U2_Response_data_register   ; yes - print it
+		
+		; A = DATA here
+
+		cpy #$76		;Convert text strings to petscii
+		bcs gethb
+		cpy #$16
+		bcc gethb
+		tax			;saves 1 byte 
+		beq convspc		;Convert zeros to space
+		cmp #$60
+		bcc +
+		and #$1f
++		.byte $2c
+convspc		lda #$20
+gethb		sta header,y
+		iny
+		bne -		
+
+nomorechars1
+
+		jsr get_status
+		
+		lda #_DATA_ACC
+		sta U2_Control_register     ; no need to wait for more since we know it is all in 1 packet
+
+;code continues below here in root main source:

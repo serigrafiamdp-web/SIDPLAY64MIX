@@ -1,0 +1,1785 @@
+;--------------------------------------------------------------
+;         SIDPLAY 64 V.083
+;--------------------------------------------------------------
+;         Programmed by:
+;         Glenn Rune Gallefoss / SHAPE (2005-2013)
+;--------------------------------------------------------------
+; * All hvsc sids are version 2 or version 3
+; * All hvsc sids have a $7c header
+; * All hvsc sids use timers dc04/dc05 if speedflag is used
+;--------------------------------------------------------------
+; $D01A = 0, but enabled when jumping into a song using own interrupt handler.
+; $D019 Not used in irq, but enabled when jumping into a song using own interrupt handler.
+; $DC0D - The irq is a timer irq, so $dc0d must be read for each irq triggered.
+;--------------------------------------------------------------
+def_currentdate	= 0	;1 = include current date and clock in setup
+def_illegal	= 1
+def_colorselect	= 1	;use 1, 0 = for debugging new colors.
+;--------------------------------------------------------------
+;compile like this:
+;64tass --m6502 -D defset=1 -a sidplay64.tas -o sidplay64-normal.o64
+
+.include sidplay64.cfg	;see this file for defset's
+
+;--------------------------------------------------------------
+;         Kernal Addresses and other definitions:
+;--------------------------------------------------------------
+.include src/kernal.tas		;list of useful kernal adresses
+.include src/1541u2_defines.tas ;list of 1541u2 addressing
+
+;--------------------------------------------------------------
+;         Zeropages used during DISK I/O:
+;--------------------------------------------------------------
+header		= $0c
+magicID		= header	;+00 - 4 bytes	- "psid" or"rsid"
+version		= header+$04	;+04 - word	-  version 0001/0002/0003 (rsid+psid v2ng)
+dataoffset	= header+$06	;+06 - word	- dataoffset to the c64 binary
+loadAddress	= header+$08	;
+initAddress	= header+$0a
+playAddress	= header+$0c
+songs		= header+$0e
+startSong	= header+$10
+speed		= header+$12
+sidname		= header+$16
+sidauthor	= header+$36
+sidreleased	= header+$56
+v1data
+flags		= header+$76
+startPage	= header+$78   ;at 84
+pageLength	= header+$79   ;at 85
+reserved	= header+$7a
+v2data
+v2loadaddress	= header+$7c ;binary loadadress
+
+status		= $90 ;
+
+endAdrHi	= $af	;$f0 ;|
+endAdrLo	= $ae	;$f1 ;|
+
+ldzp		= endAdrLo	;for 1541u2
+
+netdrivex	= $f1
+countdir	= $f2	;Zp dir sorter
+countfile	= $f3	;Zp dir sorter
+tmp		= $f4 ;
+relocsize	= $f5 ;
+startbank	= $f6 ;
+dzp		= $fc ;|
+loadAdrLo	= $fe ;|Startadress - header offset ($76 or $7c)
+loadAdrHi	= $ff ;|
+
+
+;--------------------------------------------------------------
+;         Zeropages used during play and irq:
+;--------------------------------------------------------------
+
+pos_cursor		= $02	;Visible # limit for filenames
+zerop		= pos_cursor
+maxfile		= $03	;Keeps track of # of files in memory
+gzp		= $04	;word
+rzp		= $06	;word
+tzp		= $08	;word
+;zp01		= $0b	;Backup zp $01 during d000-e000 access
+
+firstzp		= pos_cursor
+lastzp		= tzp+1
+
+zpBuffSize	= ( lastzp - firstzp) +1 ;9 end of zeropage address 
+stackClear	= zpBuffSize + 1
+
+
+;-------- Safe Zeropages when restarting a tune (000c-0100 is zero filled during init)
+speedbit	= tzp	;byte
+bcd		= $0c	;word
+bin		= bcd+2	;word
+bincount	= bin+2 ;byte
+
+;--------------- static memory adressing:
+fname		= $0200
+playBuf		= $d000		;d000-d007
+editBuf		= $d008		;d008-d00f
+offs_cursor		= $d017		;Offset for filenames
+
+keydelay	= $d010
+seed		= $d01c
+lastkey		= $d01d
+
+;d015	;cant use
+;d01b	;free
+;d01c	;free
+
+;--------------------------------------------------------------
+;         SIDPLAY64 STACK JUMPS, TABLES, DATA
+;--------------------------------------------------------------
+topstack	= $ff        ;$01fb
+
+               * = $1100
+stack 
+               * = $0115
+               .offs stack-*
+stacker
+
+
+numb		.byte dir_keys		;low nibble only (numb uses 00-0e )
+
+minuteshi	.byte $30
+minuteslo	.byte $33
+		.byte $3a   ;:
+secondshi	.byte $30
+secondslo	.byte $35
+
+wjs_playlist	jmp plt_inc         ;00-jmp $XX00
+wjs_restartTune	jmp restartTune     ;01-jmp $XX00
+wjs_resetCia	jmp resetCia        ;03-jmp $XX00
+wjs_display	jmp displayfiles    ;05-jmp $XX00
+.if def_1541u2cmd
+wjs_wait_while_busy jmp wait_while_busy ;06-jmp $XX00
+.else
+wjs_getbyte	jmp getbyte         ;06-jmp $XX00
+.fi
+stack_irq	jmp irq             ;07-jmp $XX00
+stack_hwirq	jmp hwirq           ;08-jmp $XX00
+stack_nmi	sei
+		ldx #topstack
+		txs
+		inx
+		stx $d020             ;0
+		jmp (wjp_dirselector) ;nmi
+
+
+wjs_add		.byte >(plt_inc-screen2)      ;highbyte Offset from screen
+		.byte >(restartTune-screen2)  ;highbyte Offset from screen
+		.byte >(resetCia-screen2)     ;highbyte Offset from screen
+		.byte >(displayfiles-screen2) ;highbyte Offset from screen
+.if def_1541u2cmd
+		.byte >(wait_while_busy-screen2)      ;highbyte Offset from screen
+.else
+		.byte >(getbyte-screen2)      ;highbyte Offset from screen
+.fi
+		.byte >(irq-screen2)          ;highbyte Offset from screen
+		.byte >(hwirq-screen2)        ;highbyte Offset from screen
+
+initMus		jmp initMus        ;jmp $xxxx
+playMus		jmp playMus        ;jmp $xxxx
+stopMusic	.byte 0            ;byte 1-ff = music on... 0 = music off
+
+wjp_dirselector	.word dirselector  ;00-word - jmp direselector
+wjp_fileselect	.word fileselect   ;01-word - jmp fileselect
+wjp_load	.word load         ;02-word - jmp load
+wjp_pltadvance	.word plt_advance  ;03-word - jmp plt_advance
+
+wjp_add		.byte >(dirselector-screen2)  ;highbyte Offset from screen
+		.byte >(fileselect-screen2)   ;highbyte Offset from screen
+		.byte >(load-screen2)         ;highbyte Offset from screen
+		.byte >(plt_advance-screen2)  ;highbyte Offset from screen
+
+screenpos	.byte $C4
+fontpos		.byte $e0
+
+device		.byte 0
+plt_flag	.byte 2              ;$02 = manual select (color red too)
+                                     ;$00 = shuffle to next
+                                     ;$80 = shuffle random
+plt_letter	.byte $4d             ;M,N,R                                     
+samefile	.byte 0
+tune		.byte 0              ;|Should stay
+maxtune		.byte 0              ;|next to each other
+
+speedtimer	.byte 0,0,0,0        ;0 bit = standard irq
+                                     ;1 bit = dc04/dc05 
+                                     
+tunesystem	.byte 1              ;00 = unknown  bits 1,0  byte $00
+                                     ;01 = pal      bits 1,0  byte $01
+                                     ;10 = ntsc     bits 1,0  byte $02
+                                     ;11 = both     bits 1,0  byte $03
+.if def_1541u2cmd
+wait_for_idle
+-		lda U2_Status_register
+		and #_STATE
+		bne -
+		rts
+get_status	lda #<txterror1
+		sta gzp
+		lda screenpos
+		clc
+		adc #>txterror1&$03ff
+		sta gzp+1
+		ldy #0
+-		bit U2_Status_register
+		bvc +
+		lda U2_Staus_data_register
+		sta (gzp),y
+		iny
+		bne -            
++		rts
+		
+.else
+panic_load				;zp $01 = 36
+				
+		lda #$38
+		sta $01
+
+		ldx #5
+copyp2		lda panic_0314,x	;0314,15,16,17,18,19
+		sta $0314,x		;Buffer irq vectors for panic load
+		dex
+		bpl copyp2
+		lda #$36
+		sta $01
+           	ldx loadAdrLo
+panicload	lda #1			;For cases where ther is no memory and sid is a rsid (playaddress $0000):
+					;We change panicload+1 to zero, load the file, run it and hope for the best.  No exit to sp64.
+
+		jsr ROM_load
+.if def_illegal
+		lax tune
+.else
+		lda tune
+		tax
+.fi		
+		tay
+		;sei
+		;ldy #$36
+		;sty $01
+;panicinit	jsr *
+		jsr initmus
+		jmp *
+.fi
+
+nofile		.text "no files present   "
+;----------------------0123456789abcdef012
+              
+;-------------------------
+.if def_iec
+diskimage			;IEC - 1-ff no disk image, 0 = disk image
+zerofile	.byte 0		;IEC - used in dir-load to check if a file has zero blocks
+dircommand
+.text "cd:"			;IEC - open dir
+dirname				;IEC - dirname to open
+.fi
+;-------------------------
+endstacker
+              * = *-stacker+stack
+              .offs 0
+
+
+		
+		* = $9000
+;--------------------------------------------------------------
+;         SIDPLAY64 INITIAL RUN
+;--------------------------------------------------------------
+;         This code is only runned once to 
+;         setup stack, colors, memory, code.
+;         Jumps to label "start" to begin sidplay64.
+;--------------------------------------------------------------
+;Sidplay64 is started with a call to $c000  on startup:
+.if def_colorselect
+.include src/init.tas
+.else
+.include src/init2.tas	;just for testing new colors
+.fi
+.include src/devicecheck.tas
+.include src/joyport1.tas
+;.include src/joyport2.tas
+
+;--------------------------------------------------------------
+
+
+
+;--------------------------------------------------------------
+;         SIDPLAY64 
+;--------------------------------------------------------------
+;         Program
+;--------------------------------------------------------------
+screen1		= $0400
+screen2		= $c400
+screen2chars	= $e000 ;e000-e800
+credz		= (screen1&$03ff)+($d808+(40*3))
+songstr1	= screen1+(40*6)+8
+timestr1	= screen1+(40*20)+11
+txterror1	= screen1+$0399
+dirscreen	= screen2+(40*7)+20
+maxDirY		= 15
+;--------------------------------------------------------------
+
+		* = $c400
+.if def_1541u2cmd
+		.binary "bin/screen08-1541u2.o64",2		;1541u2 cmd version
+.else
+	.if def_iec
+		.binary "bin/screen08-iec.o64",2		;iec + cmd + ide64 + 1541u
+	.else		
+		.binary "bin/screen08-ser.o64",2		;normal + 1541u2swiec
+	.fi		
+.fi	
+;--------------------------------------------------------------
+		* = $C7e8
+
+;variables 
+
+dir_keys	= 5	;crsr-up/crsr-down/clrhome/sh+clrhome/space/delete
+noirq_keys	= 6	;return (load file possible)
+irq_keys	= 13	;select tune, restart, shuffle
+
+keyCrsrDown	= 0	;Directory keys 0-5
+keyCrsrUp	= 1	;
+keyClrHome	= 2	;
+keyShClrHome	= 3	;
+keySpace	= 4	;
+keyDelete	= 5	;
+
+keyReturn	= 6	;No irq keys    0-6
+
+keyF7		= 7	;IRQ keys	0-15
+keyComma	= 8	;          
+keyPeriod	= 9	;
+;keyRandom	= 10	;
+;keyNext		= 11	;
+keyF1		= 10	;
+keyPlus		= 11	;
+keyMinus	= 12	;
+keyManual	= 13	;
+           
+;keyboard scan table
+
+dc00	.byte $fe	;00|crsr
+	.byte $00	;01|crsr+sh
+	.byte $bf	;02|clrh
+	.byte $00	;03|clrh+sh
+	.byte $7f	;04|space
+	.byte $fe	;05|delete
+	.byte $fe	;06|Return
+	.byte $fe	;07|F7
+	.byte $df 	;08|<
+	.byte $df	;09|>
+;	.byte $fb	;10|R
+;	.byte $ef	;11|N
+	.byte $FE	;10|F1
+	.byte $df	;11|+
+	.byte $df	;12|-
+	.byte $ef	;13|M
+
+dc01	.byte $7f	;00|crsr  
+	.byte $6f	;01|crsr+sh  
+	.byte $f7	;02|clrh    
+	.byte $e7	;03|clrh+sh 
+	.byte $ef	;04|space
+	.byte $fe	;05|delete
+	.byte $fd	;06|Return
+	.byte $f7	;07|F7
+	.byte $7f	;08|,
+	.byte $ef	;09|.
+;	.byte $fd	;10|R
+;	.byte $7f	;11|N
+	.byte $EF	;10|F1
+	.byte $fe	;11|+
+	.byte $f7	;12|-
+	.byte $ef	;13|M
+
+;-------------------------------------
+;
+;-------------------------------------
+memoryerror	.byte $2c		;stack jump here with Y <> 0
+dirSelector	ldy #0
+		jsr wjs_resetCia	;Y = not used, zp 01 = $36
+		lda #$1b		;screen on
+		sta $d011
+		tya			;instead of cpy #0
+		beq dodir
+		jmp (wjp_fileselect)
+;--------------------------------------------------------------
+;LOAD NEW DIR:
+dodir		lda #2
+		sta plt_flag
+		lda #$4d		;"M"-anual selection
+		sta plt_letter
+		lda #<txterror1
+		sta dzp
+		lda screenpos
+		clc
+		adc #>txterror1&$03ff
+		sta dzp+1
+		ldy #$25
+		lda #$20		;Clear text error area with spacebar
+clrmsg2		sta (dzp),y
+		dey
+		bpl clrmsg2
+
+start                       		;JMP HERE ON FIRST TIME INIT.
+
+
+.if def_1541u2cmd
+		.include src/dir-1541u2cmd.tas
+.else
+    .if def_iec
+	    	.include src/dir-iec.tas
+    .else		
+	    	.include src/dir-read1.tas
+    .fi		
+.fi
+		
+;Set Help, Dir, Load keys:
+;and wait for user
+
+		lda #noirq_keys  ;*9
+		sta numb
+            
+fileSelect	jsr wjs_display		;DisplayFiles+keys
+		lda #$1b		;Screen on
+		sta $d011
+		bne fileSelect		;JMP
+
+; Dir-buffer is located at $d000 ->
+
+
+displayFiles
+.include src/displayfiles.tas
+;zp $01 = 36 and code continues here:
+
+;---------------------------------------
+;  Keyboard scan routine with delay
+;  Inserted clock routine + random+next load here to free up cpu time for irq speed calls
+;---------------------------------------
+
+;zp $01 = 36 here
+
+ffe4key
+
+
+clock		lda #<timestr1
+		sta tzp
+		lda screenpos
+		clc
+		adc #>timestr1&$03ff
+		sta tzp+1
+
+		ldx #2
+		ldy #0       ;0-1  3-4  6-7
+timeloop	lda $dc09,x  ;dc09,dc0a,dc0b
+		pha
+		lsr
+		lsr
+		lsr
+		lsr
+		ora #$30
+		sta (tzp),y
+		pla
+		iny
+		and #$0f
+		ora #$30
+		sta (tzp),y
+		iny
+		iny
+		dex
+		bpl timeloop
+
+		ldy #41
+		lda plt_letter
+		sta (tzp),y
+
+		lda #<timestr1+3   ;adjust to minutes, : and seconds only
+		sta tzp
+            
+		ldx #4
+		;ldy #40
+		dey
+-		lda minuteshi-40,y
+		sta (tzp),y
+		iny
+		dex
+		bpl -
+
+.if def_illegal
+		lax plt_flag		;a+x
+.else
+		lda plt_flag		
+		tax
+.fi				
+					;A= 0,2 or 81
+		and #%01111110		;A= 0,2
+		bne scankeys
+		tay			;A=0
+
+checkdigits	lda (tzp),y
+		cmp minuteshi,y
+		beq equ
+		bcc scankeys
+		bcs plt_advance
+equ		iny
+		cpy #5
+		bne checkdigits
+
+plt_advance	txa			;untouched from plt_flag
+		tay
+		sei			;i think i must set sei
+		jsr wjs_resetCia	;zp $01 = 36 
+					;X = FF
+					;Y = untouched
+		txs			;X=FF = topstack
+		tya			;0
+		bne plt_random		;1-ff
+;Y=0
+		lda pos_cursor
+		sec
+		adc offs_cursor
+		cmp maxfile
+		bne last_plt
+		tya			;Y=0
+		;lda #0			;Start on top of list again...
+		sta offs_cursor
+		sta pos_cursor
+		beq doload		;jmp
+last_plt	jsr wjs_playlist	;plt_inc
+
+doload		ldy #1			;Set y = 1 for loading files
+		jmp (wjp_load)
+	
+plt_random	
+
+newrand		lda seed		;| random routine from WhiteFlame
+		beq doeor
+		asl
+		beq noeor		;if the input was $80, skip the eor
+		bcc noeor
+doeor		eor #$1d
+noeor		sta seed
+
+		cmp maxfile
+		bcs newrand
+		cmp samefile		;check if it tries to load the same file
+		beq newrand
+		sta samefile
+		tay
+
+		sec
+		sbc #maxDirY-1
+		bcs maax
+		lda #0
+		.byte $2c
+maax		ldy #maxDirY-1
+		sty pos_cursor	;visible limit
+		sta offs_cursor	;offset
+		sec
+		bcs doload
+		;bne doload	;|
+		;beq doload	;|JMP
+
+scankeys
+
+;ctrl_delay = keydelay
+;ctrl_cmp   = lastkey
+
+		ldx #$ff
+		stx $dc02
+		inx
+		stx $dc03
+            
+		lda #<dc00
+		sta gzp
+		lda #<dc01
+		sta rzp
+		lda screenpos
+		clc
+		adc #>dc00&$03ff
+		sta gzp+1
+		sta rzp+1
+
+		ldy numb     ;04/09/0c/10
+looker		lda (gzp),y
+		sta $dc00
+		lda (rzp),y
+		cmp $dc01
+		beq finner
+		dey
+		bpl looker
+
+		lda #10
+		sta lastkey		;any value not == $ff
+		sta keydelay
+wewait		rts
+
+
+finner		lda #0
+		cmp lastkey
+		beq thesame	;new key pressed ?
+		ldx #10		;yes
+		stx keydelay	;set long delay
+		bne newchar	;and jump to give Y to keycheckers below
+		
+thesame				;the same key is being pressed
+		dec keydelay	;count 10 or 3 times
+		bpl wewait
+		ldx #3		;Then we shift to 3 in delay
+		stx keydelay
+
+newchar		sta lastkey	;A=FF = CTRL note (see notetable)
+
+		;Y = key we pressed
+;---------------------------------------
+		;A = 0
+
+		cpy #keyCrsrUp		;"Crsr up"
+		bne tg
+		lda offs_cursor
+		ora pos_cursor
+		beq td			;zero ? then do nothing
+		lda pos_cursor
+		beq th
+		dec pos_cursor		
+		rts
+th		dec offs_cursor
+		rts
+		
+tg		cpy #keyCrsrDown	;"Crsr down"
+		bne tok
+plt_inc		lda offs_cursor
+		sec
+		adc pos_cursor
+		cmp maxfile
+		beq td
+		lda pos_cursor
+		cmp #maxDirY-1
+		beq tj
+		inc pos_cursor
+		rts
+tj		inc offs_cursor
+td		rts
+
+tok
+.if def_iec + def_1541u2cmd
+		cpy #keyDelete
+		bne tk
+		tay
+		;ldy #0			;Y=0 for going back directory level - dir_back
+		beq dirbackw		;Yes
+.fi		
+
+tk		cpy #keyReturn		;"RETURN"
+		bne tl
+		ldy maxfile		;Y = 1-ff will be used at (wjp_load)
+		beq ingenfil
+dirbackw	pla
+		pla
+		jsr wjs_resetCia	;zp $01 = 36
+		jmp (wjp_load)
+
+tl		cpy #keySpace		;"SPACE"
+		bne tm
+ingenfil	pla
+		pla
+		jsr wjs_resetCia	;zp $01 = 36
+		jsr ROM_clall           ;Close dirfile, and all other files..
+		jmp (wjp_dirSelector)
+         
+tm		cpy #keyF7		;"F7	"
+		bne tmm
+		
+		ldx #14			
+-		lda #0		
+		sta $d404,x		;standard
+secondsid1	bit $d424;,x		;second sid
+		lda #$ff		;
+		.byte $cb,7		;Illegal opcode sbx #7 (txa,sec,sbc#7,tax):
+         	bpl -
+
+		lda stopmusic		;0 = pause
+		eor #$ff		;1-ff = unpause
+		sta stopmusic	
+		ldx #3
+-		lda $dc08,x		;8,9,A,B - reading $dc0b here pauses the clock
+		sta $dc08,x
+		dex
+		bpl -
+		rts
+
+tmm		cpy #keyClrHome
+		bne tn
+		ldx pos_cursor
+		bne bd1
+		lda offs_cursor
+		sec
+		sbc #maxDirY
+		bcs bd2
+		lda #0
+bd2		sta offs_cursor
+		rts
+bd1		sta pos_cursor		;cursor pos to top of screen
+		rts		
+
+;keyclrHome code for going straigth to the top
+;		;lda #0
+;		ldx pos_cursor
+;		bne grd
+;		sta offs_cursor
+;grd		sta pos_cursor
+;		rts
+
+
+tn		cpy #keyShClrHome
+		bne ts
+.if def_illegal
+		lax maxfile
+.else
+		lda maxfile
+		tax
+.fi
+		dex
+		cpx #maxDirY-1
+		bcc tp
+		ldx #maxDirY-1
+		cpx pos_cursor
+		beq tq
+tp		stx pos_cursor
+		rts
+tq		sec
+		sbc #maxDirY
+		bcs tr
+		lda #0
+tr		sta offs_cursor
+		rts
+
+ts		ldx #3
+		cpy #keycomma		;"<"
+		bne chka
+hy		cpx #2
+		beq skipsemi1
+.if def_illegal
+		lda #$2f
+		dcp minuteshi,x		;saves 3 bytes
+		bne spab
+.else
+		dec minuteshi,x
+		lda minuteshi,x
+		cmp #$2f
+		bne spab
+.fi
+		lda #$35
+		sta minuteshi,x
+skipsemi1	dex
+		bpl hy
+spab		rts
+            
+chka		cpy #keyperiod		;">"
+		bne chkb
+nextspub	cpx #2
+		beq skipsemi2
+.if def_illegal
+		lda #$36
+		sec
+		isc minuteshi,x		;saves 2 bytes
+		bne spub
+.else
+		inc minuteshi,x
+		lda minuteshi,x
+		cmp #$36
+		bne spub
+.fi
+		lda #$30
+		sta minuteshi,x
+skipsemi2	dex
+		bpl nextspub
+spub		rts
+
+chkb		cpy #keyManual
+		bne plton
+		ldy #$4d		;M (x=02)
+		lda plt_flag
+		beq one		;set one if $00		
+		bmi two		;set two if $81
+				;set zero if $02
+		ldx #0
+		iny		;$4e		;N (x=00)
+		bne +
+		
+one		ldx #$81
+		ldy #$52		;R (x=81)
+		.byte $2c
+two		ldx #2			;M
+
++		stx plt_flag
+		sty plt_letter		;NRM on screen
+endofkey_check	rts
+
+.comment
+chkb		lda #2
+		ldx #$4d		;"M"-anual selection
+		cpy #keyManual
+		beq skmanual
+		lda #0
+		ldx #$4e		;"N"-ext (loads next song in dir list)
+		cpy #keyNext
+		beq sknext
+		
+		cpy #keyRandom		;"R"-andom (loads random song in dir list)
+		bne plton
+		lda #$80
+		ldx #$52		
+
+sknext
+skmanual	sta plt_flag
+		stx plt_letter
+		rts
+.endc		
+
+
+plton
+		ldx tune
+		cpy #keyF1		;"F1"
+		beq restT
+		cpy #keyMinus		;"-"
+		bne kf
+		txa			;zero ?
+		beq endofkey_check
+		dex
+		bpl restT		;0-7f
+
+kf		cpy #keyPlus		;"+"
+		bne endofkey_check
+		cpx maxtune
+		beq endofkey_check
+		inx
+
+restT		stx tune		
+
+;table jump here after file is loaded:
+restartTune
+
+;zp $01 is always 35 when entering here
+		
+		php
+		sei
+		lda #$38
+		sta $01
+		jsr dotunenumbers
+;		lda #$35
+;		sta $01
+
+
+		jsr wjs_resetCia	;zp 01 = 36
+
+;   | Bit 4 |   Force Load Timer A: 1 = Yes
+;   | Bit 0 |   Start/Stop Timer A: 1 = Start, 0 = Stop
+		;lda #%00010000 ;Stop timer A - latch is on
+		lda #%00010001
+		sta $dc0e
+
+
+;It's possible a tune uses the default timer A for a system
+;to playback a song. If not the tune init will set it's own $dc04/$dc05 timer.
+
+		lda speedbit	;Check if tune is supposed to play with timer
+                                ;0 = no
+                                ;1 = yes
+		beq nospeed
+              
+		ldx #$25        ;PAL  - default timer
+		ldy #$40
+		lda tunesystem  ;Check on what system the tune was made on
+		beq unknown     ;1 is pal
+		cmp #2          ;2 is ntsc and 3 is both
+		bne fixdef
+		ldx #$95        ;NTSC - default timer
+		ldy #$42
+fixdef
+unknown
+		stx $dc04
+		sty $dc05
+		
+nospeed
+
+
+
+
+
+		lda #$0f		;force volume because of bad hvsc rips where volume is lost
+		sta $d418		;when choosing a sub-tune.
+
+		ldx #zpBuffSize-1	;Buffer
+bp1		lda zerop,x
+		sta editbuf,x
+		lda playbuf,x
+		sta zerop,x
+		dex
+		bpl bp1
+					;RSID check:
+		lda playmus+1		;Check if playcallplay
+		ora playmus+2		;= $0000 ?
+		bne ownirq
+              				;yes
+              				;Does PC sidplay assume zp $01 to be 37 ?
+
+		;lda #$36		;Ram 0000-D000
+		;sta $01
+		;Maybe we should reset all io registers to default here		
+		;jsr wjs_resetCia
+		;LDA #$11
+		;STA $DC0E
+              				
+		lda #$1b		;Screen on
+		sta $d011
+		sta $d020		;Grey border = $0000 SID with no playcall.
+.if def_illegal		
+		lax tune		;lda tune, tax
+.else
+		lda tune
+		tax
+.fi				
+		tay
+		jsr initmus		;This will normally set zeropage $01 to 35,36 or 37
+waitk		;ldx #$7f		;saves 2 bytes - 
+		ldx #0			;cbm keyscan also works with 0
+		stx $dc00
+		lda $dc01
+		cmp #$df
+		bne waitk
+
+		sei	
+		;ldx #0
+		stx $dd0e		;Disable NMI timer A interrupt - These interrupts must be disabled here	
+		stx $dd0f		;Disable NMI timer B interrupt
+		stx $d020		;black screen
+		
+		lda #$35		;
+		sta $01
+		
+;		ldx #topstack
+;		txs
+		ldx #zpBuffSize-1
+bp5		lda zerop,x
+		sta playbuf,x
+		lda editbuf,x
+		sta zerop,x
+		dex
+		bpl bp5
+		jsr wjs_resetCia		;restores 0300-0332 and fffa-fffe
+		txs			;topstack
+		jmp (wjp_fileselect)
+ownirq         
+		dec $01			;zp 01 = 35
+
+.if def_illegal
+		lax tune			;lda tune, tax
+.else
+		lda tune
+		tax
+.fi				
+		tay
+		jsr initmus			;might change zp $01 to something else..
+		sei
+		lda #$35
+		sta $01
+
+		ldx #zpBuffSize-1
+bp4		lda zerop,x
+		sta playbuf,x
+		lda editbuf,x
+		sta zerop,x
+		dex
+		bpl bp4
+		stx stopMusic			;=FF
+
+
+		lda speedbit	;0 = nospeed aka vblank
+		bne nospeed2	;1 = multispeed
+
+		ldy #$4c	;$4cc7
+		ldx #$c7	;PAL - Timer for vblank tunes
+		lda tunesystem	;Setup speed according to system it was made on
+		cmp #2
+		bne fix2
+		ldy #$42	;$42c6
+		dex		;ldx #$c6  ;NTSC - Timer for vblank tunes
+fix2		stx $dc04
+		sty $dc05
+nospeed2
+       
+         
+wait32		lda #$32
+		cmp $d012
+		bne wait32
+		bit $d011
+		bmi wait32
+
+pal_dc0e    = %11010001
+ntsc_dc0e   = %01010001
+              ;76543210
+fixdc0e		lda #%01010001
+                        ;bit 0 - Timer a start
+                        ;bit 4 - Force latched value to be loaded to Timer A counter
+                        ;bit 6 - Serial Port (56332, $DC0C) mode (1=output, 0=input)
+                        ;Bit 7:  Time of Day Clock frequency (1=50 Hz required on TOD pin, 0=60 Hz)
+                        ;50 hz = pal
+                        ;60 hz = ntsc
+		sta $dc0e
+		plp
+		rts
+            
+
+         
+
+
+;---------- Load a new file -----------------------------
+;jmp wjp_load
+
+load
+.if def_iec
+		tya		;1-ff = load sid or open dir or open image file
+		beq dir_back	;0    = go one dir up
+.fi		
+.if def_1541u2cmd
+		tya
+		bne u2notback
+		lda #$80
+		bne dir_back
+u2notback
+.fi
+		
+				;89abcde
+		lda #$2e	;|file: $042e
+		sta tzp
+		lda screenpos
+		sta tzp+1
+
+		lda pos_cursor	;zeropage
+		clc
+		adc offs_cursor	;d017 IO
+		tax
+
+		ldy #$38
+		sty $01
+
+		jsr getpos		;>dirpos
+		sta rzp+1
+		sty rzp
+		
+		
+		ldy #$10
+		lda #$2a		;"*" wildcard
+		.byte $2c		;falls through
+		;ldy #$0f
+plaz		lda (rzp),y
+
+setwildc
+		sta fname,y
+.if def_iec		
+		sta dirname,y		;IEC
+.fi		
+		jsr convert_letter
+		cpy #$10
+		bcs *+4
+		sta (tzp),y		;Write filename to screen at "|PSID:    "
+		dey
+		bpl plaz
+		lda flengde,x		;A - falls through to setfname
+		
+.if def_iec		
+	.if def_sd2iec
+		sta diskimage		;1-ff = no diskimage
+		bmi its_a_dir		;if dir, then skip searching diskimage
+		pha
+		jsr check_disk_images	;SD2IEC supports disk images
+		pla
+	.fi
+its_a_dir
+.fi		
+		
+		;returns flengde in A
+		
+		ldx #$36
+		stx $01
+
+.if def_iec
+
+		.if def_1541u
+		
+		.else
+		ldx #$3a		;"cd:" DIR or "name.D64"
+		stx dircommand+2
+		.fi
+
+	.if def_sd2iec
+		ldx diskimage
+		beq opendiskimage
+	.fi		
+		tax			;flengde
+		bpl loadfile
+
+opendiskimage
+		ldx plt_flag
+		cpx #2			;2=manual
+		bne file_error
+.if def_1541u_long
+		and #$3f
+.fi
+		asl			;get rid of bit 7 & set CLC
+		lsr			;return bits 0-6 to original state
+		adc #3			;set length for dir name
+		bne gotodir
+dir_back
+		
+	.if def_1541u
+		lda #$2e
+		sta dircommand+3
+		sta dircommand+4
+		lda #5			;"cd:.."
+	.else
+		lda #$5f		
+		sta dircommand+2	;"cd<-" works for iec,CMD & IDE64 drives (jiffydos)
+		lda #3			;file length is 3
+	.fi		
+		
+gotodir		ldx #<dircommand
+		ldy #>dircommand
+		jsr Rom_SetNam
+		lda #1
+		ldx device
+		ldy #15			;command channel
+		jsr Rom_SetLfs
+		jsr Rom_Open
+		;bcs errorChan		;A error happened
+		lda #1
+		jsr ROM_close
+		jsr ROM_clrchn
+nodirnow	jmp (wjp_dirselector)
+.fi
+;-------------------------------------------
+
+				
+
+.if def_1541u2cmd
+
+;A = file length 1-10 for files or 81-90 for dirs
+
+dir_back		;A=80 for going back a dir on 1541u2
+		tay	;sta header
+		
+		jsr wait_for_idle	;X+Y free
+		lda #$01
+		sta U2_Command_data_register
+
+		tya	;lda header
+		asl			;get rid of bit 7 & set CLC
+		bcc loadfile
+		lsr			;return bits 0-6 to original state
+		bne gotodiru2
+;go one dir up here
+		lda #$11
+		sta U2_Command_data_register
+		lda #'.'
+		sta U2_Command_data_register
+		sta U2_Command_data_register
+		bne endcd
+
+gotodiru2
+; go to selected dir here
+		tax ;sta header
+	
+		lda plt_flag
+		cmp #2			;2=manual
+		bne file_error2
+
+		lda #$11
+		sta U2_Command_data_register
+		ldy #$00
+-		lda fname,y
+		sta U2_Command_data_register
+		iny
+		dex	;cpy header
+		bne -	;bne -
+		
+		lda #'*'
+		sta U2_Command_data_register
+endcd        
+		lda #_PUSH_CMD
+		sta U2_Control_register
+
+		jsr wjs_wait_while_busy		
+
+		lda #_DATA_ACC
+		sta U2_Control_register
+
+		jmp (wjp_dirselector)
+
+file_error2
+		bne file_error
+.fi
+
+loadfile
+		
+
+;Load sid header
+		
+.if def_1541u2cmd
+		lsr
+		tax 	;sta header
+;		jsr wait_for_idle		
+;		lda #$01
+;		sta U2_Command_data_register		; this is already done before
+		lda #_DOS_CMD_OPEN_FILE
+		sta U2_Command_data_register
+		lda #_FA_READ
+		sta U2_Command_data_register
+		ldy #$00
+-		lda fname,y
+		sta U2_Command_data_register
+		iny
+		dex	;cpy header
+		bne -	;bne -
+		lda #'*'
+		sta U2_Command_data_register
+		lda #_PUSH_CMD
+		sta U2_Control_register
+		jsr wjs_wait_while_busy		
+		
+		jsr get_status
+		
+		lda #_DATA_ACC                  ; Go to next packet, if any
+		sta U2_Control_register
+
+		jsr wait_for_idle
+
+		ldy #$01
+		sty U2_Command_data_register
+		lda #_DOS_CMD_READ_DATA
+		sta U2_Command_data_register
+		lda #$7e
+		sta U2_Command_data_register	;7e read $007e bytes
+		dey
+		sty U2_Command_data_register	;00
+		lda #_PUSH_CMD
+		sta U2_Control_register
+
+;		ldy #0
+		
+		jsr wjs_wait_while_busy
+		
+-		lda U2_Status_register          ; any data left to process int this packet ?
+		bpl nomorechars1
+		lda U2_Response_data_register   ; yes - print it
+		
+		; A = DATA here
+
+		cpy #$76		;Convert text strings to petscii
+		bcs gethb
+		cpy #$16
+		bcc gethb
+		tax			;saves 1 byte 
+		beq convspc		;Convert zeros to space
+		cmp #$60
+		bcc +
+		and #$1f
++		.byte $2c
+convspc		lda #$20
+gethb		sta header,y
+		iny
+		bne -		
+
+nomorechars1
+
+		jsr get_status
+		
+		lda #_DATA_ACC
+		sta U2_Control_register     ; no need to wait for more since we know it is all in 1 packet
+.else
+		ldx #<fname
+		ldy #>fname
+		jsr ROM_setnam
+		ldy #0		;Turn off screen
+		sty $d011
+		lda #2			;2
+		ldx device
+;		ldy #0			;Y=0 LOADING
+		jsr ROM_setlfs
+		jsr ROM_open
+		ldx #2			;2
+		jsr ROM_chkin
+		ldy #0
+getheada	jsr ROM_chrin
+		cpy #$76		;Convert text strings to petscii
+		bcs gethb
+		cpy #$16
+		bcc gethb
+;		cmp #0
+		tax			;saves 1 byte 
+		beq convspc		;Convert zeros to space
+		cmp #$60
+		bcc +
+		and #$1f
++		.byte $2c
+convspc		lda #$20
+gethb		sta header,y
+		iny
+		cpy #$7e
+		bne getheada
+		lda #2			;2
+		jsr ROM_close
+		jsr ROM_clrchn
+.fi
+		
+		lda magicid+1
+		cmp #$53		;pSid/rSid
+		beq idook
+file_error	ldx plt_flag
+		beq donext		;0   next
+		bmi donext   		;80+ random
+		stx $d020
+		jmp (wjp_dirselector)
+donext		jmp (wjp_pltadvance)	;try next file in dir
+;siderror	jmp (wjp_fileselect)	;return to fileselector - this sid is using $0000 as play address - unfortunately with all keys on.
+         
+idook		
+
+		lda playAddress+1	;lo part of play call
+		ora playAddress		;hi part of play call (checking for $0000 which is typical for RSID.. and only a few PSID)
+skiprsid	beq file_error		;$24;siderro	;wrong sid type
+		
+		sei			;! Must set SEI here, because we do a stack jump to "returnhere"
+		lda #$38		;! or we do a stack jump to
+		sta $01
+		jmp doheaderstuff	;src/doheaderstuff.tas
+
+returnHere                      ;returns with stackjump here from doheaderstuff
+		lda #$36
+		sta $01
+
+;Find correct $dd00
+
+.if def_illegal
+		lax screenpos	;lda,tax
+		alr #%11000000	;and #, lsr
+				;saves 1 byte
+		lsr
+		lsr
+		lsr
+		lsr
+		lsr
+
+.else
+		lda screenpos
+		tax
+		and #%11000000
+		lsr
+		lsr
+		lsr
+		lsr
+		lsr
+		lsr
+.fi		             
+		
+		eor #%00000011
+		sta $dd00
+		tay
+                
+;Find correct $d018
+;Locate videoram pointer (screen 0400-07e8)
+
+		txa 
+		and #$3f
+		asl
+		asl
+		sta tmp
+;Locate charset pointer (font 2000-2800)
+		lda #%00000110 ;Rom font (1000/9000)
+		cpy #3         ;0000-4000
+		beq romchar
+		cpy #1         ;8000-c000
+		beq romchar
+		
+		lda fontpos    ;Banks 4000-8000 and c000-00000
+		sta gzp+1
+.if def_illegal
+		alr #$3f	;and #, lsr
+				;saves 1 byte
+		lsr
+.else
+		and #$3f       ;Needs a copy of the romcharset
+		lsr
+		lsr
+.fi
+		pha
+		lda #$33
+		sta $01
+		lda #$d8
+		sta rzp+1
+	
+		ldx #8		;7 pages of font to copy
+		ldy #0
+		sty rzp
+		sty gzp
+RRomset		lda (rzp),y
+		sta (gzp),y
+		iny
+		bne RRomset
+		inc rzp+1
+		inc gzp+1
+		dex
+		bne RRomset
+		
+		lda #$36
+		sta $01
+		
+		pla
+		
+romchar		ora tmp
+		sta $d018
+
+;-- Adjust jmp's to new screenpos:
+
+		ldx #3*2                 ;0,1,2,3,4 entries
+		ldy #3
+adjust1		lda screenpos
+		clc
+		adc wjp_add,y
+		sta wjp_dirselector+1,x
+		dey
+		dex
+		dex
+		bpl adjust1
+
+;-- Adjust jsr's to new screenpos:
+
+		ldx #6*3                ;0,1,2,3,4,5,6,7,8 entries
+		ldy #6
+adjust2		lda screenpos
+		clc
+		adc wjs_add,y
+		sta wjs_playlist+2,x
+		dey
+		dex
+		dex
+		dex
+		bpl adjust2
+           
+;load file into mem
+
+.if def_1541u2cmd
+; Read remaining stuff here
+		;lda v2loadaddress	- load adress is set in src/doheaderstuff.tas
+		;sta ldzp
+		;lda v2loadaddress+1
+		;sta ldzp+1
+
+		jsr wait_for_idle
+
+		lda #$01
+		sta U2_Command_data_register
+		lda #_DOS_CMD_READ_DATA
+		sta U2_Command_data_register
+		lda #$ff
+		sta U2_Command_data_register
+		lda #$ff
+		sta U2_Command_data_register
+		lda #_PUSH_CMD
+		sta U2_Control_register
+
+		ldy #0
+nextpacket2
+		jsr wjs_wait_while_busy		
+		
+-		lda U2_Status_register          ; any data left to process int this packet ?
+		bpl nomorechars2
+		lda U2_Response_data_register   ; yes - print it
+		
+		; A = DATA here
+		sta (ldzp),y			;zp $01 = 36 - Can safely write to 0000-cfff and e000-ffff
+		inc ldzp
+		bne -
+		inc ldzp+1
+		bne -				;(jmp) never zero
+		
+nomorechars2
+
+		jsr get_status
+
+		lda #_DATA_ACC                  ; Go to next packet, if any
+		sta U2_Control_register
+		lda U2_Status_register
+		and #_STATE
+		cmp #_STATE_COMMAND_BUSY        ; check if there is any more packets to process
+		beq nextpacket2
+		
+		
+		;lda tzp
+		;sta endAdrLo
+		;lda tzp+1
+		;sta endAdrHi
+		;.. see ldzp
+
+.else
+		lda #0
+		sta $90			;TESTING - Will this fix sd2iec loading problems ?
+		sta $b9			;IDE64 again
+           	ldx loadAdrLo
+		ldy loadAdrHi
+		lda panicload+1		;A = 0 on panic
+		bne nopanic
+		jmp panic_load
+nopanic		lda #0
+		jsr ROM_load		;Returns X = endadr lo
+					;Returns Y = endadr hi
+		;stx endAdrLo
+		;sty endAdrHi
+.endif
+
+;-----------------------------------         
+;IOmessages can be disabled to gain memory:
+.if IOMessages
+		php
+.include src/iec_errorchannel.tas
+		plp
+		bcc errormsg
+		jmp (wjp_fileselect)
+.else
+		bcc errormsg
+		jmp (wjp_dirSelector)         
+		
+.fi
+;-----------------------------------
+errormsg
+
+
+		sei
+		lda #$38
+		sta $01
+
+		lda #$45
+		sta tzp
+		lda screenpos		;0445/0845/0c45...c445
+		sta tzp+1
+
+		ldy #3
+		lda v2loadaddress
+		jsr printhexnum
+		lda v2loadaddress+1
+		jsr printhexnum
+        
+		ldy #9
+		lda endAdrLo
+		jsr printhexnum
+		lda endAdrHi
+		jsr printhexnum
+
+;------> initialize loaded file <--------------
+		;jsr wjs_resetCia	;clear all zeropage memory - important!
+		;zp $01 = 36 here
+		ldx #irq_keys		;Set corret key range when irq is running
+		stx numb
+		jsr wjs_restartTune	;RestartTune, also call wjs_resetCia
+		;zp $01 = 35 here
+		      ;76543210	
+		;lda #%10000001
+		;sta $dc0d
+		;lda #1
+		;sta $d01a		;Raster IRQ compare flag off
+		;lsr $d019
+		;lda $dc0d
+		cli
+		jmp (wjp_fileselect)
+
+;--------------------------------------------------------------
+;----------- 0314/0315 & FFFE/FFFF IRQ ------------------------
+;--------------------------------------------------------------
+.include src/irq.tas
+;--------------------------------------------------------------
+
+resetCia
+;IMPORTANT Must not use Y register here:
+;Y must fall through untouched
+.include src/cia_reset3.tas
+
+.if def_1541u2cmd
+wait_while_busy
+.include src/wait_1541u2cmd.tas
+.fi
+
+
+.cerror *>$cf84,"program crossing $0f84 limit!!!"
+
+driverend
+
+
+
+
+;--------------------------------------------------------------
+		* = $d000
+dirpos
+
+;--------------------------------------------------------------
+;note: The 1541u2 have space for 188 files
+.if def_1541u2cmd
+* = $dbc0	;dbc0-d000/16=188 files
+lastpos
+* = $dbc2 ;188 files table (dbc2-dc7e)
+flengde
+
+.else
+; other versions has less mem for files:
+* = $dab0		;dab0-d000/16 = 171 files
+lastpos
+* = $dab2		;176 bytes table
+flengde
+.fi
+		* = vectors-(static_code_end-static_code_start)
+;--------------------------------------------------------------
+static_code_start
+
+doheaderstuff
+.include src/doheaderstuff.tas
+
+printhexnum	jsr gethexnum
+		sta (tzp),y
+		dey
+		txa
+		sta (tzp),y
+		dey
+		rts
+
+gethexnum	pha
+		lsr
+		lsr
+		lsr
+		lsr
+		jsr hex2sa
+		tax
+		pla
+		and #$0f
+hex2sa		ora #$30
+		cmp #$3a
+		bmi hex2sb
+		adc #$06
+hex2sb		rts
+
+dotunenumbers
+.include src/dotunenumbers.tas
+convert_letter
+.include src/convertletter.tas	;convert pc letter, signs, underscore to c64
+
+getpos		pha		;a=0-ff - for getting filename pos in dirbuffer d000-e000
+		asl
+		asl
+		asl
+		asl
+		tay
+		pla
+		lsr
+		lsr
+		lsr
+		lsr
+		ora #>dirpos
+		rts
+
+
+cia_reset2_part2		;Called by src/cia_reset3.tas
+
+		stx $0291	;>80 = disable cbm+shift		
+		;lda #$48	;|jmp ($pointer) to keyboard table
+		sta $028f	;|This must be on incase its an rsid using jmp $ea31 in the interrupt handler
+		lda #$eb	;|	part of jump pointer to keyboard table
+		sta $0290	;|
+
+color_screen2	lda #$a9	;fixes color cursor blinking on certain rsids
+		sta $0286
+		
+my02a6		lda #0		;Restore pal/ntsc flag wiht its real value
+		sta $02a6	;Edvin van santens player checks this register for pal/ntsc
+
+		lda #<stack_nmi
+		ldx #>stack_nmi        ;All irq's are on the same page $0100-$0190 somewhere
+		sta $fffa
+		stx $fffb
+		lda #<stack_irq
+		sta $fffe
+		stx $ffff
+
+		ldx #$1d
+-		lda vectors,x	;0314+0318 has correct vectors
+		sta $0314,x	;0314-0331 (doesnt include the save vectors)
+		dex
+		bpl -
+		lda #$36	;sta $01
+		rts
+
+;--------------------------------------------------------------
+.if def_iec
+iec_dir_sort
+.include src/iec_dir_sort.tas
+.fi
+;--------------------------------------------------------------
+.if def_iec + def_1541u2cmd
+iec_fileinfo
+.include src/iec_fileinfo.tas	;used by src/displayfiles.tas
+.fi
+;--------------------------------------------------------------
+.if def_iec
+.include src/check_disk_images.tas
+dir_txt
+.text "rid "	;DIR - used in src/dir-iec.tas
+  .if def_1541u_long
+d64_txt
+.text "46d "	;D64 - used in src/dir-iec.tas
+  .fi
+.fi
+;--------------------------------------------------------------
+
+eorzp		.byte 0	;DIR displayer only
+cmpzp		.byte 0	;DIR displayer only
+tempcursor	.byte 0 ;DIR displayer only
+
+panic_0314
+.byte 0,0,0,0,0,0	;0314-0319
+
+chiptype       .text "<?> "
+               .text "6581"
+               .text "8580"
+               .text "both"
+system         .text "<?> " ;00
+               .text "pal " ;04
+               .text "ntsc" ;08
+               .text "both" ;0c
+
+msgmemory      .text "no memory!"
+                     ;0123456789012345678901234
+
+static_code_end
+
+.if def_1541u2cmd
+;--------------------------------------------------------------
+.cerror *>$dfe2,"program below $dfe2 too long!"
+;--------------------------------------------------------------
+;dfe2-dfff = 0314-0331 backup of original vectors
+* = $dfe2 ;+$1e=e000
+vectors
+
+.else
+;serial, iec, all devices that loads with kernal routines:
+;--------------------------------------------------------------
+.cerror *>$df66,"program below $df66 too long!"
+;--------------------------------------------------------------
+;df66-df84 = 0314-0331 backup of original vectors
+* = $df66 ;+$1e=df84
+vectors
+.fi
+
+
+
+;If a file loads to $e000:
+;It will load to $df84 because of the $7c sid header
+maxentries = (lastpos-dirpos)/16 ;=183 files
+
+
+
+;--------------------------------------------------------------
+.if def_colorselect = 0
+;.include src/col/colors_original.tas		;!
+;.include src/col/colors_grey.tas			;!
+;.include src/col/colors_gay.tas			;
+;.include src/col/colors_allgrey.tas		;!
+;.include src/col/colors_allblue.tas		;!
+.include src/col/colors_allred.tas		;!
+;.include src/col/colors_allpurple.tas		;!
+;.include src/col/colors_cbm.tas			;!
+;.include src/col/colors_allgreen.tas		;!
+;.include src/col/colors_lightblue.tas		;!
+;.include src/col/colors_red.tas			;
+.fi
+;--------------------------------------------------------------

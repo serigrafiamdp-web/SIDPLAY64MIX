@@ -1,0 +1,22 @@
+
+magicID       = *            ;psid/rsid
+version       = *+$04
+dataoffset    = *+$06
+loadAddress   = *+$08
+initAddress   = *+$0a
+playAddress   = *+$0c
+songs         = *+$0e
+startSong     = *+$10
+speed         = *+$12
+sidname       = *+$16
+sidauthor     = *+$36
+sidreleased   = *+$56
+v1data        
+flags         = *+$76
+startPage     = *+$78
+pageLength    = *+$79
+reserved      = *+$7a
+v2data  
+v2loadaddress = *+$7c ;binary loadadress
+
+

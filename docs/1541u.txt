@@ -1,0 +1,10 @@
+1541u version:
+
+1541u (iec) in standalone mode (power from pc via usb)
+C64 with jiffydos and TFR 0.8.
+
+Open and load dirs : Ok
+Load and run sid files : Ok
+Open d64 images : ok
+Go back a dir: Ok (1541u requies the "CD:.." command to go back)
+

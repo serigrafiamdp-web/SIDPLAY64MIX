@@ -1,0 +1,15 @@
+;--------------------------------------------------------------
+;  "wait_while_busy"
+;
+;  1541U2CMD Subroutine
+;--------------------------------------------------------------
+; * part of relocatable main
+; * stack jump table
+;--------------------------------------------------------------
+
+-		lda U2_Status_register
+		and #_STATE
+		cmp #_STATE_COMMAND_BUSY
+		beq -
+		rts
+

@@ -1,0 +1,60 @@
+JiffyDOS Problem and Memory Usage
+From: doug.cotton@the-spa.com (Doug Cotton)
+Subject: Re: JiffyDOS problem!
+Date: Mon, 19 Feb 1996 22:05:18 -0500 
+
+> Magnus Nyman <magnus.q.nyman@telia.se> wrote: 
+> >When Jiffy 
+
+> >loads the direcory (@$) it uses the vector bb/bc as a pointer to a 
+> >temporary buffer. Normally $9f01. The system uses the same vector as a 
+> >temporary storage for filenames after loading. (/,%,=A3... etc). 
+> >Load a ML-file from $1000 to $cfff, show the dir, and a part of your code 
+> >is corrupted! 
+
+There are a number of zero page locations used by JiffyDOS. 
+These locations are also used by the JiffyDOS kernal built into RAMLink and RAMDrive. 
+It is best to avoid using these locations in your own programs in order to retain 
+complete JiffyDOS compatibility. 
+At the very least, you should make sure that your use of them does not 
+interfere with JiffyDOS' usage. 
+
+JiffyDOS 64 Zero Page Variables
+Location  Variable Name  Note
+--------------------------------------------------------------------------------
+$26       allflag/rsize    2
+$27       comsav           2
+$9B       keybyt           2
+$9F       cjla             2
+$A3       ldflg/qflag      3
+$A6       tflag            2
+$B0/$B1   keyptr           2
+$B0       sprsav           1
+$B1       rassav           1
+$B2       regsav           1
+$BE       drvbyt           2
+$BF       dest             2
+
+JiffyDOS 128 Zero Page Variables
+Location Variable Name Note 
+--------------------------------------------------------------------------------
+$26       allflag/rsize    2
+$27       comsav           2
+$9F       cjla             2
+$A3       ldflg/qflag      3
+$A6       tflag/togsav     2
+$B0       sprsav           1
+$B1       rassav           1
+$B2       regsav           1
+$BE       drvbyt           2
+$BF       dest             2
+
+Notes
+Note 1 - Saved, then restored by LOAD routine (no other usage).
+Note 2 - Used only from BASIC for JiffyDOS wedge comands, device toggle, and function keys.
+Note 3 - Used in all disk access and LOAD routines.
+
+--- 
+
+
+

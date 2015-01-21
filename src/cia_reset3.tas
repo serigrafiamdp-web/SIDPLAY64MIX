@@ -1,0 +1,59 @@
+;Dont touch Y register
+
+len_fda3	= (($fdcb-$fda3) -1)
+
+		sei
+		lda #$36
+		sta $01
+		
+		ldx #len_fda3+1
+		lda #$60			;rts
+		bne uoo
+copyrom		lda $fda3,x
+uoo		sta $0200,x
+		dex
+		bpl copyrom
+		jsr $0200
+		lda #$81
+		sta $dc0d
+		bit $dc0d
+		bit $dd0d
+		lda #0
+		sta $d01a
+		inc $d019
+		sta stopmusic		;=00
+		ldx #zpBuffSize+1
+CLRZP		sta $00,x	;Zeropage $000c-$0100 zerofilled
+		sta $0200,x	;Buffer 0200-0300 zerofilled
+		inx
+		bne CLRZP
+		ldx #$17
+CLRSID		sta $d400,x	;d418 cleared in jsr $0200
+secondsid2	bit $d420;,x	;second sid
+		cpx #4
+		bcs clrtod3
+		sta $dc08,x	;dc08,dc09,dc0a,dc0b
+clrtod3		dex
+		bpl CLRSID
+;dont touch x, dont touch y
+		
+		;stx $0291	;>80 = disable cbm+shift		
+
+		
+		;stx $cc		;|DONT blink cursor (0 = blink cursor)		
+		;lda #$03	;default input device
+		;sta $9a	;
+		
+
+
+		lda #$48	;|jmp ($pointer) to keyboard table
+		;sta $028f	;|This must be on incase its an rsid using jmp $ea31 in the interrupt handler		
+		sta $01		;$38 = $48
+		
+		jsr cia_reset2_part2	;returns a = 36
+		;lda #$36
+		sta $01
+;Y = untouched
+;A = $36
+;X = $FF
+		rts

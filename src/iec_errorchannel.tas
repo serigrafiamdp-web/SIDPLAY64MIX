@@ -1,0 +1,43 @@
+;--------------------------------------------------------------
+; read error channel 
+;
+; Output in dos error box on screen
+; iec, serial, ide64
+;--------------------------------------------------------------
+; * part of relocatable main
+; * this routine is not a subroutine. no rts.
+;--------------------------------------------------------------
+
+		lda #<txterror1
+		sta gzp
+		lda screenpos
+		clc
+		adc #>txterror1&$03ff
+		sta gzp+1
+		
+		lda #0
+		sta $b7
+		lda #$6f
+		sta $b8
+		sta $b9
+		jsr ROM_open
+		ldx #$6f
+		jsr ROM_chkin
+		ldy #0
+dvm2		jsr Rom_Chrin		;IDE64 again
+		cmp #$0d
+		beq dvm1
+		and #$7f
+		sta (gzp),y
+		iny
+		cpy #$26
+		bne dvm2
+		beq dvm3 ;jump
+dvm1		lda #$20
+		sta (gzp),y
+		iny
+		cpy #$26
+		bne dvm1
+dvm3		jsr ROM_clrchn		;IDE64
+		jsr ROM_clall
+;code continues here:

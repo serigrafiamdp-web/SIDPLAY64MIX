@@ -1,0 +1,93 @@
+0) Netdrive must use "cd:.." to go back a dir ( works now in 0.691)
+
+1) use slash "/" between directory names to set netdrive rootdir.  ( \  doesnt work in windoze xp )
+   ie:  netdrive -r c:/tmp/sids/
+    
+2) The sid extension must be converted to .prg ( ren *.sid *.prg )
+
+3) Filenames can have a maximum of 16 letters ( not counting the ".prg" file extension)
+
+4) Subdir names must no exceed 16 letters.
+
+5) Can open d64 images if you use two .d64 extensions (test.d64.d64). unfortunately it cant load from the d64.
+
+5) Returns "31, syntax error,00,00" when sending "ui" to netdrive
+
+5) TFR cartridge messes with the X-register when using jsr ROM_chrin
+   You must backup X register.
+
+
+
+
+
+
+
+2) There's a bug in the way you treat rom_chrin in your TFR cartridge, your routine messes with the x-register.
+When i changed the following code from using X to the Y register, it
+finally loaded the first bytes as it should:
+
+ldy #0
+bn1: jsr ROM_chrin
+sta head,y
+iny
+cpy #$7c
+bne bn1
+
+
+
+
+
+
+
+
+
+
+
+WHEN WORKING                     WHEN USING NETDRIVE:
+---AR XR YR   NV-BDIZC           ---AR XR YR   NV-BDIZC
+----------------------           ----------------------
+
+pla
+ldx #<fname
+ldy #>fname
+jsr ROM_setnam   (doesnt change axy)
+---05 00 02   00110101           ---09 00 02   00110101
+
+lda #2
+ldx device
+tay
+jsr ROM_setlfs   (doesnt chane axy)
+---02 08 02   00110101           ---02 06 02   00110101
+
+; ok so far..
+
+jsr ROM_open
+---c0 00 05   11110000           ---04 03 00   00110001
+
+ldx #2
+jsr ROM_chkin
+---08 08 05   00110010           ---06 ff 00   00110000
+
+jsr ROM_chrin
+---50 00 05   00110000           ---0d ff 00   00110000
+
+jsr ROM_clrchn
+---00 03 05   01110010           ---00 03 00   00110010
+
+lda #2
+jsr ROM_close
+---00 00 05   01110010           ---00 00 00   00110010
+
+
+
+
+
+
+
+netdrive dir:
+
+00 01 02 03 04 05 06 07 08 09 0a 0b 0c 0d 0e 0f 10 11 12 13 14 15 16 17 18 19 1a 1b 1c 1d 1e 1f 20 21 22 23 24 25 26 27 28 29 2a
+--------------------------------------------------------------------------------------------------------------------------------
+01 04 01 01 00 00 20 20 20 22 2e 22 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 44 49 52 20 00  ;"." DIR
+01 01 00 00 20 20 20 20 22 2e 2e 22 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 44 49 52 20 00  ;".." DIR
+01 01 12 00 20 20 22 38 30 53 5f 67 52 49 54 54 59 5f 75 52 42 41 4e 5f 74 41 4c 45 53 2e 54 49 44 22 20 41 4e 59 20 00           ;"80s_Gritty_urban_tales.sid" ANY

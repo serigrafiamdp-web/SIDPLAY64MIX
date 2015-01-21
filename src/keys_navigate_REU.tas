@@ -1,0 +1,58 @@
+;--------------------------------------------------------------
+; REU key routines for navigating 65535 files dir:
+;--------------------------------------------------------------
+
+		;Y = key we pressed
+		;A = 0
+
+		ldx #$38
+		stx $01
+		cpy #keyCrsrUp		;"Crsr up"
+		bne key1
+		jmp reu_crsr_up
+		
+key1		cpy #keyCrsrDown	;"Crsr down"
+		bne key2
+plt_inc		jmp reu_crsr_down
+
+key2		cpy #keyClrHome
+		bne key3
+		jmp reu_clrHome		;15 up
+
+key3		cpy #keyShClrHome
+		bne key4
+		jmp reu_Shift_ClrHome	;15 down
+		
+key4		cpy #keySpace		;"SPACE"
+		bne key5
+ingenfil	pla
+		pla
+		jsr wjs_resetCia	;zp $01 = 36
+		jsr ROM_clall           ;Close dirfile, and all other files..
+		jsr clear_reu_entries
+		jmp (wjp_dirSelector)
+		rts
+         
+key5
+.if def_iec + def_1541u2cmd
+		cpy #keyDelete
+		bne key6
+		tay			;Y=0 for going back directory level - dir_back
+		beq dirbackw		;jmp
+.fi		
+
+key6		cpy #keyReturn		;"RETURN"
+		bne key7
+		;lda maxfilehi
+		;bne ingenfil
+		ldy maxfile		;Y = 1-ff will be used at (wjp_load)
+		beq ingenfil
+dirbackw	pla
+		pla
+		jsr wjs_resetCia	;zp $01 = 36
+		jmp (wjp_load)
+
+
+key7		ldx #$36
+		stx $01
+;--- code continues in main source:

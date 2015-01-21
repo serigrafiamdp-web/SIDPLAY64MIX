@@ -1,0 +1,42 @@
+;--------------------------------------------------------------
+; "convert_letter"
+;  Handles letter conversion
+;--------------------------------------------------------------
+;	* static subroutine 
+;	* location: d000-e000
+;--------------------------------------------------------------
+
+		cmp #$a4		;1541 ultimate uses $a4 for underscore
+		beq underscore		;
+		
+		and #$7f		;
+		cmp #$7f		;Underscore from browsing dirs with vice
+		beq underscore
+		cmp #$5f		;PC underscore is "_" 5f
+		bcc nope            
+		beq underscore
+		eor #$20	;letter 60-7e converted to 40-5e
+		.byte $2c
+underscore	lda #$64	;C64 version of the underscore sign
+nope            
+		rts                 
+
+
+;ASCII:
+;41-5A (A-Z uppercase)
+;61-7A (a-z lowercase)
+;
+;PETSCII:
+;41-5A (a-z lowercase)
+;C1-DA (A-Z uppercase)
+;
+;SD2IEC:
+;Converts letters to petscii when we read the dir entries.
+;FF      in the sd2iec filename tells us that the filename is longer than 16 letters.
+;        example: "touchi_1.sid" (where "_" = $ff )
+;
+;Equal for ascii & petscii:
+;20-3F
+;
+;pclink and netdrive $a4 sign as "_"
+;

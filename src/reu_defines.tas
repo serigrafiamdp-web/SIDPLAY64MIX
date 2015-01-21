@@ -1,0 +1,43 @@
+;------------------- REU REGISTERS -------------------
+
+REU_Status   = $DF00  ;[read only] Status register
+                      ;If a interrupt is on the Status register must be
+                      ;read for a successful transfer.
+
+REU_Command  = $DF01  ;Data direction.
+
+REU_C64memlo = $DF02  ;|16 bit address register
+REU_C64memhi = $DF03  ;|for read/write to C64.
+
+REU_memlo    = $DF04  ;|24 bit address
+REU_memhi    = $DF05  ;|register for
+REU_membank  = $DF06  ;|read/write to REU.
+
+;IRQ note:
+;If you STA one of the REU_mem adresses you have to
+;STA all of them. Real c64 + reu will crash if not.
+
+
+REU_lenlo    = $DF07  ;|16 bit address register
+REU_lenhi    = $DF08  ;|for size of data transfer. ($0000 = MAX)
+
+REU_Irq      = $DF09  ;|Not necesarry to use this register
+                      ;|IRQ is halted during xfer..
+
+REU_Control  = $DF0A  ;Controls Autoincrease.
+
+REU_64K      = $FF00  ;Used to access 64 KB of c64 memory,
+                      ;This allows writing to ROM D000-E000.
+
+FixNULL      = $00     ;Autoincrease on both.
+FixC64       = $80     ;C64 base address stays.
+FixREU       = $40     ;REU base address stays.
+FixBOTH      = $c0     ;Both addresses stays.
+
+reu2c64      = %00000001    ;STA REU_Command -> Transfer from reu to c64
+c642reu      = %00000000    ;STA REU_Command -> Transfer from c64 to reu
+reuexec      = %10010000    ;STA REU_Command -> Execute transfer on this sta. (Dont use if you go fo REU_64K)
+reuswap      = %00000010    ;STA REU_Command -> Swap data
+reuvrfy      = %00000011    ;STA REU_Command -> Havent tested this yet, but REU_Status probably returns something.
+
+;-----------------------------------------------------

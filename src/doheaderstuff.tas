@@ -1,0 +1,393 @@
+;--------------------------------------------------------------
+; "doheaderstuff"
+;  Handles header information and store it to screen
+;  Also prepares for memory relocation of main and error handling
+;--------------------------------------------------------------
+;	* static subroutine 
+;	* location: d000-e000
+;--------------------------------------------------------------
+
+             lda #$29		;|psid/rsid: $0429
+             sta tzp
+             lda magicid	;P or R
+             ldy #0
+             sta (tzp),y
+
+             lda #$78+8		;tzp is 0478/c478
+             sta tzp
+             ldy #30
+getsn        lda sidname,y	;title of sid/song
+             sta (tzp),y
+             dey
+             bpl getsn
+             ldx #30
+             ldy #40+30
+getsa        lda sidauthor,x	;name of composer
+             sta (tzp),y
+             dey
+             dex
+             bpl getsa
+             ldx #30
+             ldy #80+30
+getsr        lda sidreleased,x	;year, copyright
+             sta (tzp),y
+             dey
+             dex
+             bpl getsr
+
+
+             
+             lda flags+1
+             pha
+             and #%00110000  ;bit 4 = 6581
+                             ;bit 5 = 8580
+             lsr
+             lsr
+             tax
+             ldy #160
+getchip      lda chiptype,x
+             sta (tzp),y
+             inx
+             iny
+             cpy #164
+             bne getchip
+                             
+             
+             pla
+             and #%00001100  ;bit 2 = pal
+                             ;bit 3 = ntsc
+             tax
+             
+             lsr
+             lsr
+             sta tunesystem ;shift down to bits 1,0
+             
+             ldy #200
+getsyst      lda system,x
+             sta (tzp),y
+             inx
+             iny
+             cpy #204
+             bne getsyst
+
+
+
+             ldy #240+3
+             lda initAddress+1
+             sta initMus+1
+;            sta panicinit+1
+             jsr printhexnum
+             lda initAddress
+             sta initMus+2
+;            sta panicinit+2
+;            ldy #240+1
+             jsr printhexnum
+             
+             
+             inc tzp+1      ;tzp is 0578
+                            ;but we want 0590
+
+
+             ldy #$18+3         ;0590+3                            
+             lda playAddress+1
+             sta playMus+1		  ;play adress
+             jsr printhexnum
+             lda playAddress             
+             sta playMus+2
+;            ldy #$18+1         ;0590+1
+             jsr printhexnum
+             
+             
+             ldx songs+1      ;nummer of songs
+             dex
+             stx maxtune
+             ldx startSong+1
+             dex
+             stx tune
+
+             ldx #3
+copytimers   lda speed,x         ;longword
+             sta speedtimer,x
+             dex
+             bpl copytimers
+
+.if def_1541u2cmd
+
+	lda v2loadaddress ;lo - No dataoffset for 1541u2cmd
+	sta ldzp       
+	lda v2loadaddress+1 ;hi
+	sta ldzp+1     	
+
+.else
+             lda v2loadaddress   ;Adjust forced load adress to psid/rsid header
+             sec 
+             sbc dataoffset+1   ;7c
+             sta loadAdrLO
+             lda v2loadaddress+1
+             sbc dataoffset
+             sta loadAdrHi
+.fi        
+
+
+
+
+            lda startpage    ;0  = clean file and no reloc adress
+            bne itsclean
+            jmp cleanfile
+itsclean    cmp #$ff         ;FF = Relocation not possible
+            bne doreloc
+            jmp pageerr
+
+
+doreloc                      ;Start page = screenpos
+                             ;It must start on a screenpage (0400/0800/0c00..etc)
+            and #%00000011
+            beq equalpage    ;Zero = ok
+            eor #%00000011
+            tax
+adjustpage  inc startpage
+            dec pagelength
+            dex
+            bpl adjustpage
+
+equalpage   ldx #$0c      ;$0c pages for bank 0 and 2
+            lda startpage
+            and #%11000000
+            lsr
+            lsr
+            lsr
+            lsr
+            lsr
+            lsr
+            sta startbank ;save bank #
+            cmp #0        ;bank [0000-4000] ok - no charset needed
+            beq bank0
+            cmp #2        ;bank [8000-C000] ok - no charset needed
+            beq bank2
+            cmp #3        ;bank [c000-d000] - only $1000 bytes free here
+            beq bank3     ;We just have to assume it will work
+            
+            lda startpage
+            clc
+            adc #$0c        ;Find next free charset page
+            sta fontpos
+            and #%00000111
+            beq fontposok   ;if zero then it is located at 4000,4800,5000,5800...
+            lda fontpos     ;else it is on a uneven charset page.. 4400,4c00,5400,5c00...
+            clc
+            adc #$04        ;adjust to even charset page 4800,5000,5800
+            sta fontpos
+
+fontposok   
+;check if both screen and font is within the same bank
+            lda fontpos
+            clc
+            adc #7
+            and #%11000000
+            lsr
+            lsr
+            lsr
+            lsr
+            lsr
+            lsr
+            cmp startbank     ;compare with bank position of screen
+            beq bankmatch
+            lda pagelength
+            cmp #$18
+            bcc pageerr       ;no room for reloc
+            sec
+            sbc #4
+            sta pagelength
+            lda startpage
+            clc
+            adc #$04
+            sta startpage
+            bne equalpage
+            
+bank0       lda startpage   ;check if we are within 1000-2000 - not possible with a screen here
+            cmp #$20
+            bcs bankok
+            cmp #$10
+            bcc bankok
+            lda pagelength
+            cmp #$0c
+            bcc pageerr    ;no room for code
+            sec
+            sbc #$04
+            sta pagelength
+            lda startpage
+            clc
+            adc #$04
+            sta startpage
+            bne bank0
+
+bank2       lda startpage   ;check if we are within 9000-a000 - not possible with a screen here
+            cmp #$a0
+            bcs bankok
+            cmp #$90
+            bcc bankok
+            clc
+            adc #$04
+            sta startpage
+            lda pagelength        ;hvsc rips doesnt allow a000-c000 as free relocation pages
+            clc                   ;But we cheat - and allow that..
+            adc #$04
+            sta pagelength
+            bne bank2
+            
+bank3       lda #$f8           ;Force charset for bank 3 to f800-ffff
+            sta fontpos
+            bne bankok          
+            
+bankmatch   lda fontpos
+            clc
+            adc #8
+            sec
+            sbc startpage
+            tax
+
+bankok      stx relocsize
+
+            lda pagelength   ;# of free pages after startpage
+                             ;We need $0c free pages for bank 0 (0000-4000)
+                             ;We need $0c free pages for bank 2 (8000-c000)
+                             ;We need $14 free pages for bank 1 (4000-8000)
+                             ;For bank 3 we only have driver space at c000-d000 (screen+driver)
+                             ;and charset at f800
+            sec
+            sbc relocsize                             
+            bcs pageok
+
+;At this point there is no free memory for relocation pages,
+;so we check if the song play adress is $0000, if so
+;we load the sid song anyway and hope for the best....
+ 
+		lda playAddress	;high	;3
+		ora playAddress+1	;low	;6
+		beq wepanic		;	;8 byte
+
+       
+            
+            
+            
+
+pageerr     lda #<txterror1
+            sta tzp
+            lda screenpos
+            clc
+            adc #>txterror1&$03ff                
+            sta tzp+1
+            ldy #9
+getmsgm     lda msgmemory,y
+            sta (tzp),y
+            dey
+            bpl getmsgm
+            lda screenpos
+            clc
+            adc #>((memoryerror-1)-screen2)
+            pha
+            lda #<memoryerror-1
+            pha
+            lda #noirq_keys
+            sta numb
+            ;Y=FF
+            rts
+            
+;stack jump to memoryerror
+
+
+wepanic
+.if def_1541u2cmd
+.else
+		dec panicload+1	;set to 0
+.fi
+		beq stackjump
+
+pageok     
+            ldx startpage 
+            bne movecode
+            
+            
+            
+
+cleanfile   lda #$f8        ;$f800 font pos for c400 screen
+            sta fontpos
+
+
+.if def_1541u2cmd
+	ldx #>screen2          ;C400 - screen to move to
+	lda v2loadaddress ;lo
+	cmp #<driverend        ;Where to relocate driver 0400 vs C400
+	lda v2loadaddress+1 ;hi
+	sbc #>driverend&$0fff
+	bcc movecode
+	ldx #>screen1          ;0400 - screen to move to
+.else
+		ldx #>screen2          ;C400 - screen to move to
+		lda loadAdrLO
+		cmp #<driverend        ;Where to relocate driver 0400 vs C400
+		lda loadAdrHI
+		sbc #>driverend&$0fff
+		bcc movecode
+		ldx #>screen1          ;0400 - screen to move to
+.fi
+
+movecode    
+
+            ldy screenpos    ;Current screen position
+            sty rzp+1        ;Forward copy: $1000-$2000 to $0c00-$1c00, not killing driver
+            stx gzp+1
+            
+            stx screenpos    ;Set new screen position
+
+            ldx #12
+            ldy #0
+            sty gzp
+            sty rzp
+            
+            lda gzp+1         ;New screenpos
+            cmp rzp+1        ;Currentscreenpos
+            bcc copyforward  ;Determine Forward or Backward memory copy:
+                             ;is new screenpos above/equal/below current screenpos ?
+                             ;Above = Backward copy
+                             ;Below = Forward copy
+                             
+                             ;backward copy: $2000-$1000 to $2400-$1400, not killing driver
+            clc
+            adc #$0b         ;driver range (0c00)-0100
+            sta gzp+1
+            lda rzp+1
+            clc
+            adc #$0b         ;driver range (0c00)-0100
+            sta rzp+1
+           
+            dey             ;Y=ff
+move2       lda (rzp),y
+            sta (gzp),y
+            dey
+            cpy #$ff
+            bne move2
+            dec rzp+1
+            dec gzp+1
+            dex
+            bne move2
+            beq stackjump
+
+
+copyforward
+move1       lda (rzp),y
+            sta (gzp),y
+            iny
+            bne move1
+            inc rzp+1
+            inc gzp+1
+            dex
+            bne move1
+stackjump
+            lda screenpos
+            clc
+            adc #>((returnHere-1)-screen2)
+            pha
+            lda #<returnHere-1
+            pha
+            rts   ;Stack jump to "returnHere"

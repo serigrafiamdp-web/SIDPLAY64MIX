@@ -1,0 +1,23 @@
+;--------------------------------------------------------------
+; Kernal calls:
+;--------------------------------------------------------------
+ROM_second   = $FF93   ;chkout
+ROM_tksa     = $FF96   ;chkin
+ROM_Acptr    = $FFA5   ;chrin
+ROM_ciout    = $FFA8   ;chrout
+ROM_untalk   = $FFAB   ;clrchn
+ROM_unlsn    = $FFAE   ;clrchn
+ROM_listen   = $FFB1   ;chkout
+ROM_talk     = $FFB4   ;chkin
+ROM_setlfs   = $FFBA
+ROM_setnam   = $FFBD
+ROM_open     = $FFC0
+ROM_close    = $FFC3
+ROM_chkin    = $FFC6
+ROM_chkout   = $FFC9
+ROM_clrchn   = $FFCC
+ROM_chrin    = $FFCF
+ROM_chrout   = $FFD2
+ROM_load     = $FFD5
+ROM_getin    = $FFE4    ;F142 can also be used.
+ROM_clall    = $FFE7   ;F32F  close or abort all files

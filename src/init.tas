@@ -1,0 +1,595 @@
+temp		= $ff
+
+;-------------- SP64 INITIAL SETUP ROUTINE:
+
+		sei
+		cld
+		lda #$37
+		sta $01
+;-------------------------------------------
+		lda #$80
+		sta $028a		;Keys repeat
+		sta $0291		;Disable shift+cbm
+		sta $d020
+		sta $d021
+		sta $d40f		;random frqhi
+		sta $d412		;random wave
+;-------------- pal/ntsc detector
+		jsr $ff84
+		ldy #1
+		bit $d011
+		bmi *-3
+		bit $d011
+		bpl *-3
+		ldx #$72
+		dex
+		bpl *-1
+		bit $d011
+		bmi pal
+		dey		;ntsc
+pal		sty $02a6
+
+		lda $d41b		;get random number
+		sta seed		;set it in seed
+
+		bit $dc0b		;stop TOD timer
+
+		lda #0			;reset TOD clock
+		ldx #3
+clrtod		sta $dc08		;08,09,0a,0b
+		dex
+		bpl clrtod
+
+		jsr $ff90		;Disable kernal io messages
+
+		jsr devicecheck		;Select correct device here (f1/f2/return) - needs acess to rom routines at a000-c000 and e000-fffff
+
+
+
+
+		lda #<secondsidmsg
+		ldy #>secondsidmsg
+		jsr inputmsgyes		;returns cmp #$59
+		bne no2sid
+		lda #$9d		;opcode for sta $abcd,x
+		sta secondsid1		;d424,x
+		sta secondsid2		;d420,x
+	
+		lda #<entersidadr
+		ldy #>entersidadr
+		jsr $ab1e
+	
+		lda $d3
+		clc
+		adc $d1
+		sta $d1
+		bcc +
+		inc $d2
++
+		lda #0
+		;sta $cc			;enable cursor blink
+setkeys		sta $d3
+
+keys
+-		jsr $ffe4
+		beq -
+		ldy $d3		
+		cmp #$0d
+		bne chks
+		;inc $cc			;disable cursor blink
+		lda ($d1),y		;Removes inversed letter on screen
+		and #$7f
+		sta ($d1),y
+		bne no2sid		;jmp
+		
+chks		ldx #$0f
+chkn		cmp cmpnumb,x
+		beq numok
+		dex
+		bpl chkn
+		bmi keys		;jmp
+		
+
+numok		;x register is 00-0F
+		and #$3f
+		sta ($d1),y
+		
+		lda #1			;force inverted cursor on next keypress
+		sta $cd
+	
+		lda $d3
+		bne hiny
+		txa			;$00-$0F	
+		ora #$d0		;$d0-$df	High nybble
+		sta secondsid1+2	;$dx04,x
+		sta secondsid2+2	;$dx20,x
+		lda #1
+		bne setkeys		;jmp
+		
+hiny		txa			;$00-$0F
+		asl
+		asl
+		asl
+		asl			;$00-$F0	Low nybble
+		sta secondsid2+1	;d4x0
+		ora #$04
+		sta secondsid1+1	;d4x4
+		lda #0
+		beq setkeys		;jmp
+
+		
+no2sid		lda #<rsidmsg
+		ldy #>rsidmsg
+		jsr inputmsgyes		;returns cmp #$59
+		beq +			;no change, keep the "beq error"
+		lda #$24		;bit error (enable loading rsid)
+		sta skiprsid
++
+
+		lda #<keyjoystickmsg
+		ldy #>keyjoystickmsg
+		jsr inputmsgyes
+		cmp #$4a		;"j"
+		bne +
+		jsr init_joyport1
+
++
+		
+		sei
+		inc $cc			;disable cursor blink
+		lda #$33		;Char-rom
+		sta $01
+
+		ldy #8
+		ldx #0
+RR		lda $d800,x		;Copy char rom to
+SR		sta screen2chars,x	;e000-e800 - sp64 is located in bank 0 on startup (c000-ffff)
+		inx
+		bne RR
+		inc RR+2
+		inc SR+2
+		dey
+		bne RR
+
+		lda #$36
+		sta $01
+
+;---------- convert device number to petscii screen:
+
+.if def_1541u2cmd
+.else
+		lda $ba			;secure device number
+		sta tmp
+
+		sed			;Convert device number to decimal - could we use the $bdcd routine here ?
+		lda #0
+		sta dzp
+		ldx #8
+conbit2		asl tmp
+		lda dzp
+		adc dzp
+		sta dzp
+		dex
+		bne conbit2
+		cld
+		lda dzp
+		tax
+		lsr
+		lsr
+		lsr
+		lsr
+		ora #$30		;.. and insert into sp64 screen
+		sta devout
+		txa
+		and #$0f
+		ora #$30
+		sta devout+1
+.fi
+
+		lda #0
+		sta $dd00		;bank
+		lda #$c4		;c400
+		sta screenpos
+		lda #$e0
+		sta fontpos		;e000
+		lda #$18
+		sta $d018
+
+		lda #0
+		jsr setup_colors	;$01 = 37 on end
+
+main		cli
+-		jsr $ffe4
+		beq -
+		sei
+		cmp #$3a		;A <  39
+		bcs trkinstd
+		cmp #$31		;A >= 31
+		bcc trkinstd
+		sec
+		sbc #$31		;0-7
+		jsr setup_colors	;$01 = 37 at end
+		jmp main
+
+
+trkinstd	lda #$38
+		sta $01		;inc $01			;38
+
+		lda #$7e		;$ea7e (no keyboard scan)
+		sta $0314
+;lda #$8e
+;sta $0328
+;lda #$e6
+;sta $0329
+		lda #$ea		;$f6ea (no stop key)
+		sta $0328
+
+
+		ldx #5
+copyp1		lda $0314,x		;0314,15,16,17,18,19
+		sta panic_0314,x	;Buffer irq vectors for panic load
+		dex
+		bpl copyp1
+;------
+;IRQ
+;------
+		lda #<stack_nmi
+		ldy #>stack_nmi		;All irq's are on the same page $0100-$0190 somewhere
+		sta $0316		;Break vectors jump to stack_nmi - > jumps to dirdisplayer
+		sty $0317
+		sta $fffa
+		sty $fffb
+		sta $0318
+		sty $0319
+		lda #<stack_hwirq
+		sta $0314
+		sty $0315
+		lda #<stack_irq
+		sta $fffe
+		sty $ffff
+
+		ldy #endstacker-stacker		;?? dont remember
+movstack	lda stack-1,y
+		sta stacker-1,y
+		dey
+		bne movstack
+		ldx #topstack
+		txs
+
+
+
+
+;we dont backup 0300-0313 because those vectors are for basic programs only
+
+		ldx #$1d
+copyvectors2	lda $0314,x		;backup current vectors
+		sta vectors,x
+		dex
+		bpl copyvectors2
+
+		ldx #pal_dc0e
+		lda $02a6		;Read $02a6 value and insert into sidplay64
+		sta my02a6+1	;located in 38 ram
+		bne fix1
+		ldx #ntsc_dc0e
+fix1		stx fixdc0e+1	;located in 36 ram
+
+
+		lda #$36
+		sta $01 ;37
+
+		lda #0			;initital values for dir displayer
+		sta pos_cursor
+		sta offs_cursor
+		sta maxfile
+
+		lda $ba
+		sta device
+		jmp start
+
+
+	
+inputmsgyes	jsr $ab1e
+
+blinkcursor	ldx #0
+		stx $cc      ;blink cursor        ;<Makes cursor blink when idle.
+		stx $cf      ;reverse letter      ;|Makes cursor reversed
+		inx                               ;|when scrolling.
+		stx $cd      ;counter to 1        ;|
+
+
+		;lda #0			;enable cursor blink
+		;sta $cc
+-		jsr $ffe4
+		beq -
+		jsr $ffd2		;print letter
+		;inc $cc			;disable cursor blink		
+		cmp #$59
+		rts
+
+
+;--------------------------------------------------------------
+;
+;--------------------------------------------------------------
+cblack		= $00
+cwhite		= $01
+cred		= $02
+ccyan		= $03
+cpurple		= $04
+cgreen		= $05
+cblue		= $06
+cyellow		= $07
+corange		= $08
+cbrown		= $09
+cpink		= $0a
+cgrey		= $0b
+cmgrey		= $0c
+clgreen		= $0d
+clblue		= $0e
+clgrey		= $0f
+;------------------
+;color_screen		= cgreen
+;color_d021		= cblack
+;color_playmusic	= cgreen
+;color_current_filename	= clgrey
+;color_iomessage	= clgrey
+;color_credits1		= cwhite
+;color_credits2		= cwhite
+;color_songnumbers	= cwhite
+;color_timer		= cwhite	;clock and shuffle
+;color_device_number	= clgreen
+;color_dir_filenames	= clgreen
+;color_dir_numbers	= clgrey
+;color_number_of_files	= clgrey
+
+
+
+
+
+
+
+default
+.byte cgreen,cblack,cbrown,clgrey,clgrey,cwhite,cwhite,cwhite,cwhite,clgreen,clgreen,clgrey,clgrey
+allgrey
+.byte cblack,cgrey,cmgrey,clgrey,cmgrey,cwhite,clgrey,cwhite,clgrey,cmgrey,clgrey,cmgrey,clgrey
+allblue
+.byte cblack,cblue,clblue,ccyan,clblue,cwhite,clblue,cwhite,clgrey,clgrey,ccyan,clblue,clgrey
+allred
+.byte cblack,cred,cpink,cyellow,clgrey,cwhite,clgrey,cwhite,cpink,cyellow,cyellow,cpink,cpink
+;allpurple
+;.byte cblue,cpurple,cblue,ccyan,clblue,cwhite,cyellow,cwhite,cyellow,clgrey,ccyan,cpink,ccyan
+grey
+.byte cgrey,cblack,cgrey,clgrey,clgrey,cwhite,cmgrey,cwhite,clgrey,clgrey,clgrey,cmgrey,cmgrey
+lightblue
+.byte cblue,clblue,cblue,cblack,clgreen,cwhite,clgreen,cwhite,cblack,clgreen,cwhite,cblack,cblack
+;gay .byte cpink,cbrown,cpink,cyellow,ccyan,cwhite,clgreen,cwhite,clgrey,clgrey,cwhite,cyellow,cyellow
+cbm
+.byte clblue,cblue,clblue,ccyan,ccyan,cwhite,clgrey,cwhite,clgrey,clgrey,cwhite,clgrey,clgrey
+allgreen
+.byte cblack,cgreen,clgreen,cwhite,cgrey,cwhite,clgreen,cwhite,cwhite,cgrey,clgreen,cgrey,clgreen
+red
+.byte cred,cblack,cred,cpink,corange,cwhite,cyellow,cwhite,cyellow,cred,cpink,corange,corange
+
+
+
+lopoint
+.byte <default		;0
+.byte <allgrey		;1
+.byte <allblue		;2
+.byte <allred   	;3
+.byte <grey		;4
+.byte <lightblue	;5
+.byte <cbm		;6
+.byte <allgreen		;7
+.byte <red		;8
+
+hipoint
+.byte >default
+.byte >allgrey
+.byte >allblue
+.byte >allred   
+.byte >grey
+.byte >lightblue
+.byte >cbm
+.byte >allgreen
+.byte >red
+
+setup_colors	tax
+
+		lda #$38		;ALL RAM
+		sta $01
+
+		lda hipoint,x
+		sta dzp+1
+		lda lopoint,x
+		sta dzp
+
+		ldy #12
+-		lda (dzp),y
+		pha
+		dey
+		bpl -
+
+.comment
+		pla
+		sta color_screen+1		;in player for $0286
+		sta color_screen2+1
+		pla
+		sta color_d021+1
+		pla
+		sta color_playmusic2+1
+		pla
+		sta color_current_filename+1
+		pla
+		sta color_iomessage+1
+		pla
+		sta color_credits1+1
+		pla
+		sta color_credits2+1
+		pla
+		sta color_songnumbers+1
+		pla
+		sta color_timer+1
+		pla
+		sta color_device_number+1
+		pla
+		sta color_dir_filenames+1
+		pla
+		sta color_dir_numbers+1
+		pla
+		sta color_number_of_files+1
+.endc
+
+
+		pla
+		sta color_screen2+1		;in player for $0286
+		dec $01			;37
+
+		ldx #0
+;color_screen	lda #$a9		;Main text color - whole screen
+-		sta $d800,x
+		sta $d900,x
+		sta $da00,x
+		sta $db00,x
+		inx
+		bne -
+
+
+		pla
+;color_d021	lda #0
+		sta $d021
+
+		pla
+		sta color_playmusic2+1	;in player
+
+
+		pla
+		ldx #$0f
+;color_current_filename
+;		lda #$a9
+-		sta $d82e,x
+		dex
+		bpl -
+
+
+
+		pla
+		ldx #37
+;color_iomessage lda #$a9		;IO disk messages
+-		sta $db99,x
+		dex
+		bpl -
+
+		pla
+		ldx #30
+;color_credits1	lda #$a9
+-		sta credz,x
+		sta credz+(40*1),x
+		sta credz+(40*2),x
+		dex
+		bpl -
+
+		pla
+		ldx #3
+;color_credits2	lda #$a9
+-		sta credz+(40*4),x
+		sta credz+(40*5),x
+		sta credz+(40*6),x
+		sta credz+(40*7),x
+		dex
+		bpl -
+
+		pla
+		sta color_songnumbers+1
+		pla
+		sta color_timer+1
+
+		ldx #$07
+-
+color_songnumbers
+		lda #$a9
+		sta (songstr1&$3ff)+$d800,x		;song number 26/26
+color_timer	lda #$a9
+		sta (timestr1&$3ff)+$d800,x		;tod clock color
+		sta ((timestr1&$3ff)+$d800)+40,x	;shuffle timer color
+		dex
+		bpl -
+
+
+;		ldx #4
+;-		sta ((timestr1&$3ff)+$d800)+43,x		;shuffle timer color
+;		dex
+;		bpl -
+
+
+devout = screen2+(40*10)+17
+
+		pla
+;color_device_number
+;		lda #$a9
+		sta $d800+(devout&$03ff)
+		sta $d800+(devout&$03ff)+1
+
+
+		pla
+		sta color_dir_filenames+1
+		pla
+		sta color_dir_numbers+1
+
+
+		lda #>(dirscreen&$03ff)+$d800
+		sta gzp+1
+		lda #<dirscreen
+		sta gzp
+
+		ldx #maxDirY-1
+row		ldy #$12
+row2		cpy #$10
+		bcs numrow
+color_dir_filenames
+		lda #$a9		;light green
+		.byte $2c
+numrow
+color_dir_numbers
+		lda #$a9		;light grey
+		sta (gzp),y
+		dey
+		bpl row2
+		lda gzp
+		clc
+		adc #$28
+		bcc *+4
+		inc gzp+1
+		sta gzp
+		dex
+		bpl row
+
+numfiles = screen2+$0151
+
+		pla
+;color_number_of_files
+;		lda #$a9
+		sta $d800+(numfiles&$03ff)
+		sta $d800+(numfiles&$03ff)+1
+		rts
+
+
+keyjoystickmsg
+.byte $0d,$0d,$1e
+.text "keyboard or joyport #1 (k/j)? ",$99,0
+
+rsidmsg
+.byte $0d,$0d,$1e
+.text "skip sids using $0000 as play address? ",$99,0
+
+secondsidmsg
+.byte $0d,$0d,$1e
+.text "do you have a 2nd sid ? ",$99,0
+
+entersidadr
+.byte $0d,$0d,$1e
+.text "address: ",$99,"$",$05,"d420",$9d,$9d,$9d,0
+
+cmpnumb	.text "0123456789"
+	.byte $41,$42,$43,$44,$45,$46
+

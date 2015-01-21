@@ -1,0 +1,65 @@
+;--------------------------------------------------------------
+; "iec_dir_sort"
+;
+;  IEC sort files + directories
+;--------------------------------------------------------------
+;	* static subroutine 
+;	* location: d000-e000
+;--------------------------------------------------------------
+;maxfile = maxium number of files read
+;rzp = dir entries we scan for
+;dzp = current normal file we can swap with
+
+
+		lda #0
+		sta countfile
+sort_next		
+
+scanforfile	ldy countfile		;Search file entries
+bn94		lda flengde,y
+		bpl filefound
+		iny
+		cpy maxfile
+		bne bn94
+		rts
+filefound	sty countfile
+bn91		sta filevalue+1
+		tya
+		jsr getpos		;returns every $10 from dir memory
+		sta dzp+1
+		sty dzp
+
+		lda countfile		;set first dir entry to scan
+		sta countdir		;for at same position as first file entry
+
+scanfordir	ldy countdir		;Search dir entries
+bn93		lda flengde,y
+		bmi dirfound
+		iny
+		cpy maxfile
+		bne bn93
+		rts
+dirfound	sty countdir
+bn92		sta dirvalue+1
+		tya
+		jsr getpos		;returns every $10 from dir memory
+		sta rzp+1
+		sty rzp
+
+		ldy countfile		;filepos
+dirvalue	lda #0			;insert dir value
+		sta flengde,y
+		ldy countdir		;dirpos
+filevalue	lda #0			;insert file value
+		sta flengde,y
+		
+		ldy #$0f		;swap names
+swap2		lda (dzp),y		;filename
+		pha
+		lda (rzp),y		;dirname
+		sta (dzp),y		;store dirname in new position
+		pla
+		sta (rzp),y		;store filename in new position
+		dey
+		bpl swap2
+		bmi sort_next		;jmp (saves 1 byte)

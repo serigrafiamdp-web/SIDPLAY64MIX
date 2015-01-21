@@ -1,0 +1,172 @@
+DIRCMD	= $e808
+
+		lda #dir_keys		;only a few keys available while loading dir
+		sta numb		;00-0e
+		lda #>dirpos
+		sta dzp+1
+		
+		ldy #0
+		sty pos_cursor
+		sty offs_cursor
+		sty maxfile
+		sty dzp
+
+
+		lda #1
+		ldx device
+;		ldy #0			;Y = 0
+		jsr rom_setlfs		;sta b8,ba,b9
+		ldx #<dircmd
+		ldy #>dircmd
+		jsr rom_setnam		;sta b7,bb,bc
+		jsr rom_open
+		ldx #1			;ide64 fix
+		jsr rom_chkin
+
+;* skip disk header/id (2*10 = $20)
+;* skip 2 bytes of file entry (1*2)
+;* get 2 bytes for blocksize for fileentry (1*2)
+
+;zp $01 = 36 here
+
+		ldy #$10+2
+skip_header	jsr wjs_getbyte
+		tax			;file entry block lo (lsb)
+		jsr wjs_getbyte
+					;file entry block hi (msb)
+		dey
+		bne skip_header
+		;cmp #0
+		tay
+		bne goof		;msb 0 blocks ?
+		txa			;lsb 0 blocks ?
+goof		sta zerofile		;both 0 blocks ? then zero
+		
+gfn_start	JSR wjs_getbyte
+		cmp #$22		;skip spaces or check first "
+		bne gfn_start
+;----
+		ldx maxfile
+		ldy #0			;start of name "
+		tya
+		sta flengde,x		;zerolength
+getfname_loop	jsr wjs_getbyte		;start of name chars
+
+		cmp #$22		;end of name "
+		bne getfname
+		tya
+		sta flengde,x		;if file has a 16 letter limit it will be set here
+		lda #$20
+getfname	sta (dzp),y		;store name letter
+		iny
+		cpy #$11
+		bne getfname_loop	;
+		lda flengde,x		;Check if still zero ?
+		bne aye
+		tya
+		sta flengde,x		;11
+		
+;		dey			;10
+;		tya
+;		sta flengde,x		;
+;		dey			;0f
+;		lda #$2a		;put a "*" in the filename
+;		sta (dzp),y
+
+aye		
+		
+		
+		
+		
+;wait for filentry to finish / scan for DIR entry
+retry_dir	ldy #3			;reset dir search
+scandir
+fn_endloop	JSR wjs_getbyte		;Scan filetype
+		beq fn_endloop2		;exit
+
+.if def_1541u_long
+		cmp d64_txt,y
+		beq found_d64
+.fi		
+		cmp dir_txt,y		;Look for " DIR" (PRG SEQ REL USR DEL)
+		bne retry_dir
+found_d64	dey
+		bpl scandir
+		sta zerofile		;"R"
+
+.if def_1541u_long
+		cmp #"4"		;"d64"
+		bne adir
+		lda #$c0		;d64
+		.byte $2c
+adir		lda #$80		;dir
+		ora flengde,x
+		sta flengde,x
+		bne fn_endloop
+
+
+.else		
+;		ldx maxfile
+		lda flengde,x		;Change file length to + $80 for DIR
+		ora #$80
+		sta flengde,x
+		bne fn_endloop		;jmp
+.fi
+		
+fn_endloop2
+		lda zerofile		;dont allow zerofiles
+		beq bci
+		inc maxfile		;
+		lda dzp
+		clc
+		adc #$10
+		sta dzp
+		bcc bci
+		inc dzp+1
+bci
+
+;		lda #$36
+;		sta $01
+		jsr wjs_display		;displayFiles+read keyboard
+;		jsr wjs_ffe4		;read keyboard
+		ldy #2
+		bne skip_header
+
+
+;--------- Getbyte from Device --------------
+;wjs_getbyte:
+;--------------------------------------------
+getByte
+		lda #$36
+		sta $01
+		lda maxfile		;zeropage
+		cmp #maxentries		;Reached the file limit ?
+		beq endofdir		;yes
+		lda #0			;no
+		sta $90
+		stx netdrivex		;TFR - Netdrive bug
+		jsr ROM_chrin
+		ldx netdrivex		;TFR - Netdrive bug
+		pha
+		lda #$38
+		sta $01
+		pla
+		inc $90			;Checks if $90 is zero without changing
+		dec $90			;A,X or Y
+		bne endofdir
+		cmp #0
+		rts
+;---------Finished reading directory--------
+endofdir	lda maxfile		;we dont sort 1 file
+		cmp #2			;must be 2 or more
+		bcc nofiles
+		lda #$38
+		sta $01
+		jsr iec_dir_sort
+nofiles		lda #$36
+		sta $01
+		pla
+		pla
+		lda #$01
+		jsr ROM_close
+;falls through to code

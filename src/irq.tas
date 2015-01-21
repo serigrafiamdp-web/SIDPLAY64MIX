@@ -1,0 +1,68 @@
+;--------------------------------------------------------------
+;	IRQ, HWIRQ (0314, FFFE)
+;
+;	The only irq routine running
+;
+;--------------------------------------------------------------
+; * part of relocatable main
+;--------------------------------------------------------------
+
+;---------------------------------------
+irq		pha
+		txa
+		pha
+		tya
+		pha
+hwirq		lda $01
+		pha
+		lda #$35
+		sta $01
+		;inc $d019
+		lda stopmusic
+		beq end_irq
+		lda $dc08		;Må lese tenths registeret for at tod skal fortsette
+
+		ldx #zpBuffSize-1
+bp2		lda zerop,x		;Buffer background zp
+		sta editbuf,x
+		lda playbuf,x		;Enable zp for music
+		sta zerop,x
+		dex
+		bpl bp2
+
+goplay		
+color_playmusic2
+		lda #$a9
+		sta $d020
+		php		;play call might change sei/cli
+		jsr playmus     ;play call might change $01 too...
+		plp
+		lda #$35        ;So we force it...
+		sta $01
+
+		ldx #$7f	;|saves 1 byte
+		stx $dc00	;|
+		inx		;|$80
+		stx $d020	;|$00=black
+		lda $dc01
+joymode1	cmp #$fd	;change to cbm for joystick mode
+		beq goplay
+          
+		ldx #zpBuffSize-1
+bp3		lda zerop,x
+		sta playbuf,x   ;backup for music
+		lda editbuf,x
+		sta zerop,x
+		dex
+		bpl bp3
+end_irq
+		bit $dc0d		;We are using timer irq = must read $dc0d
+		pla
+		sta $01
+		pla
+		tay
+		pla
+		tax
+		pla
+		rti
+;---------------------------------------

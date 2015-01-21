@@ -1,0 +1,39 @@
+cblack		= $00
+cwhite		= $01
+cred		= $02
+ccyan		= $03
+cpurple		= $04
+cgreen		= $05
+cblue		= $06
+cyellow		= $07
+corange		= $08
+cbrown		= $09
+cpink		= $0a
+cgrey		= $0b
+cmgrey		= $0c
+clgreen		= $0d
+clblue		= $0e
+clgrey		= $0f
+
+;---------------------------------------
+
+color_screen		= cblue
+color_d021		= clblue
+
+color_playmusic		= cblue
+
+color_current_filename	= cblack
+
+color_iomessage		= clblue
+color_credits1		= cwhite
+color_credits2		= clgreen
+color_songnumbers	= cwhite
+color_timer		= cblack		;clock and shuffle
+
+color_device_number	= clgreen
+color_dir_filenames	= cwhite
+color_dir_numbers	= cblack
+color_number_of_files	= cblack
+
+;----------------------------------------
+

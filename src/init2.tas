@@ -1,0 +1,267 @@
+
+
+;-------------- SP64 INITIAL SETUP ROUTINE:
+
+		sei
+		cld
+		lda #$37
+		sta $01
+;-------------- pal/ntsc detector
+		jsr $ff84
+		ldy #1
+		bit $d011
+		bmi *-3
+		bit $d011
+		bpl *-3
+		ldx #$72
+		dex
+		bpl *-1
+		bit $d011
+		bmi pal
+		dey		;ntsc
+pal		sty $02a6
+
+;-------------------------------------------
+
+		lda #$80
+		sta $028a		;Keys repeat
+		sta $0291		;Disable shift+cbm
+		sta $d020
+		sta $d021
+		
+		bit $dc0b		;stop TOD timer		
+				
+		lda #0			;reset TOD clock
+		ldx #3
+clrtod		sta $dc08		;08,09,0a,0b
+		dex
+		bpl clrtod
+
+		jsr $ff90		;Disable kernal io messages
+
+		jsr devicecheck		;Select correct device here (f1/f2/return) - needs acess to rom routines at a000-c000 and e000-fffff
+		
+		jsr setup_colors
+		
+		
+		sei
+		lda #$33		;Char-rom
+		sta $01
+		
+		ldy #8
+		ldx #0
+RR		lda $d800,x		;Copy char rom to 
+SR		sta screen2chars,x	;e000-e800 - sp64 is located in bank 0 on startup (c000-ffff)
+		inx
+		bne RR
+		inc RR+2
+		inc SR+2
+		dey
+		bne RR
+             
+		lda #$38		;ALL RAM
+		sta $01
+
+		lda #$7e		;$ea7e (no keyboard scan)
+		sta $0314
+;lda #$8e
+;sta $0328
+;lda #$e6
+;sta $0329
+		lda #$ea		;$f6ea (no stop key)
+		sta $0328
+		
+		
+		ldx #5
+copyp1		lda $0314,x		;0314,15,16,17,18,19
+		sta panic_0314,x	;Buffer irq vectors for panic load
+		dex
+		bpl copyp1
+;------
+;IRQ
+;------
+		lda #<stack_nmi
+		ldy #>stack_nmi		;All irq's are on the same page $0100-$0190 somewhere
+		sta $0316		;Break vectors jump to stack_nmi - > jumps to dirdisplayer
+		sty $0317
+		sta $fffa
+		sty $fffb
+		sta $0318
+		sty $0319
+		lda #<stack_hwirq
+		sta $0314
+		sty $0315
+		lda #<stack_irq
+		sta $fffe
+		sty $ffff
+
+		ldy #endstacker-stacker		;?? dont remember
+movstack	lda stack-1,y
+		sta stacker-1,y
+		dey
+		bne movstack
+		ldx #topstack
+		txs
+		
+;---------- setup:
+		lda $ba			;secure device number
+		sta device
+		sta tmp
+
+		sed			;Convert device number to decimal - could we use the $bdcd routine here ?
+		lda #0
+		sta dzp
+		ldx #8
+conbit2		asl tmp
+		lda dzp
+		adc dzp
+		sta dzp
+		dex
+		bne conbit2
+		cld
+		lda dzp
+		tax
+		lsr
+		lsr
+		lsr
+		lsr
+		ora #$30		;.. and insert into sp64 screen
+		sta devout
+		txa
+		and #$0f
+		ora #$30
+		sta devout+1
+
+
+
+;we dont backup 0300-0313 because those vectors are for basic programs only
+
+		ldx #$1d
+copyvectors2	lda $0314,x		;backup current vectors
+		sta vectors,x
+		dex
+		bpl copyvectors2
+
+		ldx #pal_dc0e
+		lda $02a6		;Read $02a6 value and insert into sidplay64
+		sta my02a6+1	;located in 38 ram
+		bne fix1
+		ldx #ntsc_dc0e
+fix1		stx fixdc0e+1	;located in 36 ram
+             
+             
+		lda #$36
+		sta $01 ;37
+             
+		lda #0			;initital values for dir displayer
+		sta pos_cursor
+		sta offs_cursor
+		sta maxfile
+		;lda #0             
+		sta $dd00		;bank  
+
+		lda #$c4		;c400
+		sta screenpos 
+		lda #$e0
+		sta fontpos		;e000
+		lda #$18
+		sta $d018
+		jmp start
+
+;--------------------------------------------------------------
+;
+;--------------------------------------------------------------
+setup_colors
+		ldx #0
+		lda #color_screen		;Main text color - whole screen
+scrcolor	sta $d800,x
+		sta $d900,x
+		sta $da00,x
+		sta $db00,x
+		inx
+		bne scrcolor
+		
+		lda #color_playmusic
+		sta color_playmusic2+1
+		
+		ldx #37
+		lda #color_iomessage		;IO disk messages
+msgcolor	sta $db99,x
+		dex
+		bpl msgcolor
+
+		ldx #30
+		lda #color_credits1
+credz1		sta credz,x
+		sta credz+(40*1),x
+		sta credz+(40*2),x
+		dex
+		bpl credz1
+		ldx #3
+		lda #color_credits2
+credz2		sta credz+(40*4),x
+		sta credz+(40*5),x
+		sta credz+(40*6),x             
+		sta credz+(40*7),x
+		dex
+		bpl credz2
+		
+		ldx #$07
+timecol		lda #color_songnumbers
+		sta (songstr1&$3ff)+$d800,x		;song number 26/26
+		lda #color_timer
+		sta (timestr1&$3ff)+$d800,x		;the clock
+		dex
+		bpl timecol
+             
+		ldx #4
+shufflecol	sta ((timestr1&$3ff)+$d800)+43,x	;shuffle timer
+		dex
+		bpl shufflecol
+             
+		lda #>(dirscreen&$03ff)+$d800
+		sta gzp+1
+		lda #<dirscreen
+		sta gzp
+
+		ldx #maxDirY-1
+row		ldy #$12
+row2		cpy #$10
+		bcs numrow
+		lda #color_dir_filenames		;light green
+		.byte $2c
+numrow		lda #color_dir_numbers		;light grey
+		sta (gzp),y
+		dey
+		bpl row2
+		lda gzp
+		clc
+		adc #$28
+		bcc *+4
+		inc gzp+1
+		sta gzp
+		dex
+		bpl row
+
+numfiles = screen2+$0151
+
+		lda #color_number_of_files
+		sta $d800+(numfiles&$03ff)
+		sta $d800+(numfiles&$03ff)+1
+
+devout = screen2+(40*10)+17
+
+		ldx #$0f
+		lda #color_current_filename
+filecol		sta $d82e,x
+		dex
+		bpl filecol
+             
+		lda #color_device_number
+		sta $d800+(devout&$03ff)
+		sta $d800+(devout&$03ff)+1
+
+		lda #color_d021
+		sta $d021
+		rts
+

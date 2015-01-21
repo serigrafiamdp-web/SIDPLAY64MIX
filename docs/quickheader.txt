@@ -1,0 +1,43 @@
++00    magicID: ``PSID'' or ``RSID''
++04    WORD version                 ;0001 or 0002
++06    WORD dataOffset              ;$0076 for version1 / $007c for version2
++08    WORD loadAddress             ;0000 = data is in original c64 binary format
++0A    WORD initAddress             ;0 means the address is equal to the effective load address.
++0C    WORD playAddress             ;0 means the initialization subroutine is expected to setup its own irq
++0E    WORD songs                   ;The minimum is 1. The maximum is 256.
++10    WORD startSong               ;It has a default of 1.
++12    LONGWORD speed               ;
++16    ``<name>''                   ;String ends with a zero -> max chars used is 31
++36    ``<author>''                 ;String ends with a zero -> --""--
++56    ``<released>''               ;String ends with a zero -> --""--
++76    <data>                       ;Version1 : Binary c64 data starts here
+
+The SID file header v2
+======================
++76    WORD flags          
+- Bit 0 specifies format of the binary data (musPlayer):
+  0 = built-in music player,
+  1 = Compute!'s Sidplayer MUS data, music player must be merged.
+- Bit 1 specifies whether the tune is PlaySID specific, e.g. uses PlaySID samples (psidSpecific):
+  0 = C64 compatible,
+  1 = PlaySID specific.
+- Bits 2-3 specify the video standard (clock):
+  00 = Unknown,
+  01 = PAL,
+  10 = NTSC,
+  11 = PAL and NTSC.
+- Bits 4-5 specify the SID version (sidModel):
+  00 = Unknown,
+  01 = MOS6581,
+  10 = MOS8580,
+  11 = MOS6581 and MOS8580.
+- Bits 6-15 are reserved and should be set to 0.
+
++78    BYTE startPage (relocStartPage)
++79    BYTE pageLength (relocPages)
++7A    WORD reserved
++7C    <data>                         ;Version2 : Binary c64 data starts here
+
+  
+  
+

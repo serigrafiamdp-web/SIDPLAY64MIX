@@ -1,0 +1,35 @@
+;joyport #2 scan table
+
+j2dc00	.byte $7d	;00|crsr	down			DOWN
+	.byte $7e	;01|crsr+sh	up			UP
+	.byte $6e	;02|clrh	top			hold up   + fire
+	.byte $6d	;03|clrh+sh	bottom			hold down + fire
+	.byte $7f	;04|space	reload dir		
+	.byte $6a	;05|delete	up a dir		hold upleft + fire
+	.byte $6f	;06|Return	load file		fire
+	.byte $65	;07|F7		pause			hold downright + fire
+	.byte $6b 	;08|<		clock decrease		hold left + fire
+	.byte $67	;09|>		clock increase		hold right + fire
+	.byte $fb	;10|R		Random			
+	.byte $ef	;11|N		Next
+	.byte $66	;12|F1		Restart			hold upright + fire
+	.byte $77	;13|+		next song		right
+	.byte $7b	;14|-		prev song		left
+	.byte $ef	;15|M		Manual
+
+j2dc01	.byte $ff	;00|crsr  
+	.byte $ff	;01|crsr+sh  
+	.byte $ff	;02|clrh    
+	.byte $ff	;03|clrh+sh 
+	.byte $ef	;04|space
+	.byte $ff	;05|delete
+	.byte $ff	;06|Return
+	.byte $ff	;07|F7
+	.byte $ff	;08|<
+	.byte $ff	;09|>
+	.byte $fd	;10|R
+	.byte $7f	;11|N
+	.byte $ff	;12|F1
+	.byte $ff	;13|+
+	.byte $ff	;14|-
+	.byte $ef	;15|M

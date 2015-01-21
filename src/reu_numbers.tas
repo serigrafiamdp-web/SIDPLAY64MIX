@@ -1,0 +1,30 @@
+;--- a = high filenumber
+;--- x = low filenumer
+
+getreuadress
+		sta zhi
+		lsr		;When hi is 0,4,8,c,10...
+		lsr
+		sta zbank	;zbank change bank to 0,1,2,3,4...
+		txa		;fcountlo, seed, lo value
+		asl
+		rol zhi		;*2
+		asl
+		rol zhi		;*4
+		asl
+		rol zhi		;*8
+		asl
+		rol zhi		;*$10
+		asl
+		rol zhi		;*$20
+		asl
+		rol zhi		;*$40
+				;returns
+		sta zlo		;a = lo
+		ldx zhi		;x = hi
+		ldy zbank	;y = bank
+		rts
+
+zlo	.byte 0
+zhi	.byte 0
+zbank	.byte 0

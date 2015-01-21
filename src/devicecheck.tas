@@ -1,0 +1,305 @@
+;--------------------------------------------------------------
+; "devicecheck"
+;
+; Handles initial device identifying and selection
+;
+; This routine is part of the setup process and is
+; only used once.
+;--------------------------------------------------------------
+;	* static subroutine 
+;	* can be located at: 0800-C000
+;--------------------------------------------------------------
+
+
+devicecheck
+
+msgpos		= $0400+4+(40*6)
+
+.if def_1541u2cmd
+		
+		lda #1		;disable cursor
+		sta $cc
+		lda #<devmsg
+		ldy #>devmsg
+		jsr $ab1e
+		lda #$15
+		sta $d018
+		lda #$0D
+		jsr $ffd2
+		jsr $ffd2
+		
+; check if U2 is connected and in Ultimate Command mode
+		LDA U2_Identification_register
+		CMP #$C9
+		BEQ u2ison
+		; show message
+		lda #<u2msg
+		ldy #>u2msg
+		jsr $ab1e
+		jmp *
+		
+u2ison  
+		; try aborting current command if there is any
+wait_abort_idle
+		LDA #_DATA_ACC | _ABORT
+		STA U2_Control_register
+		LDA U2_Status_register
+		AND #_STATE
+		BNE wait_abort_idle
+wait_for_idle_or_not_abort_pending
+
+		LDA #_DATA_ACC
+		STA U2_Control_register
+		LDA U2_Status_register
+		AND #$34
+		BNE wait_for_idle_or_not_abort_pending
+		LDA #_CLR_ERR
+		STA U2_Control_register
+		
+		; Identify U2 DOS
+		lda #$01
+		sta U2_Command_data_register
+		lda #$01
+		sta U2_Command_data_register
+		lda #_PUSH_CMD
+		sta U2_Control_register
+
+		jsr wait_while_busy			;routine in main
+
+		; Get response
+-		lda U2_Status_register
+		bpl +
+		lda U2_Response_data_register
+		jsr $ffd2
+		jmp -
++		lda #$0D
+		jsr $ffd2 		
+
+		; Get status
+		bit U2_Status_register
+		bvc outstatus
+
+-		bit U2_Status_register
+		bvc +
+		lda U2_Staus_data_register
+		jsr $ffd2
+		jmp -
++		lda #$0d
+		jsr $ffd2 		
+outstatus			
+		lda #_DATA_ACC
+		sta U2_Control_register
+		rts
+.else
+
+;---------- serial,iec routine:
+
+		lda $ba
+		cmp #6
+		bcc forcedev
+		cmp #31
+		bcc deviceok
+forcedev	lda #8
+		sta $ba
+deviceok		
+		
+		jsr disablecursor
+		lda #<devmsg
+		ldy #>devmsg
+		jsr $ab1e
+		
+		lda #$15
+		sta $d018
+
+
+		ldx #0
+		stx $cc      ;blink cursor        ;<Makes cursor blink when idle.
+		stx $cf      ;reverse letter      ;|Makes cursor reversed
+		inx                               ;|when scrolling.
+		stx $cd      ;counter to 1        ;|
+
+		ldx $ba
+check_status	stx $ba
+
+		jsr device_sniff
+
+tf		
+		jsr kflash
+		jsr $ffe4
+
+		cmp #$85	;F1
+		bne _kf1
+		ldx $ba
+		cpx #30
+		beq tf
+		inx			;8-31
+		bne check_status
+		
+_kf1		cmp #$89	;F2
+		bne _kf2
+		ldx $ba
+		cpx #6
+		beq tf
+		dex			;8-31
+		bne check_status
+		
+_kf2
+		cmp #$8d
+		bne drivestatus			;CBM+RETURN to force device number (even tho it gives error)
+		ldy $028d
+		cpy #2
+		beq force_this_device
+		
+drivestatus	ldy #0
+		bne tf
+		cmp #$0d
+		bne tf
+force_this_device		
+disablecursor	lda #1
+		sta $cc
+		rts
+		
+		
+
+kflash		ldx #$29		;and #$7f
+		ldy #$7f
+		lda $cf
+		beq curson
+		ldx #$09		;ora #$80
+		ldy #$80
+curson		stx setora
+		sty setora+1
+		ldy #39
+dofl		lda ($d1),y
+setora		ora #$80
+		sta ($d1),y
+		lda #$0d
+		sta ($f3),y
+		dey
+		bpl dofl
+		sta $0286
+		sta $0287
+		rts
+	
+		
+device_sniff	ldx #6
+		ldy #0
+		clc
+		jsr $fff0
+		lda #$40
+		jsr $ffd2
+		ldx $ba
+		lda #0
+		jsr $bdcd		;print line #
+		ldy $d3
+		cpy #2
+		bne hub
+		lda #$20
+		sta ($d1),y
+hub		ldy #3
+		lda #$3a
+		sta ($d1),y
+
+open_errchn	lda #0
+		sta $b7
+		lda #$6f
+		sta $b9
+		sta $b8
+		jsr ROM_open
+close_channel	lda $b8
+		jsr ROM_close
+		lda $90
+		beq print_device_msg
+
+erroragain	ldx #35
+		stx drivestatus+1
+dser		lda msgnotpresent,X
+		and #$3f
+		sta msgpos,x
+		dex
+		bpl dser
+		rts
+
+pdm_filenum	= 1
+
+print_device_msg
+		sta drivestatus+1
+		ldx #35
+		lda #$20
+dser2		sta msgpos,x
+		dex
+		bpl dser2
+		lda #pdm_filenum
+		ldx $ba
+		ldy #15			;command channel
+		jsr Rom_SetLfs
+		lda #2
+		ldx #<init_cmd
+		ldy #>init_cmd
+		jsr Rom_SetNam
+		jsr Rom_Open
+		bcs errorChan		;A error happened
+openok		ldx #pdm_filenum
+		jsr Rom_ChkIn		;set filenumber as input
+		ldy #0
+getmsg		jsr Rom_ChrIn		;Read status characters
+		cmp #$0d
+		beq ClearChan
+		and #$3f
+		sta msgpos,y
+		iny
+		cpy #36
+		bne getmsg
+ClearChan	lda #pdm_filenum
+		jsr Rom_Close
+		jmp Rom_ClrChn
+errorChan	jsr ClearChan
+		jmp erroragain
+		
+init_cmd	.byte $55,$49       ;ui
+msgnotpresent	.text "error, device not present...          "
+;------------------@08:12345678901234567890123456789012345678
+
+.fi ;end of .if .else .fi
+
+;--------------------------------------------------------------
+devmsg		.byte $1e,$08,$93,$99
+		.text "sidplay64"
+		.if def_iec
+			.if def_1541u
+			.text "-1541u-netdrive"
+			.else
+				.if def_sd2iec
+				.text "-sd2iec"
+				.else
+				.text "-iec-cmd-ide64"
+				.fi
+			.fi				
+		.fi
+
+		.if def_1541u2siec		
+		.text "-1541u2-swiec"
+		.fi
+        .if def_1541u2cmd
+		.text "-1541u2-cmd"
+        .fi
+		.text " v0.83",$0d
+		.text "beta "
+		.if def_currentdate
+		.binary timedate.log	;created by batch echo in root dir
+		.else
+		.text"15.01.2015 22:14"
+		.fi
+		* = *-2	;delete the two last bytes ($0d,$0a) created by batch echo
+.if def_1541u2cmd
+        .byte $1e,0
+u2msg		
+		.text "1541u2 not connected or",$0d,"ultimate command interface disabled!",0
+		
+.else
+		.byte $0d,$0d,$1e
+		.text "press ",$12,"f1",$92,"/",$12,"f2",$92," to select device.",$0d
+		.byte $12,"return",$92," to continue.",$0d,0
+.fi		
+
+;--------------------------------------------------------------		

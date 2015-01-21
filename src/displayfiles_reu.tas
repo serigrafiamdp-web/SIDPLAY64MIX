@@ -1,0 +1,133 @@
+;--------------------------------------------------------------
+; "displayfiles"
+;
+;  Displays files and dirs on screens.
+;
+;--------------------------------------------------------------
+; * part of relocatable main
+; * this routine is not a subroutine. no rts.
+;--------------------------------------------------------------
+
+
+		lda #$36
+		sta $01
+		
+		lda offs_cursor
+		
+		ldx #$38
+		stx $01
+		sta tempcursor
+
+	
+		lda #0
+		sta cmpzp		;text out på $048f
+		lda #<dirscreen		;ZP pointer to write to screen
+		sta gzp
+		lda screenpos
+		clc
+		adc #>dirscreen&$03ff
+		sta gzp+1
+
+		lda #<dest
+		sta rzp
+		lda #>dest
+		sta rzp+1
+             
+		lda maxfile		;display number of files 
+		jsr gethexnum
+		ldy #40-2
+		sta (gzp),y 
+		txa
+		dey
+		sta (gzp),y
+             
+		lda maxfile		;No files in dir-buffer ?
+		bne tt
+		lda maxfilehi
+		bne tt
+		ldy #$12
+grh		lda nofile,y		;nofile found
+		sta (gzp),y
+		dey
+		bpl grh
+		bmi tx
+
+tt
+		lda cmpzp
+		clc
+		adc tempcursor;cite		;copy of cite ;!! d017 sprite register
+		tax
+            
+		;jsr getpos			;get dir pos
+		;sty rzp
+		;sta rzp+1
+		
+
+.if def_iec + def_1541u2cmd           
+		;X = dir entry number
+		jsr iec_fileinfo
+.else
+		inx				;start with+1
+		txa
+		jsr gethexnum			;convert to A and X
+		ldy #$12
+		sta (gzp),y			;print A
+		dey
+		txa
+		sta (gzp),y			;print X
+		dey
+		lda #$3a			;":"
+		sta (gzp),y
+.fi
+
+		ldx #0
+		lda cmpzp
+		cmp pos_cursor
+		bne tu
+		ldx #$80
+tu		stx eorzp
+		;ldy #$0f
+		dey
+tv 		
+		lda (rzp),y		;Filename(s)
+		jsr convert_letter	;convert ascii to petscii
+		eor eorzp
+		sta (gzp),y
+		dey
+		bpl tv
+		
+tx		lda gzp			;Next line
+		clc
+		adc #$28
+		sta gzp		
+		bcc +
+		inc gzp+1
++
+		lda rzp
+		clc
+		adc #$40
+		sta rzp
+		bcc +
+		inc rzp+1
++		
+
+
+tw		inc cmpzp
+		lda cmpzp
+		cmp #maxDirY		;max files displayed
+		bcs tz
+		cmp maxfile
+		bcc tt
+		lda maxfilehi		;$0100-$010f needs a 16 bit check
+		bne tt
+		ldy #$12		;Fill the remaining area of the box
+		lda #$20		;with spaces
+ty		sta (gzp),y
+		dey
+		bpl ty
+		bmi tx
+tz		
+		lda #$36
+		sta $01
+		
+;code falls through here

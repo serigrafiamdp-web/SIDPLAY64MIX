@@ -1,0 +1,24 @@
+
+
+*) Seperate screen design for 1541u2 version ?
+
+*) 1541u2 version needs to detect if 1541u2 is present ?
+
+*) 1541u2 version needs to detect if sd card is present ?
+
+*) Joystick routine was asked for - DONE!
+
+*) A key to turn screen on/off to reduce videochip noise.
+
+*) Change F7 to work as pause/continue - DONE!
+
+*) Better random routine: Daniele - DONE!
+
+*) for 2 sids/stereo songs we need to silent more sid pages... maybe just silence d400-d500 will do.
+
+http://noname.c64.org/csdb/forums/?roomid=11&topicid=88355&firstpostd=88612#88612
+
+
+
+
+

@@ -1,0 +1,97 @@
+;--------------------------------------------------------------
+; "dotunenumbers"
+;  Handles tune numbers on screen when selecting subtunes
+;  Also takes care of speedbits
+;--------------------------------------------------------------
+;	* static subroutine 
+;	* location: d000-e000
+;--------------------------------------------------------------
+              ldx tune
+              inx
+              stx bin
+              ldx maxtune
+              inx
+              stx bin+1
+
+              lda #<songstr1
+              sta tzp
+              lda screenpos
+              clc
+              adc #>songstr1&$03ff
+              sta tzp+1
+
+              ldy #0
+              ldx #0
+nextnumber    sed              ;Set decimal flag
+              lda #0
+              sta bcd
+              sta bcd+1
+              lda #8
+              sta bincount
+conbit        asl bin,x
+              lda bcd
+              adc bcd
+              sta bcd
+              lda bcd+1
+              adc bcd+1
+              sta bcd+1
+              dec bincount
+              bne conbit
+              cld
+            
+              lda bcd+1
+              beq higdec
+              ora #$30
+              sta (tzp),y
+              iny
+higdec        lda bcd
+              and #$f0
+              beq lodec
+              lsr
+              lsr
+              lsr
+              lsr
+              ora #$30
+              sta (tzp),y
+              iny
+lodec         lda bcd
+              and #$0f
+              ora #$30
+              sta (tzp),y
+              iny
+              cpx #0
+              bne endbin
+              lda #$2f
+              sta (tzp),y
+              iny
+              inx
+              bne nextnumber
+endbin        lda #$20          ;put some spaces behind
+              sta (tzp),y
+              iny
+              cpy #8
+              bcc endbin
+
+;Find speedbit for this song#
+
+              ldx #0
+              ldy #3
+nextbyte      lda #8
+              sta bincount
+              lda speedtimer,y  ;32 bits, each bit represents a tune# telling if dc04/dc05 is on or off
+nextbit       lsr
+              pha
+              lda #0              
+              bcc bit0
+              lda #1
+bit0          sta speedbit
+              pla
+              cpx tune
+              beq endbit
+              inx
+              dec bincount
+              bne nextbit
+              dey
+              bpl nextbyte
+endbit                          ;For tunes #32-255 the speedbit in bit 32 is used
+              rts

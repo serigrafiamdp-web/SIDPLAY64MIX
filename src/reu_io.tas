@@ -1,0 +1,84 @@
+dirsize			= 15 * $40	;15 files  
+filename_entry_size	= $40		;
+
+dest		= $d000	;location for visible dir page in c64 mem
+
+src		= $d400	;new loaded filenames to be moved to reu
+
+
+
+write_reu_dir_entry
+
+		;lda #$36
+		;sta $01
+		
+		lda #%10000000|c642reu
+		sta reu_comm
+		lda #>src
+		sta c64memhi
+		lda #0
+		sta reu_datadr_lo
+		sta reu_datadr_hi
+		sta reu_datadr_bank
+		jmp execute_reu_command
+
+
+get_reu_dir
+		;lda #$36
+		;sta $01
+		
+		lda #%10000000|reu2c64
+		sta reu_comm
+		lda #>dest
+		sta c64memhi
+		lda #<15*$40
+		sta reu_len_lo
+		lda #>15*$40
+		sta reu_len_hi
+		;jmp execute_reu_command
+		
+
+execute_reu_command
+
+		ldx #8
+-		lda reu_comm-1,x
+		pha
+		dex
+		bne -
+		
+		lda #$36
+		sta $01
+
+-		pla
+		sta REU_command,x
+		inx
+		cpx #8
+		bne -
+
+		lda #$38
+		sta $01			;34	;all RAM available
+		lda $ff00			;Read and ...
+		sta $ff00			;.. write to execute DMA transfer
+		lda #$36
+		sta $01			;35
+		lda REU_status
+		rts
+
+		
+.comment
+.if def_reu512
+                lda reu_datadr_bank
+                tax
+                and #7
+                cmp #7                  ;check if bank is close to a 512kb wrap position
+                bne +
+                lda #0
+                sta reu_datadr_lo
+                sta reu_datadr_hi
+                inx
+                stx reu_datadr_bank     ;08,10,18,20,28.... F8
++               
+.fi
+.endc
+
+

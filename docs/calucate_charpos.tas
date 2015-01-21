@@ -1,0 +1,49 @@
+screenpos .byte $40
+driverpos .byte $44
+fontpos   .byte $50
+
+
+
+;Find correct $dd00
+                  lda screenpos
+                  tax
+                  and #%11000000
+                  lsr
+                  lsr
+                  lsr
+                  lsr
+                  lsr
+                  lsr
+                  eor #%00000011
+                  sta $dd00
+                  tay
+                
+;Find correct $d018
+;Locate videoram pointer (screen 0400-07e8)
+                  txa
+                  and #$3f
+                  asl
+                  asl
+                  sta highnybble
+;Locate charset pointer (font 2000-2800)
+                  lda #%00000110 ;Rom font (1000/9000)
+                  cpy #3         ;0000-4000
+                  beq romchar
+                  cpy #1         ;8000-c000
+                  beq romchar
+                  lda fontpos
+                  and #$3f
+                  lsr
+                  lsr
+romchar           ora highnybble
+                  sta $d018
+                  
+;        765432|10
+;$00    %000000|00
+;$08    %000010|00
+;$10    %000100|00
+;$18    %000110|00
+;$20    %001000|00
+;$28    %001010|00
+;$30    %001100|00
+;$38    %001110|00

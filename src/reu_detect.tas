@@ -1,0 +1,24 @@
+
+		ldx #3
+ser1		txa			;Write "3210" to REU
+		sta REU_C64memlo,x
+		dex 
+		bpl ser1
+		ldx #3			;Check if "3210" are present.
+ser2		lda REU_C64memlo,x	;If the values are here we have
+		sta ser3+1		;possibly detected a REU unit.
+		txa
+ser3		cmp #$ff
+		bne noReuFound
+		dex
+		bpl ser2
+		rts
+;--------------------------------------------------------------
+noReuFound	lda #<noreutxt
+		ldy #>noreutxt
+		jsr $ab1e
+		jmp *
+noreutxt
+.byte $0d,$0d
+.text "no reu detected!",$0d,0
+;--------------------------------------------------------------

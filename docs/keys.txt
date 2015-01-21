@@ -1,0 +1,62 @@
+3up controls:     dc00       dc01
+--------------------------------------
+CBM    = left   %01111111   %00100000
+LSHIFT = right  %11111101   %10000000
+E      = up     %11111101   %01000000
+S      = down   %11111101   %00100000
+Q      = fire   %01111111   %01000000
+
+4up controls:     dc00       dc01
+--------------------------------------
+,      = left   %11011111   %10000000
+/      = right  %10111111   %10000000
+|      = up     %10111111   %01000000   ;up arrow
+=      = down   %10111111   %00100000
+:      = fire   %11011111   %00100000
+
+*      = fire   %10111111   %00000010
+
+
+
+WRITE TO PORT A               READ PORT B (56321, $DC01)
+$DC00    $DC01
+         Bit 7   Bit 6   Bit 5   Bit 4   Bit 3   Bit 2   Bit 1    Bit 0
+
+Bit 7    STOP    Q       C=      SPACE   2       CTRL    <-      1
+Bit 6    /       ^       =       RSHIFT  HOME    ;       *       LIRA
+Bit 5    ,       @       :       .       -       L       P       +
+Bit 4    N       O       K       M       0       J       I       9
+Bit 3    V       U       H       B       8       G       Y       7
+Bit 2    X       T       F       C       6       D       R       5
+Bit 1    LSHIFT  E       S       Z       4       A       W       3
+Bit 0    CRSR DN F5      F3      F1      F7      CRSR RT RETURN  DELETE
+
+
+
+	lda #%10111111	;z
+	sta $dc00
+	lda $dc01
+	and #%00010000
+
+
+;--- F5 ---------
+     lda #%11111110
+     sta $dc00
+     lda $dc01
+     and #%01000000
+     bne dof5
+     jmp levelskip
+dof5 rts
+
+;--- F3 -----------
+
+     lda #%11111110
+     sta $dc00
+     lda $dc01
+     and #%00100000
+     bne dof3
+     jmp secretlevel
+dof3 rts
+
+
+

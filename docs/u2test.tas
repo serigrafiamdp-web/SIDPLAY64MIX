@@ -1,0 +1,92 @@
+;
+;
+; TEST file to read the directory from 1541-II ...
+;
+;
+
+.include    "1541u2_defines.tas"
+
+            *= $8000            ;base address of cartridge
+
+            sei
+
+read_dir
+			jsr wait_for_idle
+
+			lda #$01                        ; OPEN DIR
+			sta U2_Command_data_register
+			lda #$13
+			sta U2_Command_data_register
+            lda #_PUSH_CMD
+            sta U2_Control_register
+
+            jsr wait_while_busy             ; end command
+            lda #_DATA_ACC
+            sta U2_Control_register
+
+			jsr wait_for_idle
+
+			lda #$01                        ; READ DIR
+			sta U2_Command_data_register
+			lda #$14
+			sta U2_Command_data_register
+            lda #_PUSH_CMD
+            sta U2_Control_register
+
+nextdirentry
+            jsr wait_while_busy
+
+-           lda U2_Status_register          ; any data left to process int this packet ?
+            bpl +
+            lda U2_Response_data_register   ; yes - print it
+            jsr $ffd2
+            jmp -                           ; next data
++           lda #$0D                        ; no - print CR
+            jsr $ffd2
+			
+;            jsr get_status                 ; here we need to get the status - after the packet is done, if we want to !
+
+            lda #_DATA_ACC                  ; Go to next packet, if any
+            sta U2_Control_register
+            lda U2_Status_register
+            and #_STATE
+            cmp #_STATE_COMMAND_BUSY        ; check if there is any more packets to process
+            beq nextdirentry
+
+			; no more dir entries
+			
+			rts
+			
+
+wait_while_busy
+-           lda U2_Status_register
+            and #_STATE
+            cmp #_STATE_COMMAND_BUSY
+            beq -
+            rts
+
+wait_for_idle
+            lda U2_Status_register
+            and #_STATE
+            cmp #_STATE_IDLE
+            bne wait_for_idle
+            rts
+
+
+; Use to print out status - not needed in our case !
+get_status
+            bit U2_Status_register
+            bvs +
+            rts
++           lda #<status_string
+            ldy #>status_string
+            jsr $ab1e
+-           bit U2_Status_register
+            bvc +
+            lda U2_Staus_data_register
+            jsr $ffd2
+            jmp -            
++           lda #$0d
+            jmp $ffd2
+status_string .text "STATUS: ", $00
+

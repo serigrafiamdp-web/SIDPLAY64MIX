@@ -1,0 +1,483 @@
+C64 Opcodes put together from the "bible" and various sources.
+Take a look at Programmers Reference Guide for a more complex 
+view on how each operations affects flags etc.
+
+
+GRG/SHAPE 	Sept. 1999
+
+___________________________________________________________________________
+
+	   A       Accumulator                  EOR     Logical Exclusive Or
+
+     X, Y    Index Registers              fromS   Transfer from Stack
+
+     M       Memory                       toS     Transfer to Stack
+
+     P       Processor Status Register    ->      Transfer to
+
+     S       Stack Pointer                <-      Transfer from
+
+     /       Change                       V       Logical OR
+
+     _       No Change                    PC      Program Counter
+
+     +       Add                          PCH     Program Counter High
+
+     /\      Logical AND                  PCL     Program Counter Low
+
+     -       Subtract                     OPER    OPERAND
+
+     #       IMMEDIATE ADDRESSING MODE
+___________________________________________________________________________
+
+
+	* 	Add 1 cycle if page boundary is crossed.
+	** 	Add 1 cycle if branch occurs to same page/Add 2 cycles if branch occurs to different page.
+  +----------------+-----------------------+---------+---------+----------+-------------+
+  | Addressing Mode| Assembly Language Form| OP CODE |No. Bytes|No. Cycles| N Z C I D V |
+  +----------------+-----------------------+---------+---------+----------+-------------+
+  |  Immediate     |   ADC #Oper           |    69   |    2    |    2     |	/ / / _ _ /	|
+  |  Zero Page     |   ADC Oper            |    65   |    2    |    3     |	/ / / _ _ /	|
+  |  Zero Page,X   |   ADC Oper,X          |    75   |    2    |    4     |	/ / / _ _ /	|
+  |  Absolute      |   ADC Oper            |    6D   |    3    |    4     |	/ / / _ _ /	|
+  |  Absolute,X    |   ADC Oper,X          |    7D   |    3    |    4*    |	/ / / _ _ /	|
+  |  Absolute,Y    |   ADC Oper,Y          |    79   |    3    |    4*    |	/ / / _ _ /	|
+  |  (Indirect,X)  |   ADC (Oper,X)        |    61   |    2    |    6     |	/ / / _ _ /	|
+  |  (Indirect),Y  |   ADC (Oper),Y        |    71   |    2    |    5*    |	/ / / _ _ /	|
+  +----------------+-----------------------+---------+---------+----------+-------------+-----------------------+
+  |  Immediate     |   ALR #Oper           |    4B   |    2    |    2     | Example: ALR #$FE = AND #$FE, LSR A |
+  +----------------+-----------------------+---------+---------+----------+-------------+-----------------------+
+  |  Immediate     |   AND #Oper           |    29   |    2    |    2     |	/ / _ _ _ _ | 
+  |  Zero Page     |   AND Oper            |    25   |    2    |    3     |	/ / _ _ _ _ |
+  |  Zero Page,X   |   AND Oper,X          |    35   |    2    |    4     |	/ / _ _ _ _ |
+  |  Absolute      |   AND Oper            |    2D   |    3    |    4     |	/ / _ _ _ _ |
+  |  Absolute,X    |   AND Oper,X          |    3D   |    3    |    4*    |	/ / _ _ _ _ |
+  |  Absolute,Y    |   AND Oper,Y          |    39   |    3    |    4*    |	/ / _ _ _ _ |
+  |  (Indirect,X)  |   AND (Oper,X)        |    21   |    2    |    6     |	/ / _ _ _ _ |
+  |  (Indirect,Y)  |   AND (Oper),Y        |    31   |    2    |    5     |	/ / _ _ _ _ |
+  +----------------+-----------------------+---------+---------+----------+-------------+-----------------------+
+  |  Immediate     |   ARR #Oper           |    6B   |    2    |    2     | Example: ARR #$7F = AND #$7F, ROR A |
+  +----------------+-----------------------+---------+---------+----------+-------------+-----------------------+
+  |  Accumulator   |   ASL A               |    0A   |    1    |    2     |	/ / / _ _ _ |
+  |  Zero Page     |   ASL Oper            |    06   |    2    |    5     |	/ / / _ _ _ |
+  |  Zero Page,X   |   ASL Oper,X          |    16   |    2    |    6     |	/ / / _ _ _ |
+  |  Absolute      |   ASL Oper            |    0E   |    3    |    6     |	/ / / _ _ _ |
+  |  Absolute, X   |   ASL Oper,X          |    1E   |    3    |    7     |	/ / / _ _ _ |
+  +----------------+-----------------------+---------+---------+----------+-------------+
+  |  Zero Page     |   ASO Oper            |    07   |    2    |    5     | Example:    |
+  |  Zero Page,X   |   ASO Oper,X          |    17   |    2    |    6     |             |
+  |  (Indirect,X)  |   ASO (Oper,X)        |    03   |    2    |    8     | ASO $1000   |
+  |  (Indirect,Y)  |   ASO (Oper),Y        |    13   |    2    |    8     |   =         |
+  |  Absolute      |   ASO Oper            |    0F   |    3    |    6     | ASL $1000   |
+  |  Absolute, X   |   ASO Oper,X          |    1F   |    3    |    7     | ORA $1000   |
+  |  Absolute, Y   |   ASO Oper,Y          |    1B   |    3    |    7     |             |
+  +----------------+-----------------------+---------+---------+----------+-------------+-----------------------+
+	|  Absolute      |   AXS Oper            |    8F   |    3    |    4     | Example:                            |
+	|  Zero Page     |   AXS Oper            |    87   |    2    |    3     |   AXS $FE                           |
+	|  Zero Page,Y   |   AXS Oper,Y          |    97   |    2    |    4     |      =                              |
+	|  (Indirect,X)  |   AXS (Oper,X)        |    83   |    2    |    6     | STX $FE, PHA, AND $FE, STA $FE, PLA |
+  +----------------+-----------------------+---------+---------+----------+-------------+-----------------------+
+  |  Relative      |   BCC Oper            |    90   |    2    |    2**   | _ _ _ _ _ _ |
+  +----------------+-----------------------+---------+---------+----------+-------------+
+  |  Relative      |   BCS Oper            |    B0   |    2    |    2**   | _ _ _ _ _ _ |
+  +----------------+-----------------------+---------+---------+----------+-------------+
+  |  Relative      |   BEQ Oper            |    F0   |    2    |    2**   | _ _ _ _ _ _ |
+  +----------------+-----------------------+---------+---------+----------+-------------+
+  |  Zero Page     |   BIT Oper            |    24   |    2    |    3     | M7/ _ _ _ M6|
+  |  Absolute      |   BIT Oper            |    2C   |    3    |    4     | M7/ _ _ _ M6|
+  +----------------+-----------------------+---------+---------+----------+-------------+
+  |  Relative      |   BMI Oper            |    30   |    2    |    2**   | _ _ _ _ _ _ |
+  +----------------+-----------------------+---------+---------+----------+-------------+
+  |  Relative      |   BNE Oper            |    D0   |    2    |    2**   | _ _ _ _ _ _ |
+  +----------------+-----------------------+---------+---------+----------+-------------+
+  |  Relative      |   BPL Oper            |    10   |    2    |    2**   | _ _ _ _ _ _ |
+  +----------------+-----------------------+---------+---------+----------+-------------+
+  |  Implied       |   BRK                 |    00   |    1    |    7     |  _ _ _ 1 _ _|
+  +----------------+-----------------------+---------+---------+----------+-------------+
+  |  Relative      |   BVC Oper            |    50   |    2    |    2**   | _ _ _ _ _ _ |
+  +----------------+-----------------------+---------+---------+----------+-------------+
+  |  Relative      |   BVS Oper            |    70   |    2    |    2**   | _ _ _ _ _ _ |
+  +----------------+-----------------------+---------+---------+----------+-------------+
+  |  Implied       |   CLC                 |    18   |    1    |    2     | _ _ 0 _ _ _ |
+  +----------------+-----------------------+---------+---------+----------+-------------+
+  |  Implied       |   CLD                 |    D8   |    1    |    2     | _ _ _ _ 0 _ |
+  +----------------+-----------------------+---------+---------+----------+-------------+
+  |  Implied       |   CLI                 |    58   |    1    |    2     | _ _ _ 0 _ _ |
+  +----------------+-----------------------+---------+---------+----------+-------------+
+  |  Implied       |   CLV                 |    B8   |    1    |    2     | _ _ _ _ _ 0 |
+  +----------------+-----------------------+---------+---------+----------+-------------+
+  |  Immediate     |   CMP #Oper           |    C9   |    2    |    2     | / / / _ _ _ |
+  |  Zero Page     |   CMP Oper            |    C5   |    2    |    3     | / / / _ _ _ |
+  |  Zero Page,X   |   CMP Oper,X          |    D5   |    2    |    4     | / / / _ _ _ |
+  |  Absolute      |   CMP Oper            |    CD   |    3    |    4     | / / / _ _ _ |
+  |  Absolute,X    |   CMP Oper,X          |    DD   |    3    |    4*    | / / / _ _ _ |
+  |  Absolute,Y    |   CMP Oper,Y          |    D9   |    3    |    4*    | / / / _ _ _ |
+  |  (Indirect,X)  |   CMP (Oper,X)        |    C1   |    2    |    6     | / / / _ _ _ |
+  |  (Indirect),Y  |   CMP (Oper),Y        |    D1   |    2    |    5*    | / / / _ _ _ |
+  +----------------+-----------------------+---------+---------+----------+-------------+
+  |  Immediate     |   CPX *Oper           |    E0   |    2    |    2     | / / / _ _ _ |
+  |  Zero Page     |   CPX Oper            |    E4   |    2    |    3     | / / / _ _ _ |
+  |  Absolute      |   CPX Oper            |    EC   |    3    |    4     | / / / _ _ _ |
+  +----------------+-----------------------+---------+---------+----------+-------------+
+  |  Immediate     |   CPY *Oper           |    C0   |    2    |    2     | / / / _ _ _ |
+  |  Zero Page     |   CPY Oper            |    C4   |    2    |    3     | / / / _ _ _ |
+  |  Absolute      |   CPY Oper            |    CC   |    3    |    4     | / / / _ _ _ |
+  +----------------+-----------------------+---------+---------+----------+-------------+
+	|  Absolute      |   DCM Oper            |    CF   |    3    |    6     | Example:    |
+	|  Absolute,X    |   DCM Oper,X          |    DF   |    3    |    7     |             |
+	|  Absolute,Y    |   DCM Oper,Y          |    DB   |    3    |    7     |  DCM $FF    |
+	|  Zero Page     |   DCM Oper            |    C7   |    2    |    5     |     =       |
+	|  Zero Page,X   |   DCM Oper,X          |    D7   |    2    |    6     |  DEC $FF    |
+	|  (Indirect,X)  |   DCM (Oper,X)        |    C3   |    2    |    8     |  CMP $FF    |
+	|  (Indirect),Y  |   DCM (Oper),Y        |    D3   |    2    |    8     |             |
+  +----------------+-----------------------+---------+---------+----------+-------------+
+  |  Zero Page     |   DEC Oper            |    C6   |    2    |    5     | / / _ _ _ _ |
+  |  Zero Page,X   |   DEC Oper,X          |    D6   |    2    |    6     | / / _ _ _ _ |
+  |  Absolute      |   DEC Oper            |    CE   |    3    |    6     | / / _ _ _ _ |
+  |  Absolute,X    |   DEC Oper,X          |    DE   |    3    |    7     | / / _ _ _ _ |
+  +----------------+-----------------------+---------+---------+----------+-------------+
+  |  Implied       |   DEX                 |    CA   |    1    |    2     | / / _ _ _ _ |
+  +----------------+-----------------------+---------+---------+----------+-------------+
+  |  Implied       |   DEY                 |    88   |    1    |    2     | / / _ _ _ _ |
+  +----------------+-----------------------+---------+---------+----------+-------------+
+  |  Immediate     |   EOR #Oper           |    49   |    2    |    2     | / / _ _ _ _ |
+  |  Zero Page     |   EOR Oper            |    45   |    2    |    3     | / / _ _ _ _ |
+  |  Zero Page,X   |   EOR Oper,X          |    55   |    2    |    4     | / / _ _ _ _ |
+  |  Absolute      |   EOR Oper            |    4D   |    3    |    4     | / / _ _ _ _ |
+  |  Absolute,X    |   EOR Oper,X          |    5D   |    3    |    4*    | / / _ _ _ _ |
+  |  Absolute,Y    |   EOR Oper,Y          |    59   |    3    |    4*    | / / _ _ _ _ |
+  |  (Indirect,X)  |   EOR (Oper,X)        |    41   |    2    |    6     | / / _ _ _ _ |
+  |  (Indirect),Y  |   EOR (Oper),Y        |    51   |    2    |    5*    | / / _ _ _ _ |
+  +----------------+-----------------------+---------+---------+----------+-------------+
+  |  Zero Page     |   INC Oper            |    E6   |    2    |    5     | / / _ _ _ _ |
+  |  Zero Page,X   |   INC Oper,X          |    F6   |    2    |    6     | / / _ _ _ _ |
+  |  Absolute      |   INC Oper            |    EE   |    3    |    6     | / / _ _ _ _ |
+  |  Absolute,X    |   INC Oper,X          |    FE   |    3    |    7     | / / _ _ _ _ |
+  +----------------+-----------------------+---------+---------+----------+-------------+
+  |  Implied       |   INX                 |    E8   |    1    |    2     | / / _ _ _ _ |
+  +----------------+-----------------------+---------+---------+----------+-------------+
+  |  Implied       |   INY                 |    C8   |    1    |    2     | / / _ _ _ _ |
+  +----------------+-----------------------+---------+---------+----------+-------------+
+	|  Absolute      |   INS Oper            |    EF   |    3    |    6     | Example:    |
+	|  Absolute,X    |   INS Oper,X          |    FF   |    3    |    7     |             |
+	|  Absolute,Y    |   INS Oper,Y          |    FB   |    3    |    7     |   INS $FF   |
+	|  Zero Page     |   INS Oper            |    E7   |    2    |    5     |     =       |
+	|  Zero Page,X   |   INS Oper,X          |    F7   |    2    |    6     |   INC $FF   |
+	|  (Indirect,X)  |   INS (Oper,X)        |    E3   |    2    |    8     |   SBC $FF   |
+	|  (Indirect),Y  |   INS (Oper),Y        |    F3   |    2    |    8     |             |
+  +----------------+-----------------------+---------+---------+----------+-------------+
+  |  Absolute      |   JMP Oper            |    4C   |    3    |    3     | _ _ _ _ _ _ |
+  |  Indirect      |   JMP (Oper)          |    6C   |    3    |    5     | _ _ _ _ _ _ |
+  +----------------+-----------------------+---------+---------+----------+-------------+
+  |  Absolute      |   JSR Oper            |    20   |    3    |    6     | _ _ _ _ _ _ |
+  +----------------+-----------------------+---------+---------+----------+-------------+
+	|  Absolute      |   LAX Oper            |    AF   |    3    |    4     | Example:    |
+	|  Absolute,Y    |   LAX Oper,Y          |    BF   |    3    |    4*    |             |
+	|  Zero Page     |   LAX Oper            |    A7   |    2    |    3     | LAX $1000,Y |
+	|  Zero Page,Y   |   LAX Oper,Y          |    B7   |    2    |    4     |     =       |
+	|  (Indirect,X)  |   LAX (Oper,X)        |    A3   |    2    |    6     | LDA $1000,Y |
+	|  (Indirect),Y  |   LAX (Oper),Y        |    B3   |    2    |    5*    | LDX $1000,Y |
+  +----------------+-----------------------+---------+---------+----------+-------------+
+  |  Immediate     |   LDA #Oper           |    A9   |    2    |    2     | / / _ _ _ _ |
+  |  Zero Page     |   LDA Oper            |    A5   |    2    |    3     | / / _ _ _ _ |
+  |  Zero Page,X   |   LDA Oper,X          |    B5   |    2    |    4     | / / _ _ _ _ |
+  |  Absolute      |   LDA Oper            |    AD   |    3    |    4     | / / _ _ _ _ |
+  |  Absolute,X    |   LDA Oper,X          |    BD   |    3    |    4*    | / / _ _ _ _ |
+  |  Absolute,Y    |   LDA Oper,Y          |    B9   |    3    |    4*    | / / _ _ _ _ |
+  |  (Indirect,X)  |   LDA (Oper,X)        |    A1   |    2    |    6     | / / _ _ _ _ |
+  |  (Indirect),Y  |   LDA (Oper),Y        |    B1   |    2    |    5*    | / / _ _ _ _ |
+  +----------------+-----------------------+---------+---------+----------+-------------+
+  |  Immediate     |   LDX #Oper           |    A2   |    2    |    2     | / / _ _ _ _ |
+  |  Zero Page     |   LDX Oper            |    A6   |    2    |    3     | / / _ _ _ _ |
+  |  Zero Page,Y   |   LDX Oper,Y          |    B6   |    2    |    4     | / / _ _ _ _ |
+  |  Absolute      |   LDX Oper            |    AE   |    3    |    4     | / / _ _ _ _ |
+  |  Absolute,Y    |   LDX Oper,Y          |    BE   |    3    |    4*    | / / _ _ _ _ |
+  +----------------+-----------------------+---------+---------+----------+-------------+
+  |  Immediate     |   LDY #Oper           |    A0   |    2    |    2     | / / _ _ _ _ |
+  |  Zero Page     |   LDY Oper            |    A4   |    2    |    3     | / / _ _ _ _ |
+  |  Zero Page,X   |   LDY Oper,X          |    B4   |    2    |    4     | / / _ _ _ _ |
+  |  Absolute      |   LDY Oper            |    AC   |    3    |    4     | / / _ _ _ _ |
+  |  Absolute,X    |   LDY Oper,X          |    BC   |    3    |    4*    | / / _ _ _ _ |
+  +----------------+-----------------------+---------+---------+----------+-------------+
+	|  Absolute      |   LSE Oper            |    4F   |    3    |    6     | Example:    |
+	|  Absolute,X    |   LSE Oper,X          |    5F   |    3    |    7     |             |
+	|  Absolute,Y    |   LSE Oper,Y          |    5B   |    3    |    7     |  LSE $1000  |
+	|  Zero Page     |   LSE Oper            |    47   |    2    |    5     |     =       |
+	|  Zero Page,X   |   LSE Oper,X          |    57   |    2    |    6     |  LSR $1000  |
+	|  (Indirect,X)  |   LSE (Oper,X)        |    43   |    2    |    8     |  EOR $1000  |
+	|  (Indirect,Y)  |   LSE (Oper),Y        |    53   |    2    |    8     |             |
+  +----------------+-----------------------+---------+---------+----------+-------------+
+  |  Accumulator   |   LSR A               |    4A   |    1    |    2     | 0 / / _ _ _ |
+  |  Zero Page     |   LSR Oper            |    46   |    2    |    5     | 0 / / _ _ _ |
+  |  Zero Page,X   |   LSR Oper,X          |    56   |    2    |    6     | 0 / / _ _ _ |
+  |  Absolute      |   LSR Oper            |    4E   |    3    |    6     | 0 / / _ _ _ |
+  |  Absolute,X    |   LSR Oper,X          |    5E   |    3    |    7     | 0 / / _ _ _ |
+  +----------------+-----------------------+---------+---------+----------+-------------+
+  |  Implied       |   NOP                 |    EA   |    1    |    2     | _ _ _ _ _ _ |
+  |  Implied       |   NOP                 |    1A   |    1    |    2     | _ _ _ _ _ _ |
+  |  Implied       |   NOP                 |    3A   |    1    |    2     | _ _ _ _ _ _ |
+  |  Implied       |   NOP                 |    5A   |    1    |    2     | _ _ _ _ _ _ |
+  |  Implied       |   NOP                 |    7A   |    1    |    2     | _ _ _ _ _ _ |
+  |  Implied       |   NOP                 |    DA   |    1    |    2     | _ _ _ _ _ _ |
+  |  Implied       |   NOP                 |    FA   |    1    |    2     | _ _ _ _ _ _ |
+  +----------------+-----------------------+---------+---------+----------+-------------+-------------------------------+
+	|  Immediate     |   OAL #Oper           |    AB   |    2    |    2     | Example: OAL #$AA = ORA #$EE, AND #$AA, TAX |
+  +----------------+-----------------------+---------+---------+----------+-------------+-------------------------------+
+  |  Immediate     |   ORA #Oper           |    09   |    2    |    2     | / / _ _ _ _ |
+  |  Zero Page     |   ORA Oper            |    05   |    2    |    3     | / / _ _ _ _ |
+  |  Zero Page,X   |   ORA Oper,X          |    15   |    2    |    4     | / / _ _ _ _ |
+  |  Absolute      |   ORA Oper            |    0D   |    3    |    4     | / / _ _ _ _ |
+  |  Absolute,X    |   ORA Oper,X          |    1D   |    3    |    4*    | / / _ _ _ _ |
+  |  Absolute,Y    |   ORA Oper,Y          |    19   |    3    |    4*    | / / _ _ _ _ |
+  |  (Indirect,X)  |   ORA (Oper,X)        |    01   |    2    |    6     | / / _ _ _ _ |
+  |  (Indirect),Y  |   ORA (Oper),Y        |    11   |    2    |    5     | / / _ _ _ _ |
+  +----------------+-----------------------+---------+---------+----------+-------------+
+  |  Implied       |   PHA                 |    48   |    1    |    3     | _ _ _ _ _ _ |
+  +----------------+-----------------------+---------+---------+----------+-------------+
+  |  Implied       |   PHP                 |    08   |    1    |    3     | _ _ _ _ _ _ |
+  +----------------+-----------------------+---------+---------+----------+-------------+
+  |  Implied       |   PLA                 |    68   |    1    |    4     | _ _ _ _ _ _ |
+  +----------------+-----------------------+---------+---------+----------+-------------+
+  |  Implied       |   PLP                 |    28   |    1    |    4     |  From Stack |
+  +----------------+-----------------------+---------+---------+----------+-------------+
+	|  Zero Page     |   RLA Oper            |    27   |    2    |    5     | Example:    |
+	|  Zero Page,X   |   RLA Oper,X          |    37   |    2    |    6     |             |
+	|  (Indirect,X)  |   RLA (Oper,X)        |    23   |    2    |    8     | RLA $1000   |
+	|  (Indirect,Y)  |   RLA (Oper),Y        |    33   |    2    |    8     |	   =        |
+	|  Absolute			 |   RLA Oper            |    2F   |    3    |    6     | ROL $1000   |
+	|  Absolute, X   |   RLA Oper,X          |    3F   |    3    |    7     | AND $1000   |
+  |  Absolute, Y   |   RLA Oper,Y          |    3B   |    3    |    7     |             |
+  +----------------+-----------------------+---------+---------+----------+-------------+
+  |  Accumulator   |   ROL A               |    2A   |    1    |    2     | / / / _ _ _ |
+  |  Zero Page     |   ROL Oper            |    26   |    2    |    5     | / / / _ _ _ |
+  |  Zero Page,X   |   ROL Oper,X          |    36   |    2    |    6     | / / / _ _ _ |
+  |  Absolute      |   ROL Oper            |    2E   |    3    |    6     | / / / _ _ _ |
+  |  Absolute,X    |   ROL Oper,X          |    3E   |    3    |    7     | / / / _ _ _ |
+  +----------------+-----------------------+---------+---------+----------+-------------+
+  |  Accumulator   |   ROR A               |    6A   |    1    |    2     | / / / _ _ _ |
+  |  Zero Page     |   ROR Oper            |    66   |    2    |    5     | / / / _ _ _ |
+  |  Zero Page,X   |   ROR Oper,X          |    76   |    2    |    6     | / / / _ _ _ |
+  |  Absolute      |   ROR Oper            |    6E   |    3    |    6     | / / / _ _ _ |
+  |  Absolute,X    |   ROR Oper,X          |    7E   |    3    |    7     | / / / _ _ _ |
+  +----------------+-----------------------+---------+---------+----------+-------------+
+	|  Absolute      |   RRA Oper            |    6F   |    3    |    6     | Example:    |
+	|  Absolute,X    |   RRA Oper,X          |    7F   |    3    |    7     |             |
+	|  Absolute,Y    |   RRA Oper,Y          |    7B   |    3    |    7     |  RRA $1000  |
+	|  Zero Page     |   RRA Oper            |    67   |    2    |    5     |     =       |
+	|  Zero Page,X   |   RRA Oper,X          |    77   |    2    |    6     |  ROR $1000  |
+	|  (Indirect,X)  |   RRA (Oper,X)        |    63   |    2    |    8     |  ADC $1000  |
+	|  (Indirect,Y)  |   RRA (Oper),Y        |    73   |    2    |    8     |             |
+  +----------------+-----------------------+---------+---------+----------+-------------+
+  |  Implied       |   RTI                 |    4D   |    1    |    6     |  From Stack |
+  +----------------+-----------------------+---------+---------+----------+-------------+
+  |  Implied       |   RTS                 |    60   |    1    |    6     | _ _ _ _ _ _ |
+  +----------------+-----------------------+---------+---------+----------+-------------+-------------------------------+
+	|  Immediate     |   SAX #Oper           |    CB   |    2    |    2     | Example: SAX #$5A: (A = non existing label) |
+  |                |                       |         |         |          | STA A, TXA, AND A, SEC, SBC #$5A, TAX, LDA A|       
+  +----------------+-----------------------+---------+---------+----------+-------------+-------------------------------+
+  |  Immediate     |   SBC #Oper           |    E9   |    2    |    2     | / / / _ _ / |
+  |  Zero Page     |   SBC Oper            |    E5   |    2    |    3     | / / / _ _ / |
+  |  Zero Page,X   |   SBC Oper,X          |    F5   |    2    |    4     | / / / _ _ / |
+  |  Absolute      |   SBC Oper            |    ED   |    3    |    4     | / / / _ _ / |
+  |  Absolute,X    |   SBC Oper,X          |    FD   |    3    |    4*    | / / / _ _ / |
+  |  Absolute,Y    |   SBC Oper,Y          |    F9   |    3    |    4*    | / / / _ _ / |
+  |  (Indirect,X)  |   SBC (Oper,X)        |    E1   |    2    |    6     | / / / _ _ / |
+  |  (Indirect),Y  |   SBC (Oper),Y        |    F1   |    2    |    5     | / / / _ _ / |
+  +----------------+-----------------------+---------+---------+----------+-------------+
+  |  Implied       |   SEC                 |    38   |    1    |    2     | _ _ 1 _ _ _ |
+  +----------------+-----------------------+---------+---------+----------+-------------+
+  |  Implied       |   SED                 |    F8   |    1    |    2     | _ _ _ _ 1 _ |
+  +----------------+-----------------------+---------+---------+----------+-------------+
+  |  Implied       |   SEI                 |    78   |    1    |    2     | _ _ _ 1 _ _ |
+  +----------------+-----------------------+---------+---------+----------+-------------+--+
+  |  Implied       |   SKB                 |    80   |    1    | 2,3 or 4 | Skip next Byte |
+  |  Implied       |   SKB                 |    82   |    1    | 2,3 or 4 | Skip next Byte |
+  |  Implied       |   SKB                 |    C2   |    1    | 2,3 or 4 | Skip next Byte |
+  |  Implied       |   SKB                 |    E2   |    1    | 2,3 or 4 | Skip next Byte |
+  |  Implied       |   SKB                 |    04   |    1    | 2,3 or 4 | Skip next Byte |
+  |  Implied       |   SKB                 |    14   |    1    | 2,3 or 4 | Skip next Byte |
+  |  Implied       |   SKB                 |    34   |    1    | 2,3 or 4 | Skip next Byte |
+  |  Implied       |   SKB                 |    44   |    1    | 2,3 or 4 | Skip next Byte |
+  |  Implied       |   SKB                 |    54   |    1    | 2,3 or 4 | Skip next Byte |
+  |  Implied       |   SKB                 |    64   |    1    | 2,3 or 4 | Skip next Byte |
+  |  Implied       |   SKB                 |    74   |    1    | 2,3 or 4 | Skip next Byte |
+  |  Implied       |   SKB                 |    D4   |    1    | 2,3 or 4 | Skip next Byte |
+  |  Implied       |   SKB                 |    F4   |    1    | 2,3 or 4 | Skip next Byte |
+  +----------------+-----------------------+---------+---------+----------+----------------+
+  |  Implied       |   SKW                 |    0C   |    1    |    4     | Skip next Word |
+  |  Implied       |   SKW                 |    1C   |    1    |    4*    | Skip next Word |
+  |  Implied       |   SKW                 |    3C   |    1    |    4*    | Skip next Word |
+  |  Implied       |   SKW                 |    5C   |    1    |    4*    | Skip next Word |
+  |  Implied       |   SKW                 |    7C   |    1    |    4*    | Skip next Word |
+  |  Implied       |   SKW                 |    DC   |    1    |    4*    | Skip next Word |
+  |  Implied       |   SKW                 |    FC   |    1    |    4*    | Skip next Word |
+	+----------------+-----------------------+---------+---------+----------+-------------+--+
+  |  Zero Page     |   STA Oper            |    85   |    2    |    3     | _ _ _ _ _ _ |
+  |  Zero Page,X   |   STA Oper,X          |    95   |    2    |    4     | _ _ _ _ _ _ |
+  |  Absolute      |   STA Oper            |    8D   |    3    |    4     | _ _ _ _ _ _ |
+  |  Absolute,X    |   STA Oper,X          |    9D   |    3    |    5     | _ _ _ _ _ _ |
+  |  Absolute,Y    |   STA Oper, Y         |    99   |    3    |    5     | _ _ _ _ _ _ |
+  |  (Indirect,X)  |   STA (Oper,X)        |    81   |    2    |    6     | _ _ _ _ _ _ |
+  |  (Indirect),Y  |   STA (Oper),Y        |    91   |    2    |    6     | _ _ _ _ _ _ |
+  +----------------+-----------------------+---------+---------+----------+-------------+
+  |  Zero Page     |   STX Oper            |    86   |    2    |    3     | _ _ _ _ _ _ |
+  |  Zero Page,Y   |   STX Oper,Y          |    96   |    2    |    4     | _ _ _ _ _ _ |
+  |  Absolute      |   STX Oper            |    8E   |    3    |    4     | _ _ _ _ _ _ |
+  +----------------+-----------------------+---------+---------+----------+-------------+
+  |  Zero Page     |   STY Oper            |    84   |    2    |    3     | _ _ _ _ _ _ |
+  |  Zero Page,X   |   STY Oper,X          |    94   |    2    |    4     | _ _ _ _ _ _ |
+  |  Absolute      |   STY Oper            |    8C   |    3    |    4     | _ _ _ _ _ _ |
+  +----------------+-----------------------+---------+---------+----------+-------------+
+  |  Implied       |   TAX                 |    AA   |    1    |    2     | / / _ _ _ _ |
+  +----------------+-----------------------+---------+---------+----------+-------------+
+  |  Implied       |   TAY                 |    A8   |    1    |    2     | / / _ _ _ _ |
+  +----------------+-----------------------+---------+---------+----------+-------------+
+  |  Implied       |   TSX                 |    BA   |    1    |    2     | / / _ _ _ _ |
+  +----------------+-----------------------+---------+---------+----------+-------------+
+  |  Implied       |   TXA                 |    8A   |    1    |    2     | / / _ _ _ _ |
+  +----------------+-----------------------+---------+---------+----------+-------------+
+  |  Implied       |   TXS                 |    9A   |    1    |    2     | _ _ _ _ _ _ |
+  +----------------+-----------------------+---------+---------+----------+-------------+
+  |  Implied       |   TYA                 |    98   |    1    |    2     | / / _ _ _ _ |
+  +----------------+-----------------------+---------+---------+----------+-------------+---------------------+
+	|  Immediate     |   XAA #Oper           |    8B   |    2    |    2     | Example: XAA #$44 = TXA, AND #$44 |
+  +----------------+-----------------------+---------+---------+----------+-------------+---------------------+
+
+
+
+
+
+
+
+        00 - BRK                        20 - JSR
+        01 - ORA - (Indirect,X)         21 - AND - (Indirect,X)
+        02 - Future Expansion           22 - Future Expansion
+        03 - Future Expansion           23 - Future Expansion
+        04 - Future Expansion           24 - BIT - Zero Page
+        05 - ORA - Zero Page            25 - AND - Zero Page
+        06 - ASL - Zero Page            26 - ROL - Zero Page
+        07 - Future Expansion           27 - Future Expansion
+        08 - PHP                        28 - PLP
+        09 - ORA - Immediate            29 - AND - Immediate
+        0A - ASL - Accumulator          2A - ROL - Accumulator
+        0B - Future Expansion           2B - Future Expansion
+        0C - Future Expansion           2C - BIT - Absolute
+        0D - ORA - Absolute             2D - AND - Absolute
+        0E - ASL - Absolute             2E - ROL - Absolute
+        0F - Future Expansion           2F - Future Expansion
+        10 - BPL                        30 - BMI
+        11 - ORA - (Indirect),Y         31 - AND - (Indirect),Y
+        12 - Future Expansion           32 - Future Expansion
+        13 - Future Expansion           33 - Future Expansion
+        14 - Future Expansion           34 - Future Expansion
+        15 - ORA - Zero Page,X          35 - AND - Zero Page,X
+        16 - ASL - Zero Page,X          36 - ROL - Zero Page,X
+        17 - Future Expansion           37 - Future Expansion
+        18 - CLC                        38 - SEC
+        19 - ORA - Absolute,Y           39 - AND - Absolute,Y
+        1A - Future Expansion           3A - Future Expansion
+        1B - Future Expansion           3B - Future Expansion
+        1C - Future Expansion           3C - Future Expansion
+        1D - ORA - Absolute,X           3D - AND - Absolute,X
+        1E - ASL - Absolute,X           3E - ROL - Absolute,X
+        1F - Future Expansion           3F - Future Expansion
+
+        40 - RTI                        60 - RTS
+        41 - EOR - (Indirect,X)         61 - ADC - (Indirect,X)
+        42 - Future Expansion           62 - Future Expansion
+        43 - Future Expansion           63 - Future Expansion
+        44 - Future Expansion           64 - Future Expansion
+        45 - EOR - Zero Page            65 - ADC - Zero Page
+        46 - LSR - Zero Page            66 - ROR - Zero Page
+        47 - Future Expansion           67 - Future Expansion
+        48 - PHA                        68 - PLA
+        49 - EOR - Immediate            69 - ADC - Immediate
+        4A - LSR - Accumulator          6A - ROR - Accumulator
+        4B - Future Expansion           6B - Future Expansion
+        4C - JMP - Absolute             6C - JMP - Indirect
+        4D - EOR - Absolute             6D - ADC - Absolute
+        4E - LSR - Absolute             6E - ROR - Absolute
+        4F - Future Expansion           6F - Future Expansion
+        50 - BVC                        70 - BVS
+        51 - EOR - (Indirect),Y         71 - ADC - (Indirect),Y
+        52 - Future Expansion           72 - Future Expansion
+        53 - Future Expansion           73 - Future Expansion
+        54 - Future Expansion           74 - Future Expansion
+        55 - EOR - Zero Page,X          75 - ADC - Zero Page,X
+        56 - LSR - Zero Page,X          76 - ROR - Zero Page,X
+        57 - Future Expansion           77 - Future Expansion
+        58 - CLI                        78 - SEI
+        59 - EOR - Absolute,Y           79 - ADC - Absolute,Y
+        5A - Future Expansion           7A - Future Expansion
+        5B - Future Expansion           7B - Future Expansion
+        5C - Future Expansion           7C - Future Expansion
+        50 - EOR - Absolute,X           70 - ADC - Absolute,X
+        5E - LSR - Absolute,X           7E - ROR - Absolute,X
+        5F - Future Expansion           7F - Future Expansion
+
+        80 - Future Expansion           A0 - LDY - Immediate
+        81 - STA - (Indirect,X)         A1 - LDA - (Indirect,X)
+        82 - Future Expansion           A2 - LDX - Immediate
+        83 - Future Expansion           A3 - Future Expansion
+        84 - STY - Zero Page            A4 - LDY - Zero Page
+        85 - STA - Zero Page            A5 - LDA - Zero Page
+        86 - STX - Zero Page            A6 - LDX - Zero Page
+        87 - Future Expansion           A7 - Future Expansion
+        88 - DEY                        A8 - TAY
+        89 - Future Expansion           A9 - LDA - Immediate
+        8A - TXA                        AA - TAX
+        8B - Future Expansion           AB - Future Expansion
+        8C - STY - Absolute             AC - LDY - Absolute
+        80 - STA - Absolute             AD - LDA - Absolute
+        8E - STX - Absolute             AE - LDX - Absolute
+        8F - Future Expansion           AF - Future Expansion
+        90 - BCC                        B0 - BCS
+        91 - STA - (Indirect),Y         B1 - LDA - (Indirect),Y
+        92 - Future Expansion           B2 - Future Expansion
+        93 - Future Expansion           B3 - Future Expansion
+        94 - STY - Zero Page,X          B4 - LDY - Zero Page,X
+        95 - STA - Zero Page,X          BS - LDA - Zero Page,X
+        96 - STX - Zero Page,Y          B6 - LDX - Zero Page,Y
+        97 - Future Expansion           B7 - Future Expansion
+        98 - TYA                        B8 - CLV
+        99 - STA - Absolute,Y           B9 - LDA - Absolute,Y
+        9A - TXS                        BA - TSX
+        9B - Future Expansion           BB - Future Expansion
+        9C - Future Expansion           BC - LDY - Absolute,X
+        90 - STA - Absolute,X           BD - LDA - Absolute,X
+        9E - Future Expansion           BE - LDX - Absolute,Y
+        9F - Future Expansion           BF - Future Expansion
+
+        C0 - Cpy - Immediate            E0 - CPX - Immediate
+        C1 - CMP - (Indirect,X)         E1 - SBC - (Indirect,X)
+        C2 - Future Expansion           E2 - Future Expansion
+        C3 - Future Expansion           E3 - Future Expansion
+        C4 - CPY - Zero Page            E4 - CPX - Zero Page
+        C5 - CMP - Zero Page            E5 - SBC - Zero Page
+        C6 - DEC - Zero Page            E6 - INC - Zero Page
+        C7 - Future Expansion           E7 - Future Expansion
+        C8 - INY                        E8 - INX
+        C9 - CMP - Immediate            E9 - SBC - Immediate
+        CA - DEX                        EA - NOP
+        CB - Future Expansion           EB - Future Expansion
+        CC - CPY - Absolute             EC - CPX - Absolute
+        CD - CMP - Absolute             ED - SBC - Absolute
+        CE - DEC - Absolute             EE - INC - Absolute
+        CF - Future Expansion           EF - Future Expansion
+        D0 - BNE                        F0 - BEQ
+        D1 - CMP   (Indirect@,Y         F1 - SBC - (Indirect),Y
+        D2 - Future Expansion           F2 - Future Expansion
+        D3 - Future Expansion           F3 - Future Expansion
+        D4 - Future Expansion           F4 - Future Expansion
+        D5 - CMP - Zero Page,X          F5 - SBC - Zero Page,X
+        D6 - DEC - Zero Page,X          F6 - INC - Zero Page,X
+        D7 - Future Expansion           F7 - Future Expansion
+        D8 - CLD                        F8 - SED
+        D9 - CMP - Absolute,Y           F9 - SBC - Absolute,Y
+        DA - Future Expansion           FA - Future Expansion
+        DB - Future Expansion           FB - Future Expansion
+        DC - Future Expansion           FC - Future Expansion
+        DD - CMP - Absolute,X           FD - SBC - Absolute,X
+        DE - DEC - Absolute,X           FE - INC - Absolute,X
+        DF - Future Expansion           FF - Future Expansion
+

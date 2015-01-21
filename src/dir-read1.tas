@@ -1,0 +1,139 @@
+DIRCMD	= $e808
+
+		lda #dir_keys		;only a few keys available while loading dir
+		sta numb
+		lda #>dirpos
+		sta dzp+1
+
+		lda #0
+		sta pos_cursor
+		sta offs_cursor
+		sta maxfile
+		sta dzp
+
+		
+		lda #$01
+		ldx device
+		ldy #$60
+		jsr ROM_setlfs		;sta b8,ba,b9
+		ldx #<dircmd		;E808 = $24
+		ldy #>dircmd
+		jsr ROM_setnam		;sta b7,bb,bc
+		jsr ROM_open
+		ldx #1			;Ide64 fix
+		jsr ROM_chkin
+
+;* skip disk header/id (2*10 = $20)
+;* skip 2 bytes of file entry (1*2)
+;zp $01 = 36 here            
+
+;		ldy #$03		;disk header/id 
+		ldy #$10+2
+gri		jsr wjs_getbyte		;01   01   00           ;( = jsr ROM_chrin)
+		tax
+gri2		jsr wjs_getbyte		;04   01   00
+		dey
+		bne gri
+		;cmp #0
+		tay
+		bne ta
+		txa			;Skip zerolength files
+		beq ta
+
+
+
+		
+tb		jsr wjs_getbyte
+		cmp #$22		;" find start of filename
+		bne tb
+;----
+		ldx maxfile
+		ldy #0
+		tya
+		sta flengde,x		;make this entry zero
+		
+getfname_loop	jsr wjs_getbyte
+		cmp #$22		;" find end of filename
+		bne getfname
+		tya
+		sta flengde,x		;if file is 1-16 letters it will be set here
+
+		
+		lda #$20
+getfname	
+		sta (dzp),y		;store letter
+		iny
+		cpy #$11		;Get filename
+		bne getfname_loop
+		lda flengde,x		;Check if still zero ?
+		bne aye
+		tya
+		sta flengde,x		;Store $11 for long filenames
+
+aye
+
+.if def_1541u2siec
+;THIS assumes that all files from the 1541u2 sw iec
+;has the .prg extension.
+
+		lda flengde,x
+		sec
+		sbc #4		;".prg"
+		sta flengde,x
+				
+.fi
+		
+		inc maxfile
+		lda dzp
+		clc
+		adc #$10
+		sta dzp
+		bcc dirSdi
+		inc dzp+1
+dirSdi
+
+;		lda #$36
+;		sta $01
+		jsr wjs_display		;displayFiles+keyboard
+;		jsr wjs_ffe4		;read keyboard
+		
+ta		jsr wjs_getbyte		;wait for zero
+		bne ta
+		ldy #$02
+		bne gri
+
+;--------- Getbyte from Device --------------
+;wjs_getbyte:
+;--------------------------------------------
+
+
+getByte		
+		lda #$36
+		sta $01
+		lda maxfile
+		cmp #maxentries
+		beq endofdir
+		lda #0
+		sta $90
+		stx netdrivex		;TFR - Netdrive bug
+		jsr ROM_chrin
+		ldx netdrivex		;TFR - Netdrive bug
+		pha
+		lda #$38
+		sta $01
+		pla
+		inc $90			;Checks if $90 is zero without changing
+		dec $90			;A,X or Y
+		bne endofdir
+		cmp #0
+		rts
+		
+;falls through here         
+;---------Finished reading directory--------
+endofdir	lda #$36
+		sta $01
+		pla
+		pla
+		lda #$01
+		jsr ROM_close
+;falls through to code

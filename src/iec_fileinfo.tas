@@ -1,0 +1,48 @@
+;--------------------------------------------------------------
+; "iec_fileinfo"
+;
+;  IEC sort files + directories
+;--------------------------------------------------------------
+;	* static subroutine 
+;	* location: d000-e000
+;--------------------------------------------------------------
+
+;dir entry number in hex
+
+		lda flengde,x
+		bpl normalfiles
+.if def_1541u_long
+		asl
+		bmi dd64
+.fi		
+				
+		lda #"d"
+		sta setd+1
+		ldx #"i"
+		lda #"r"
+		bne prnt
+
+.if def_1541u_long
+dd64
+		lda #"d"
+		sta setd+1
+		ldx #"6"
+		lda #"4"
+		bne prnt
+.fi
+		
+normalfiles	inx			;start with+1
+		txa
+		jsr gethexnum		;convert to A and X
+		ldy #$3a
+		sty setd+1
+		
+prnt		ldy #$12
+		sta (gzp),y		;print A
+		dey
+		txa
+		sta (gzp),y		;print X
+		dey
+setd		lda #$3a		;":"
+		sta (gzp),y
+		rts		

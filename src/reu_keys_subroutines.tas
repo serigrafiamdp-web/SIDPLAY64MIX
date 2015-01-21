@@ -1,0 +1,251 @@
+;--------------------------------------------------------------
+;
+;--------------------------------------------------------------
+reu_crsr_up	
+		lda fcountlo
+		ora fcounthi
+		beq torts			;zero ? then do nothing
+		lda fcountlo
+		bne +
+		dec fcounthi
++		dec fcountlo
+		lda pos_cursor
+		beq +
+		dec pos_cursor
+torts		rts
++		jsr sbc_reu_file_position
+		jmp get_reu_dir			;i/o
+
+
+;--------------------------------------------------------------
+;
+;--------------------------------------------------------------
+reu_crsr_down
+		lda fcountlo		;check if we have reached the end
+		cmp maxfile
+		lda fcounthi
+		sbc maxfilehi
+		bcs torts
+		inc fcountlo
+		bne +
+		inc fcounthi
++		lda pos_cursor
+		cmp #maxDirY-1
+		beq +
+		inc pos_cursor
+		rts
++		jsr adc_reu_file_position
+		jmp get_reu_dir			;i/o
+
+;--------------------------------------------------------------
+;
+;--------------------------------------------------------------
+reu_clrHome
+		ldx pos_cursor		;x = 0 is cursor at top of screen?
+		beq ton
+					;x = 1-15 no, then move it to top
+		sta pos_cursor		;a = 0, move cursor to top
+		stx tmplo
+		lda fcountlo		;move fcount to top of screen
+		sec
+		sbc tmplo
+		sta fcountlo
+		bcs +
+		dec fcounthi
++		rts		
+
+ton		lda fcountlo
+		ora fcounthi
+		bne +
+		rts			;at top of directory
+		
++		ldy fcounthi		;0 ? 
+		bne tdp			
+		lda fcountlo
+		cmp #maxDirY		;check fcountlo in 0-15
+		bcs tdp
+		sty fcountlo		;y=0
+		sty pos_cursor
+		jsr zero_reu_datadr 	;display reu dir from start
+		jmp get_reu_dir		;i/o
+
+tdp		lda fcountlo
+		sec
+		sbc #maxDirY		;#maxDirY
+		sta fcountlo
+		bcs +
+		dec fcounthi
++
+		jsr sbc_reu_page_position
+		jmp get_reu_dir		;i/o
+
+;--------------------------------------------------------------
+;
+;--------------------------------------------------------------
+reu_Shift_ClrHome
+		lda maxfilehi		;zero ?
+		bne tpp
+		ldx maxfile
+		;dex
+		cpx #maxDirY-1
+		bcc tp
+tpp		ldx #maxDirY-1
+		cpx pos_cursor
+		beq tq
+		
+tp
+		txa
+		sec
+		sbc pos_cursor
+		stx pos_cursor		;cursor to bottom of screen
+		clc
+		adc fcountlo		;move fcount to bottom of screen
+		sta fcountlo
+		bcc +
+		inc fcounthi
++		rts
+
+tq		lda maxfile
+		sec
+		sbc #maxDiry-1
+		sta tmplo
+		lda maxfilehi
+		sbc #0
+		sta tmphi
+
+		lda fcountlo
+		cmp tmplo
+		lda fcounthi
+		sbc tmphi
+		bcc +
+		ldx maxfile		;reached maximum file limit
+		stx fcountlo
+		lda maxfilehi
+		sta fcounthi
+		ldx tmplo
+		lda tmphi
+		jsr getreuadress	;returns in a,x,y
+		sta reu_datadr_lo
+		stx reu_datadr_hi
+		sty reu_datadr_bank
+		jmp get_reu_dir		;i/o
+
+
++		lda fcountlo
+		clc
+		adc #maxDirY
+		bcc +
+		inc fcounthi
++		sta fcountlo
+
+		jsr adc_reu_page_position
+		jmp get_reu_dir		;i/o
+
+
+;--------------------------------------------------------------
+; Call this routine when loading in a new directory:
+;--------------------------------------------------------------
+clear_reu_entries
+		jsr zero_reu_datadr
+		lda #<dirsize
+		sta reu_len_lo
+		lda #>dirsize
+		sta reu_len_hi
+		rts
+
+;--------------------------------------------------------------
+; Zero 24 bit reu address position:
+;--------------------------------------------------------------
+zero_reu_datadr	lda #0
+		sta reu_datadr_lo
+		sta reu_datadr_hi
+		sta reu_datadr_bank
+		rts
+
+;--------------------------------------------------------------
+; Move reu position by one (1) file entry upwards
+;--------------------------------------------------------------
+sbc_reu_file_position
+		sec
+		lda reu_datadr_lo
+		sbc #<filename_entry_size
+		sta reu_datadr_lo
+		lda reu_datadr_hi
+		sbc #>filename_entry_size
+		sta reu_datadr_hi
+		bcs +
+		dec reu_datadr_bank
++		rts
+
+;--------------------------------------------------------------
+; Move reu position by one (1) dir page upwards (15 files)
+;--------------------------------------------------------------
+sbc_reu_page_position
+		sec
+		lda reu_datadr_lo
+		sbc #<dirsize
+		sta reu_datadr_lo
+		lda reu_datadr_hi
+		sbc #>dirsize
+		sta reu_datadr_hi
+		bcs +
+		dec reu_datadr_bank
++		rts
+
+;--------------------------------------------------------------
+; Move reu position by one (1) file entry downwards
+;--------------------------------------------------------------
+adc_reu_file_position		
+		lda #<filename_entry_size
+		clc			;Adjust table to keep track of next available adrees in reu
+		adc reu_datadr_lo
+		sta reu_datadr_lo
+		lda #>filename_entry_size
+		adc reu_datadr_hi
+		sta reu_datadr_hi
+		bcc +
+		inc reu_datadr_bank
++		rts
+
+;--------------------------------------------------------------
+; Move reu position by one (1) dir page downwards (15 files)
+;--------------------------------------------------------------
+adc_reu_page_position		
+		lda #<dirsize
+		clc			;Adjust table to keep track of next available adrees in reu
+		adc reu_datadr_lo
+		sta reu_datadr_lo
+		lda #>dirsize
+		adc reu_datadr_hi
+		sta reu_datadr_hi
+		bcc +
+		inc reu_datadr_bank
++		rts
+
+
+
+;--------------------------------------------------------------
+; Variables: Remember Zp $01 must be $38 or $34
+;--------------------------------------------------------------
+
+fcountlo	.byte 0
+fcounthi	.byte 0
+maxfilehi	.byte 1
+
+tmplo		.byte 0
+tmphi		.byte 0
+
+
+
+;--- REU transfer / verify table
+reu_comm	.byte %10000000|c642reu		;DF01 -	REU_Command	Bit 7 set = execute REU DMA transfer on $ff00 write
+c64memlo	.byte 0				;DF02 -	REU_C64memlo	C64 adress pointer to start adress
+c64memhi	.byte >$d400			;DF03 -	REU_C64memhi
+reu_datadr_lo	.byte 0				;DF04 - REU_memlo	24 bit register for controlling reu memory
+reu_datadr_hi	.byte 0				;DF05 - REU_memhi
+reu_datadr_bank	.byte 0				;DF06 - REU_membank 
+reu_len_lo	.byte <dirsize			;DF07 - REU_lenlo
+reu_len_hi	.byte >dirsize			;DF08 - REU_lenhi	$0100 bytes
+
+
+

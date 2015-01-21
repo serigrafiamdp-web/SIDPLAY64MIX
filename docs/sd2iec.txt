@@ -1,0 +1,6 @@
+sd2iec supported disk images:
+-----------------------------
+.d64
+.d71
+.d81
+.dnp

@@ -1,0 +1,43 @@
+;joyport #1 scan table
+
+j1dc00	.byte $ff	;00|crsr	down			DOWN
+	.byte $ff	;01|crsr+sh	up			UP
+	.byte $ff	;02|clrh	top			hold up   + fire
+	.byte $ff	;03|clrh+sh	bottom			hold down + fire
+	.byte $7f	;04|space	reload dir		
+	.byte $ff	;05|delete	up a dir		hold upleft + fire
+	.byte $ff	;06|Return	load file		fire
+	.byte $ff	;07|F7		pause			hold downright + fire
+	.byte $ff 	;08|<		clock decrease		hold left + fire
+	.byte $ff	;09|>		clock increase		hold right + fire
+	.byte $ff	;10|F1		Restart			hold upright + fire
+	.byte $ff	;11|+		next song		right
+	.byte $ff	;12|-		prev song		left
+	.byte $ff;$ef	;13|M		Manual  		hold downleft + fire
+
+j1dc01	.byte $fd	;00|crsr  
+	.byte $fe	;01|crsr+sh  
+	.byte $ee	;02|clrh    
+	.byte $ed	;03|clrh+sh 
+	.byte $EF	;04|space
+	.byte $ea	;05|delete
+	.byte $ef	;06|Return
+	.byte $e5	;07|F7
+	.byte $eb	;08|<
+	.byte $e7	;09|>
+	.byte $e6	;10|F1
+	.byte $f7	;11|+
+	.byte $fb	;12|-
+	.byte $e9	;13|M			
+
+init_joyport1
+		ldx #((j1dc01-j1dc00)*2) - 1
+-		lda j1dc00,x
+		sta dc00,x
+		dex
+		bpl -
+
+		lda #$df		;cbm key for ffwd
+		sta joymode1+1
+		rts
+		

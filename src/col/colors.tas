@@ -1,0 +1,29 @@
+
+
+;------------------ original colors ------------------
+;color_screen		= cgreen
+;color_d021		= cblack
+;color_playmusic	= cgreen
+;color_current_filename	= clgrey
+;color_iomessage	= clgrey
+;color_credits1		= cwhite
+;color_credits2		= cwhite
+;color_songnumbers	= cwhite
+;color_timer		= cwhite	;clock and shuffle
+;color_device_number	= clgreen
+;color_dir_filenames	= clgreen
+;color_dir_numbers	= clgrey
+;color_number_of_files	= clgrey
+
+default
+.byte cgreen,cblack,cgreen,clgrey,clgrey,cwhite,cwhite,cwhite,cwhite,clgreen,clgreen,clgrey,clgrey 
+
+
+lopoint
+.byte <default
+
+hipoint
+.byte >default
+
+setcolor
+	

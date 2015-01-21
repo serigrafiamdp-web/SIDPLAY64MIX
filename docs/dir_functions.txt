@@ -1,0 +1,37 @@
+he following commands works on all drives:
+$                   - Display dir
+$a*                 - Display files starting with the letter 'a'
+$??a*               - Display files where the 3rd letter is 'a'
+S0:FILENAME         - Scratch¨file
+R0:NEWNAME=OLDNAME  - Rename file
+N0:DISKNAME,ID      - Format disk (ID must be 2 letters for 1541 format)
+V                   - Validate disk
+I                   - Initialize drive
+
+
+
+The following commands works on CMD drives:
+MD:DIRNAME          - Make dir
+RD:DIRNAME          - Remove dir
+CD:DIRNAME          - Go to dir
+CD:/                - Go down one dir level
+CD:<-               - Left arrow go back a dir level
+T-RA                - Display date and time
+CP1                 - Set partition 1
+CP5                 - Set partition 5 (1-255 partitions possible)
+
+
+The following commands works on the IDE64:
+MD:DIRNAME          - Make dir
+RD:DIRNAME          - Remove dir
+CD:DIRNAME          - Change dir
+/DIRNAME            - Change dir
+/                   - Go down one dir level + autodisplay dir
+CD:..               - Go down one dir level
+/..                 - Go down one dir level (root dir?) + autodisplay dir
+T-RA                - Display date and time
+
+The following commands works on the SD2IEC:
+CD:DIRNAME          - Go to dir
+CD:<-               - Left arrow go back a dir level
+CD:image.64         - Open a D64 image

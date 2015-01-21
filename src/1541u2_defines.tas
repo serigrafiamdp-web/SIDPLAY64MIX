@@ -1,0 +1,89 @@
+;--------------------------------------------------------------
+; 1541U-II Command interface
+;--------------------------------------------------------------
+U2_Control_register		= $df1c	;write
+U2_Status_register		= $df1c	;read ($00)
+U2_Command_data_register	= $df1d	;write
+U2_Identification_register	= $df1d	;read ($c9)
+U2_Response_data_register	= $df1e	;read only
+U2_Staus_data_register		= $df1f	;read only
+
+;--------------------------------------------------------------
+; control register write commands (bits) 
+;--------------------------------------------------------------
+_PUSH_CMD	= %00000001
+_DATA_ACC	= %00000010
+_ABORT		= %00000100
+_CLR_ERR	= %00001000
+
+;--------------------------------------------------------------
+; status register read commands (bits) 
+;--------------------------------------------------------------
+_CMD_BUSY	= %00000001	;1  = indicates that there is a pending command in the command memory.
+;_DATA_ACC	= %00000010	;0/1  reflects the condition that the user has told the Ultimate-II that it accepted the data.
+_ABORT_P 	= %00000100	;
+_ERROR		= %00001000	;1  = user tried to send a command to the Ultimate-II while it was not in idle state.
+_STATE		= %00110000	;xx = see STATE's below
+_STAT_AV	= %01000000	;1  = status data available from the status queue, read the status data register ($DF1F).
+_DATA_AV	= %10000000	;1  = response data available from the data queue, read the response data register ($DF1E).
+
+;--------------------------------------------------------------
+; STATE'S ( from status register read command (bit 4+5)
+;--------------------------------------------------------------
+_STATE_IDLE		= %00000000
+_STATE_COMMAND_BUSY	= %00010000
+_STATE_DATA_LAST	= %00100000
+_STATE_DATA_MORE	= %00110000
+
+;--------------------------------------------------------------
+; Ultimate DOS TARGET & File Attributes
+;--------------------------------------------------------------
+DOS_TARGET		= $01	;$01 or $02
+
+;--------------------------------------------------------------
+; Ultimate DOS_CMD_OPEN_FILE attributes:
+;--------------------------------------------------------------
+_FA_READ		= $01	;
+_FA_WRITE		= $02	;
+_FA_CREATE_NEW		= $03	;
+_FA_CREATE_ALWAYS	= $04	;
+
+
+;--------------------------------------------------------------
+; Ultimate DOS_CMD_READ_DIR byte attribute:
+;--------------------------------------------------------------
+;First byte returned is the attribute of the directory entry (followed by the filename)
+_DA_READONLY		= %00000001
+_DA_HIDDEN		= %00000010
+_DA_SYSTEM		= %00000100
+_DA_VOLUME		= %00001000
+_DA_DIR			= %00010000
+_DA_ARCHIVE		= %00100000
+
+;--------------------------------------------------------------
+; Ultimate DOS Commands                                         
+;--------------------------------------------------------------
+_DOS_CMD_IDENTIFY	= $01	;Format: $01,$01
+_DOS_CMD_OPEN_FILE	= $02	;Format: $01,$02,attrib,<filename>
+_DOS_CMD_CLOSE_FILE	= $03	;Format: $01,$03                       	|Closes last used file
+_DOS_CMD_READ_DATA	= $04	;Format: $01,$04,len_lo,len_hi		|Data is always transferred in 512 bytes chunks.
+_DOS_CMD_WRITE_DATA	= $05	;Format: $01,$05,dummy,dummy,[data..]	|
+_DOS_CMD_FILE_SEEK	= $06	;Format: $01,$06,posL,posML,posMH,posH	|
+_DOS_CMD_FILE_INFO	= $07	;Format: $01,$07			|
+_DOS_CMD_CHANGE_DIR	= $11	;Format: $01,$11,<directoryname>	|For dir's and .d64
+_DOS_CMD_GET_PATH	= $12	;Format: $01,$12			|
+_DOS_CMD_OPEN_DIR	= $13	;Format: $01,$13			|
+_DOS_CMD_READ_DIR	= $14	;Format: $01,$14			|
+_DOS_CMD_COPY_UI_PATH	= $15	;Format: $01,$15			|Copy user interface path
+_DOS_CMD_LOAD_REU	= $21
+_DOS_CMD_SAVE_REU	= $22
+_DOS_CMD_ECHO		= $f0	;Format: $01,$f0
+
+
+;--------------------------------------------------------------
+; Queues
+;--------------------------------------------------------------
+;There are three byte-queues that the Ultimate-II Command Interface uses:
+;* Command queue 	$0380 bytes [max transfer size]
+;* Response Data queue	$0380 bytes [max transfer size]
+;* Status queue		$0100 bytes [max transfer size]

@@ -1,0 +1,9 @@
+Things to check for:
+
+* ! invest_intro.sid /jt loads to $0f7c - 
+
+* Test if 0300-0314 can be zerofilled (This area is just for basic afaik)
+
+* SOMETIMES THE END ADRESS IS DISPLAYED WRONG ?
+  sd2iec and 6581_house.sid  i have seen end adres : 1592, 1772 and 1c28 ( 1c28 being correct)
+  Might be related to jiffydos, own $0314/$0315 irq running & the stop key.

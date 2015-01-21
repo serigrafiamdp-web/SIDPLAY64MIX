@@ -1,0 +1,147 @@
+;--------------------------------------------------------------
+;  DIR-1541U2CMD
+;
+;  Read 1541U2 filenames + dirs and store them in dirbuffer.
+;
+;--------------------------------------------------------------
+; * part of relocatable main
+; * this routine is not a subroutine. no rts.
+;--------------------------------------------------------------
+
+
+		lda #>dirpos
+		sta dzp+1
+		
+		ldy #0
+		sty pos_cursor
+		sty offs_cursor
+		sty maxfile
+		sty dzp
+
+		jsr wait_for_idle
+
+		lda #$01                             ; OPEN DIR
+		sta U2_Command_data_register
+		lda #$13
+		sta U2_Command_data_register
+		lda #_PUSH_CMD
+		sta U2_Control_register
+
+		jsr wjs_wait_while_busy              ; end command
+;		jsr get_status
+
+		lda #_DATA_ACC
+		sta U2_Control_register
+
+		jsr wait_for_idle
+
+		lda #$01                             ; READ DIR
+		sta U2_Command_data_register
+		lda #$14
+		sta U2_Command_data_register
+		lda #_PUSH_CMD
+		sta U2_Control_register
+
+nextdirentry
+		jsr wjs_wait_while_busy
+		ldy #$00
+
+		lda maxfile
+		cmp #maxentries			;Reached the file limit ?
+		beq skipfile			;yes
+		
+;		lda U2_Status_register          ; any data left to process int this packet ?
+;		bpl skipfile
+
+		lda U2_Response_data_register   ; attribute byte
+		sta header
+
+nextchar
+		lda U2_Status_register          ; any data left to process int this packet ?
+		bpl nomorechars
+		lda U2_Response_data_register   ; yes - print it
+
+		ldx #$38
+		stx $01
+		sta (dzp),y
+		ldx #$36
+		stx $01
+		iny
+		cpy #16
+		bne nextchar
+nomorechars
+
+		lda #$38
+		sta $01
+		
+		ldx maxfile
+		tya
+		sta flengde,x			; store filelen
+
+		lda header
+		and #_DA_DIR
+		beq notdir
+		lda flengde,x
+		ora #$80			; set dir flag (bit 7)
+		sta flengde,x
+
+notdir
+-		cpy #16
+		beq dontfill
+		lda #$20
+		sta (dzp),y
+		iny
+		bne -
+dontfill
+		lda #$36
+		sta $01
+
+		inc maxfile
+
+		lda dzp		; go to next file in list
+		clc
+		adc #$10
+		sta dzp
+		bcc bci
+		inc dzp+1
+bci
+
+skipfile		
+;            jsr get_status                 ; here we need to get the status - after the packet is done, if we want to !
+
+		lda #_DATA_ACC                  ; Go to next packet, if any
+		sta U2_Control_register
+		lda U2_Status_register
+		and #_STATE
+		cmp #_STATE_COMMAND_BUSY	; check if there is any more packets to process
+		beq nextdirentry
+
+		; no more dir entries
+			
+;---------------------------------------
+;WORKAROUND for U2 Command Interface bug
+;where USB1.0 is not a directory if you don't enter it before in the selector
+;---------------------------------------
+.comment
+		ldx #$38
+		stx $01
+		lda maxfile
+		cmp #$02
+		bne outcheck
+        ldx #(16*2)-1
+        txa
+        clc
+-       adc $d000,x
+        dex
+        bpl -
+        cmp #$33        ; sum of SD + USB1.0 strings + $1f
+        bne outcheck
+		lda #$86
+		sta flengde+1
+outcheck
+		ldx #$36
+		stx $01
+.endc		
+;---------------------------------------
+
+;code continues here:

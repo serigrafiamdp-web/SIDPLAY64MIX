@@ -1,0 +1,98 @@
+;--------------------------------------------------------------
+; Normal key routines for navigating a 255 files dir:
+;--------------------------------------------------------------
+
+		;Y = key we pressed
+		;A = 0
+
+		cpy #keyCrsrUp		;"Crsr up"
+		bne key1
+		lda offs_cursor
+		ora pos_cursor
+		beq td			;zero ? then do nothing
+		lda pos_cursor
+		beq th
+		dec pos_cursor		
+		rts
+th		dec offs_cursor
+		rts
+		
+key1		cpy #keyCrsrDown	;"Crsr down"
+		bne key2
+plt_inc		lda offs_cursor
+		sec
+		adc pos_cursor
+		cmp maxfile
+		beq td
+		lda pos_cursor
+		cmp #maxDirY-1
+		beq tj
+		inc pos_cursor
+		rts
+tj		inc offs_cursor
+td		rts
+
+key2		cpy #keyClrHome
+		bne key3
+		ldx pos_cursor
+		bne bd1
+		lda offs_cursor
+		sec
+		sbc #maxDirY
+		bcs bd2
+		lda #0
+bd2		sta offs_cursor
+		rts
+bd1		sta pos_cursor		;cursor pos to top of screen
+		rts		
+
+key3		cpy #keyShClrHome
+		bne key4
+.if def_illegal
+		lax maxfile
+.else
+		lda maxfile
+		tax
+.fi
+		dex
+		cpx #maxDirY-1
+		bcc tp
+		ldx #maxDirY-1
+		cpx pos_cursor
+		beq tq
+tp		stx pos_cursor
+		rts
+tq		sec
+		sbc #maxDirY
+		bcs tr
+		lda #0
+tr		sta offs_cursor
+		rts
+
+key4		cpy #keySpace		;"SPACE"
+		bne key5
+ingenfil	pla
+		pla
+		jsr wjs_resetCia	;zp $01 = 36
+		jsr ROM_clall           ;Close dirfile, and all other files..
+		jmp (wjp_dirSelector)
+
+key5
+.if def_iec + def_1541u2cmd
+		cpy #keyDelete
+		bne key6
+		tay			;Y=0 for going back directory level - dir_back
+		beq dirbackw		;jmp
+.fi		
+
+key6		cpy #keyReturn		;"RETURN"
+		bne key7
+		ldy maxfile		;Y = 1-ff will be used at (wjp_load)
+		beq ingenfil
+dirbackw	pla
+		pla
+		jsr wjs_resetCia	;zp $01 = 36
+		jmp (wjp_load)
+
+;--- code continues in main source:
+key7

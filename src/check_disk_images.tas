@@ -1,0 +1,60 @@
+;--------------------------------------------------------------
+; "check_disk_images"
+;
+;  IEC sort files + directories
+;--------------------------------------------------------------
+;	* static subroutine 
+;	* location: d000-e000
+;--------------------------------------------------------------
+
+
+.if def_sd2iec
+	
+check_disk_images
+		ldy #$0f
+cdi1		lda (rzp),y
+		cmp #$2e	;"."
+		beq dotfound
+		dey
+		bne cdi1
+		rts
+		
+dotfound	iny
+		tya
+		clc
+		adc rzp		;never crosses page boundary
+		sta rzp
+
+		ldx #3
+		ldy #2
+nexty		lda (rzp),y
+		and #$3f		;00-3f
+sceloop		cmp imageext,x
+		beq found1
+		dex
+		bpl sceloop
+		rts
+
+found1		txa
+		and #$fc
+		clc
+		adc #$07
+		tax
+		dey
+		bpl nexty
+		lda #0		;ok, found all letters for an image extension
+		sta diskimage
+		rts		
+
+;imageext	.text "d64"  - Rumours tells me D41 is the same as a D64 image.
+;		.text "d71"
+;		.text "d81"
+;		.text "dnp"
+;		.text "m2i"  - no support as it is an outdated uiec image format
+
+imageext
+.byte $34,$31,$31,$10		;411P ;0123
+.byte $36,$37,$38,$0e		;678N ;4567
+.byte $04,$04,$04,$04		;DDDD ;89ab
+.fi ;def_sd2iec
+
