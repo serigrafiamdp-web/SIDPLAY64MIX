@@ -300,9 +300,9 @@ screen2		= $c400
 screen2chars	= $e000 ;e000-e800
 credz		= (screen1&$03ff)+($d808+(40*3))
 songstr1	= screen1+(40*6)+8
-timestr1	= screen1+(40*20)+11
+timestr1	= screen1+(40*20)+9
 txterror1	= screen1+$0399
-dirscreen	= screen2+(40*7)+20
+dirscreen	= screen2+(40*7)+18
 maxDirY		= 15
 ;--------------------------------------------------------------
 
@@ -311,9 +311,9 @@ maxDirY		= 15
 		.binary "bin/screen08-1541u2.o64",2		;1541u2 cmd version
 .else
 	.if def_iec
-		.binary "bin/screen08-iec.o64",2		;iec + cmd + ide64 + 1541u
+		.binary "bin/screen09-iec.o64",2		;iec + cmd + ide64 + 1541u
 	.else		
-		.binary "bin/screen08-ser.o64",2		;normal + 1541u2swiec
+		.binary "bin/screen09-ser.o64",2		;normal + 1541u2swiec
 	.fi		
 .fi	
 ;--------------------------------------------------------------

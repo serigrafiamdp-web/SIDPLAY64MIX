@@ -1,16 +1,10 @@
 DIRCMD	= $e808
 
-		lda #dir_keys		;only a few keys available while loading dir
-		sta numb
-		lda #>tempdir
-		sta dzp+1
-
-		lda #0
-		sta pos_cursor
-		sta offs_cursor
-		sta maxfile
-		sta dzp
-
+		ldx $01
+		lda #$38
+		sta $01
+		jsr prepare_loading_new_reu_dir	;only touch A register
+		stx $01
 		
 		lda #$01
 		ldx device

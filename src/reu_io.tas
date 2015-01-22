@@ -31,10 +31,10 @@ get_reu_dir
 		sta reu_comm
 		lda #>dest
 		sta c64memhi
-		lda #<dirsize
-		sta reu_len_lo
-		lda #>dirsize
-		sta reu_len_hi
+		;lda #<dirsize
+		;sta reu_len_lo
+		;lda #>dirsize
+		;sta reu_len_hi
 		;jmp execute_reu_command
 		
 

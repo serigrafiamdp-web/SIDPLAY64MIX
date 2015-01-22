@@ -32,14 +32,40 @@
 		sta rzp
 		lda #>dest
 		sta rzp+1
+
              
-		lda maxfile		;display number of files 
+		lda maxfile		;display number of files lo
 		jsr gethexnum
 		ldy #40-2
 		sta (gzp),y 
 		txa
 		dey
 		sta (gzp),y
+
+		lda maxfilehi		;display number of files hi
+		jsr gethexnum
+		dey
+		sta (gzp),y
+		txa
+		dey
+		sta (gzp),y
+
+		lda fcountlo		;display current file number 
+		jsr gethexnum
+		ldy #120-2
+		sta (gzp),y 
+		txa
+		dey
+		sta (gzp),y
+
+		lda fcounthi		;display current file number
+		jsr gethexnum
+		dey
+		sta (gzp),y
+		txa
+		dey
+		sta (gzp),y
+		
              
 		lda maxfile		;No files in dir-buffer ?
 		bne tt
@@ -70,7 +96,7 @@ tt
 		inx				;start with+1
 		txa
 		jsr gethexnum			;convert to A and X
-		ldy #$12
+		ldy #$14
 		sta (gzp),y			;print A
 		dey
 		txa
@@ -86,8 +112,9 @@ tt
 		bne tu
 		ldx #$80
 tu		stx eorzp
-		;ldy #$0f
-		dey
+		ldy #$0f
+		
+		
 tv 		
 		lda (rzp),y		;Filename(s)
 		jsr convert_letter	;convert ascii to petscii
@@ -121,7 +148,7 @@ tw
 		bcc tt
 		lda maxfilehi		;$0100-$010f needs a 16 bit check
 		bne tt
-		ldy #$12		;Fill the remaining area of the box
+		ldy #$14		;Fill the remaining area of the box
 		lda #$20		;with spaces
 ty		sta (gzp),y
 		dey

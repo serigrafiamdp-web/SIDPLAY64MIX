@@ -28,8 +28,7 @@ key4		cpy #keySpace		;"SPACE"
 ingenfil	pla
 		pla
 		jsr wjs_resetCia	;zp $01 = 36
-		jsr ROM_clall           ;Close dirfile, and all other files..
-		jsr clear_reu_entries
+		;jsr ROM_clall           ;Close dirfile, and all other files..
 		jmp (wjp_dirSelector)
 		rts
          

@@ -158,6 +158,8 @@ SR		sta screen2chars,x	;e000-e800 - sp64 is located in bank 0 on startup (c000-f
 
 .if def_1541u2cmd
 .else
+
+.comment		;have replaced device number by current filenumber
 		lda $ba			;secure device number
 		sta tmp
 
@@ -184,6 +186,7 @@ conbit2		asl tmp
 		and #$0f
 		ora #$30
 		sta devout+1
+.endc		
 .fi
 
 		lda #0
@@ -522,13 +525,15 @@ color_timer	lda #$a9
 ;		bpl -
 
 
-devout = screen2+(40*10)+17
+devout = screen2+(40*10)+13
 
 		pla
-;color_device_number
+;color_device_number	<-- changed to filecounter
 ;		lda #$a9
 		sta $d800+(devout&$03ff)
 		sta $d800+(devout&$03ff)+1
+		sta $d800+(devout&$03ff)+2
+		sta $d800+(devout&$03ff)+3
 
 
 		pla
@@ -543,8 +548,8 @@ devout = screen2+(40*10)+17
 		sta gzp
 
 		ldx #maxDirY-1
-row		ldy #$12
-row2		cpy #$10
+row		ldy #$14
+row2		cpy #$12
 		bcs numrow
 color_dir_filenames
 		lda #$a9		;light green
@@ -564,13 +569,15 @@ color_dir_numbers
 		dex
 		bpl row
 
-numfiles = screen2+$0151
+numfiles = screen2+$014d
 
 		pla
 ;color_number_of_files
 ;		lda #$a9
 		sta $d800+(numfiles&$03ff)
 		sta $d800+(numfiles&$03ff)+1
+		sta $d800+(numfiles&$03ff)+2
+		sta $d800+(numfiles&$03ff)+3
 		rts
 
 
