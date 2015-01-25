@@ -1,0 +1,64 @@
+;--------------------------------------------------------------
+; "plt_advance"  (Play Loop/Limit Timer)
+;
+;  Controls Play Next and Play Random 
+;
+;--------------------------------------------------------------
+; * part of relocatable main
+; * this routine is not a subroutine. no rts.
+; * For all NON REU versions.
+;--------------------------------------------------------------
+
+
+		txa			;untouched from plt_flag
+		tay
+		sei			;i think i must set sei
+		jsr wjs_resetCia	;zp $01 = 36 
+					;X = FF
+					;Y = untouched
+		txs			;X=FF = topstack
+		tya			;0
+		bne plt_random		;1-ff
+;Y=0
+		lda pos_cursor
+		sec
+		adc offs_cursor
+		cmp maxfile
+		bne last_plt
+		tya			;Y=0
+		;lda #0			;Start on top of list again...
+		sta offs_cursor
+		sta pos_cursor
+		beq doload		;jmp
+last_plt	jsr wjs_playlist	;plt_inc
+
+doload		ldy #1			;Set y = 1 for loading files
+		jmp (wjp_load)
+	
+plt_random
+
+newrand		lda seed		;| random routine from WhiteFlame
+		beq doeor
+		asl
+		beq noeor		;if the input was $80, skip the eor
+		bcc noeor
+doeor		eor #$1d
+noeor		sta seed
+
+		cmp maxfile
+		bcs newrand
+		cmp samefile		;check if it tries to load the same file
+		beq newrand
+		sta samefile
+		tay
+
+		sec
+		sbc #maxDirY-1
+		bcs maax
+		lda #0
+		.byte $2c
+maax		ldy #maxDirY-1
+		sty pos_cursor	;visible limit
+		sta offs_cursor	;offset
+		sec
+		bcs doload	;jmp

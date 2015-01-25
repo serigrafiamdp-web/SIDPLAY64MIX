@@ -265,6 +265,9 @@ msgnotpresent	.text "error, device not present...          "
 ;--------------------------------------------------------------
 devmsg		.byte $1e,$08,$93,$99
 		.text "sidplay64"
+		.if DEF_REU
+		.text "-reu"
+		.fi
 		.if def_iec
 			.if def_1541u
 			.text "-1541u-netdrive"
@@ -283,7 +286,7 @@ devmsg		.byte $1e,$08,$93,$99
         .if def_1541u2cmd
 		.text "-1541u2-cmd"
         .fi
-		.text " v0.83",$0d
+		.text " v0.87",$0d
 		.text "beta "
 		.if def_currentdate
 		.binary timedate.log	;created by batch echo in root dir

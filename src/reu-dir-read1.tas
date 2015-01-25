@@ -25,56 +25,49 @@ DIRCMD	= $e808
 		ldy #$10+2
 gri		jsr wjs_getbyte		;01   01   00           ;( = jsr ROM_chrin)
 		tax
-gri2		jsr wjs_getbyte		;04   01   00
+		jsr wjs_getbyte		;04   01   00
 		dey
 		bne gri
-		;cmp #0
-		tay
+		tay			;cmp #0
 		bne ta
-		txa			;Skip zerolength files
-		beq ta
-
+					;Y = 0
+		txa			
+		beq ta			;Skip zerolength files
 
 
 		
-tb		jsr wjs_getbyte
-		cmp #$22		;" find start of filename
-		bne tb
+-		jsr wjs_getbyte
+		cmp #$22		;" wait for start of filename
+		bne -
 ;----
-		ldx maxfile
-		ldy #0
-		tya
-		sta flengde,x		;make this entry zero
+		ldx #0			;set filename length to zero
 		
 getfname_loop	jsr wjs_getbyte
-		cmp #$22		;" find end of filename
+		cmp #$22		;" wait for end of filename
 		bne getfname
 		tya
-		sta flengde,x		;if file is 1-16 letters it will be set here
-
+		tax			;filename length 1-16 is now in X register
 		
-		lda #$20
-getfname	
-		sta (dzp),y		;store letter
+		lda #$20		;"space" sign
+getfname	sta (dzp),y		;store letter
 		iny
-		cpy #$11		;Get filename
+		cpy #$11		;max length
 		bne getfname_loop
-		lda flengde,x		;Check if still zero ?
-		bne aye
-		tya
-		sta flengde,x		;Store $11 for long filenames
-
-aye
-
+		
+		txa
+		bne +			;filename length unchanged and still zero ?
+		tya			;yes, then we have a long filename and force it to $11
++		ldy #filename_entry_size-1		
+		sta (dzp),y
+		
 .if def_1541u2siec
 ;THIS assumes that all files from the 1541u2 sw iec
 ;has the .prg extension.
-
-		lda flengde,x
+		;lda flengde,x
 		sec
 		sbc #4		;".prg"
-		sta flengde,x
-				
+		;sta flengde,x
+		sta (dzp),y
 .fi
 		
 		inc maxfile
@@ -91,23 +84,14 @@ aye
 
 		dec filecounter
 		bne bci
-		lda #maxDirY
-		sta filecounter
-		lda #0
-		sta dzp
-		lda #>tempdir
-		sta dzp+1
 		jsr write_reu_dir_entry
-		lda #$38
-		sta $01
-		jsr adc_reu_page_position
+		;jsr adc_reu_page_position
 bci
 
 
 ;		lda #$36
 ;		sta $01
 		jsr wjs_display		;displayFiles+keyboard
-;		jsr wjs_ffe4		;read keyboard
 		
 ta		jsr wjs_getbyte		;wait for zero
 		bne ta
@@ -115,16 +99,14 @@ ta		jsr wjs_getbyte		;wait for zero
 		bne gri
 
 ;--------- Getbyte from Device --------------
-;wjs_getbyte:
+;wjs_getbyte:   - do not touch x,y
 ;--------------------------------------------
-
-
 getByte		
 		lda #$36
 		sta $01
-		lda maxfile
-		cmp #maxentries
-		beq endofdir
+		;lda maxfile
+		;cmp #maxentries	;no limit check when using REU.
+		;beq endofdir
 		lda #0
 		sta $90
 		stx netdrivex		;TFR - Netdrive bug
@@ -134,19 +116,19 @@ getByte
 		lda #$38
 		sta $01
 		pla
-		inc $90			;Checks if $90 is zero without changing
-		dec $90			;A,X or Y
+		inc $90			;Checks if $90 is zero without changing AXY
+		dec $90
 		bne endofdir
 		cmp #0
 		rts
 		
-;falls through here         
 ;---------Finished reading directory--------
 endofdir	
-		jsr write_reu_dir_entry
-		lda #$38
-		sta $01
-		jsr adc_reu_page_position
+		;lda #$38
+		;sta $01
+
+		jsr write_reu_dir_entry2
+		;jsr adc_reu_page_position
 		jsr zero_reu_datadr
 		lda #$36
 		sta $01

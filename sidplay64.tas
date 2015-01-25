@@ -132,7 +132,13 @@ minuteslo	.byte $33
 secondshi	.byte $30
 secondslo	.byte $35
 
+;\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\
+wjs_jumps
+.if DEF_REU
+wjs_exe_reucomm	jmp execute_reu_command ;00-jmp $XX00
+.else
 wjs_playlist	jmp plt_inc         ;00-jmp $XX00
+.fi
 wjs_restartTune	jmp restartTune     ;01-jmp $XX00
 wjs_resetCia	jmp resetCia        ;03-jmp $XX00
 wjs_display	jmp displayfiles    ;05-jmp $XX00
@@ -143,6 +149,7 @@ wjs_getbyte	jmp getbyte         ;06-jmp $XX00
 .fi
 stack_irq	jmp irq             ;07-jmp $XX00
 stack_hwirq	jmp hwirq           ;08-jmp $XX00
+;\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\
 stack_nmi	sei
 		ldx #topstack
 		txs
@@ -150,8 +157,13 @@ stack_nmi	sei
 		stx $d020             ;0
 		jmp (wjp_dirselector) ;nmi
 
-
-wjs_add		.byte >(plt_inc-screen2)      ;highbyte Offset from screen
+;\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\
+wjs_add		
+.if DEF_REU
+		.byte >(execute_reu_command-screen2);highbyte Offset from screen
+.else
+		.byte >(plt_inc-screen2)      ;highbyte Offset from screen
+.fi
 		.byte >(restartTune-screen2)  ;highbyte Offset from screen
 		.byte >(resetCia-screen2)     ;highbyte Offset from screen
 		.byte >(displayfiles-screen2) ;highbyte Offset from screen
@@ -162,7 +174,7 @@ wjs_add		.byte >(plt_inc-screen2)      ;highbyte Offset from screen
 .fi
 		.byte >(irq-screen2)          ;highbyte Offset from screen
 		.byte >(hwirq-screen2)        ;highbyte Offset from screen
-
+;\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\
 initMus		jmp initMus        ;jmp $xxxx
 playMus		jmp playMus        ;jmp $xxxx
 stopMusic	.byte 0            ;byte 1-ff = music on... 0 = music off
@@ -285,7 +297,10 @@ endstacker
 .include src/devicecheck.tas
 .include src/joyport1.tas
 ;.include src/joyport2.tas
-
+.if DEF_REU
+reu_detection
+.include src/reu_detect.tas
+.fi
 ;--------------------------------------------------------------
 
 
@@ -459,9 +474,9 @@ fileSelect	jsr wjs_display		;DisplayFiles+keys
 
 displayFiles
 .if DEF_REU
-.include "src/displayfiles_reu.tas"
+.include "src/reu_displayfiles.tas"
 .else
-.include src/displayfiles.tas
+.include "src/displayfiles.tas"
 .fi
 ;zp $01 = 36 and code continues here:
 
@@ -474,8 +489,8 @@ displayFiles
 
 ffe4key
 
-
-clock		lda #<timestr1
+;TOD Clock is printed to screen:
+		lda #<timestr1
 		sta tzp
 		lda screenpos
 		clc
@@ -502,10 +517,12 @@ timeloop	lda $dc09,x  ;dc09,dc0a,dc0b
 		dex
 		bpl timeloop
 
+;mode is printed to screen:
 		ldy #41
 		lda plt_letter
 		sta (tzp),y
 
+;timer is printed to screen:
 		lda #<timestr1+3   ;adjust to minutes, : and seconds only
 		sta tzp
             
@@ -538,60 +555,14 @@ equ		iny
 		cpy #5
 		bne checkdigits
 
-plt_advance	txa			;untouched from plt_flag
-		tay
-		sei			;i think i must set sei
-		jsr wjs_resetCia	;zp $01 = 36 
-					;X = FF
-					;Y = untouched
-		txs			;X=FF = topstack
-		tya			;0
-		bne plt_random		;1-ff
-;Y=0
-		lda pos_cursor
-		sec
-		adc offs_cursor
-		cmp maxfile
-		bne last_plt
-		tya			;Y=0
-		;lda #0			;Start on top of list again...
-		sta offs_cursor
-		sta pos_cursor
-		beq doload		;jmp
-last_plt	jsr wjs_playlist	;plt_inc
+plt_advance
 
-doload		ldy #1			;Set y = 1 for loading files
-		jmp (wjp_load)
+.if DEF_REU
+.include "src/reu-plt_function.tas"
+.else
+.include "src/plt_function.tas"
+.fi
 	
-plt_random	
-
-newrand		lda seed		;| random routine from WhiteFlame
-		beq doeor
-		asl
-		beq noeor		;if the input was $80, skip the eor
-		bcc noeor
-doeor		eor #$1d
-noeor		sta seed
-
-		cmp maxfile
-		bcs newrand
-		cmp samefile		;check if it tries to load the same file
-		beq newrand
-		sta samefile
-		tay
-
-		sec
-		sbc #maxDirY-1
-		bcs maax
-		lda #0
-		.byte $2c
-maax		ldy #maxDirY-1
-		sty pos_cursor	;visible limit
-		sta offs_cursor	;offset
-		sec
-		bcs doload
-		;bne doload	;|
-		;beq doload	;|JMP
 
 scankeys
 
@@ -956,13 +927,19 @@ fixdc0e		lda #%01010001
 ;jmp wjp_load
 
 load
-
-.if def_1541u2cmd
-.include src/load-1541u2cmd.tas
+.if DEF_REU
+  .if def_1541u2cmd
+  .include src/load-1541u2cmd.tas
+  .else
+  .include src/reu-load-iec-serial.tas
+  .fi
 .else
-.include src/load-iec-serial.tas
-.fi
-
+  .if def_1541u2cmd
+  .include src/load-1541u2cmd.tas
+  .else
+  .include src/load-iec-serial.tas
+  .fi
+.fi ;DEF_REU
 		lda magicid+1
 		cmp #$53		;pSid/rSid
 		beq idook
@@ -1090,7 +1067,7 @@ adjust1		lda screenpos
 adjust2		lda screenpos
 		clc
 		adc wjs_add,y
-		sta wjs_playlist+2,x
+		sta wjs_jumps+2,x
 		dey
 		dex
 		dex
@@ -1240,6 +1217,7 @@ wait_while_busy
 .fi
 
 .if DEF_REU
+execute_reu_command
 .include src/reu_io.tas
 .fi
 
@@ -1255,11 +1233,18 @@ driverend
 		* = $d000
 dirpos
 
-		* = $d800
+;--------------------------------------------------------------
 .if DEF_REU
+		* = $d800
 	.include "src/reu_keys_subroutines.tas"
+getreuadress	
 	.include "src/reu_numbers.tas"
+getpos
+	.include "src/reu_filename_address.tas"
+getrandom
+	.include "src/reu_random.tas"
 .fi
+
 ;--------------------------------------------------------------
 ;note: The 1541u2 have space for 188 files
 .if def_1541u2cmd
@@ -1310,6 +1295,8 @@ dotunenumbers
 convert_letter
 .include src/convertletter.tas	;convert pc letter, signs, underscore to c64
 
+.if !DEF_REU
+;this routine is not neede for reu version:
 getpos		pha		;a=0-ff - for getting filename pos in dirbuffer d000-e000
 		asl
 		asl
@@ -1323,7 +1310,7 @@ getpos		pha		;a=0-ff - for getting filename pos in dirbuffer d000-e000
 		lsr
 		ora #>dirpos
 		rts
-
+.fi
 
 cia_reset2_part2		;Called by src/cia_reset3.tas
 
@@ -1354,17 +1341,27 @@ my02a6		lda #0		;Restore pal/ntsc flag wiht its real value
 		bpl -
 		lda #$36	;sta $01
 		rts
+;--------------------------------------------------------------
+.if DEF_REU
+
+  ;no dir sort here yet
+  
+  .if def_iec + def_1541u2cmd
+iec_fileinfo  
+  .include "src/reu_iec_fileinfo.tas"	;used by src/reu_displayfiles.tas
+  .fi
+.else
 
 ;--------------------------------------------------------------
-.if def_iec
+  .if def_iec
 iec_dir_sort
-.include src/iec_dir_sort.tas
-.fi
-;--------------------------------------------------------------
-.if def_iec + def_1541u2cmd
+  .include src/iec_dir_sort.tas
+  .fi
+  .if def_iec + def_1541u2cmd
 iec_fileinfo
-.include src/iec_fileinfo.tas	;used by src/displayfiles.tas
-.fi
+  .include src/iec_fileinfo.tas		;used by src/displayfiles.tas
+  .fi
+.fi ;DEF_REU
 ;--------------------------------------------------------------
 .if def_iec
 .include src/check_disk_images.tas
@@ -1415,7 +1412,6 @@ vectors
 * = $df66 ;+$1e=df84
 vectors
 .fi
-
 
 
 ;If a file loads to $e000:

@@ -1,5 +1,5 @@
 format "sidplay 64",14 d64 test.d64
-write sidplay64-normal.prg	"sidplay64 /shape"
+write sidplay64-sd2iec.prg	"sidplay64 /shape"
 write sids/shape.sid		"shape.sid"
 write sids/deflektor.sid	"deflektor.sid"
 write sids/deathwish3.sid	"deatwish 3"
@@ -25,3 +25,4 @@ write sids/remark_intro.sid	"remark_intro.sid"
 write sids/rambo3.sid		"rambo3.sid"
 quit
 ;--------------------------------1234567890123456
+write sidplay64-normal.prg	"sidplay64 /shape"

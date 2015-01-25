@@ -1,0 +1,151 @@
+.if def_iec
+		tya		;1-ff = load sid or open dir or open image file
+		beq dir_back	;0    = go one dir up
+.fi		
+				;89abcde
+		lda #$2e	;|file: $042e
+		sta tzp
+		lda screenpos
+		sta tzp+1
+
+		lda #$38
+		sta $01
+
+		jsr getpos		;location of filename 
+		sta rzp			;lo adress
+		stx rzp+1		;hi adress
+		
+		
+		ldy #$10
+		lda #$2a		;"*" wildcard
+		.byte $2c		;falls through
+		;ldy #$0f
+plaz		lda (rzp),y
+
+setwildc
+		sta fname,y
+.if def_iec		
+		sta dirname,y		;IEC
+.fi		
+		jsr convert_letter
+		cpy #$10
+		bcs *+4
+		sta (tzp),y		;Write filename to screen at "|PSID:    "
+		dey
+		bpl plaz
+
+		ldy #filename_entry_size-1	;filname length
+		lda (rzp),y
+		
+.if def_iec		
+	.if def_sd2iec
+		sta diskimage		;1-ff = no diskimage
+		bmi its_a_dir		;if dir, then skip searching diskimage
+		pha
+		jsr check_disk_images	;SD2IEC supports disk images
+		pla
+	.fi
+its_a_dir
+.fi		
+		
+		;returns flengde in A
+		
+		ldx #$36
+		stx $01
+
+.if def_iec
+
+		.if def_1541u
+		
+		.else
+		ldx #$3a		;"cd:" DIR or "name.D64"
+		stx dircommand+2
+		.fi
+
+	.if def_sd2iec
+		ldx diskimage
+		beq opendiskimage
+	.fi		
+		tax			;flengde
+		bpl loadfile
+
+opendiskimage
+		ldx plt_flag
+		cpx #2			;2=manual
+		bne file_error
+.if def_1541u_long
+		and #$3f
+.fi
+		asl			;get rid of bit 7 & set CLC
+		lsr			;return bits 0-6 to original state
+		adc #3			;set length for dir name
+		bne gotodir
+dir_back
+		
+	.if def_1541u
+		lda #$2e
+		sta dircommand+3
+		sta dircommand+4
+		lda #5			;"cd:.."
+	.else
+		lda #$5f		
+		sta dircommand+2	;"cd<-" works for iec,CMD & IDE64 drives (jiffydos)
+		lda #3			;file length is 3
+	.fi		
+		
+gotodir		ldx #<dircommand
+		ldy #>dircommand
+		jsr Rom_SetNam
+		lda #1
+		ldx device
+		ldy #15			;command channel
+		jsr Rom_SetLfs
+		jsr Rom_Open
+		;bcs errorChan		;A error happened
+		lda #1
+		jsr ROM_close
+		jsr ROM_clrchn
+nodirnow	jmp (wjp_dirselector)
+.fi
+;-------------------------------------------
+
+
+loadfile
+
+;Load sid header
+		
+		ldx #<fname
+		ldy #>fname
+		jsr ROM_setnam
+		ldy #0		;Turn off screen
+		sty $d011
+		lda #2			;2
+		ldx device
+;		ldy #0			;Y=0 LOADING
+		jsr ROM_setlfs
+		jsr ROM_open
+		ldx #2			;2
+		jsr ROM_chkin
+		ldy #0
+getheada	jsr ROM_chrin
+		cpy #$76		;Convert text strings to petscii
+		bcs gethb
+		cpy #$16
+		bcc gethb
+;		cmp #0
+		tax			;saves 1 byte 
+		beq convspc		;Convert zeros to space
+		cmp #$60
+		bcc +
+		and #$1f
++		.byte $2c
+convspc		lda #$20
+gethb		sta header,y
+		iny
+		cpy #$7e
+		bne getheada
+		lda #2			;2
+		jsr ROM_close
+		jsr ROM_clrchn
+
+;code continues below here in root main source:

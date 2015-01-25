@@ -1,0 +1,27 @@
+;--------------------------------------------------------------
+; getpos - use a,x,y 
+;--------------------------------------------------------------
+;Addition to find memory adress of a filename :
+;
+;y = line number (0-24)
+;x = high starting adress
+;a = low start adrss
+;
+;under these conditions it will give a number between 0000-03e8 
+
+;getpos
+		ldx #>dir_main	;highbyte adress of start of reu dir (d000-d3c0)
+		lda #<dir_main	;low byte adress
+		ldy pos_cursor	;0-15
+-		dey
+		bmi +
+		clc
+		adc #filename_entry_size	;(40)
+		bcc -
+		inx
+		bne -
++		
+;returns:	A = low adress
+;returns:	X = high adress
+		rts
+		

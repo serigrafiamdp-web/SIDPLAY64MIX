@@ -1,4 +1,11 @@
-;------------------- REU REGISTERS -------------------
+;--------------------------------------------------------------
+
+dirsize			= 15 * $40	;15 files  
+filename_entry_size	= $40		;
+dir_main			= $d000		;location for visible dir page in c64 mem
+dir_temp			= $d400		;new loaded filenames to be moved to reu
+
+;------------------- REU REGISTERS ----------------------------
 
 REU_Status   = $DF00  ;[read only] Status register
                       ;If a interrupt is on the Status register must be
@@ -40,4 +47,4 @@ reuexec      = %10010000    ;STA REU_Command -> Execute transfer on this sta. (D
 reuswap      = %00000010    ;STA REU_Command -> Swap data
 reuvrfy      = %00000011    ;STA REU_Command -> Havent tested this yet, but REU_Status probably returns something.
 
-;-----------------------------------------------------
+;--------------------------------------------------------------

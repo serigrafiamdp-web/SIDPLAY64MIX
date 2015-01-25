@@ -37,7 +37,7 @@ normalfiles	inx			;start with+1
 		ldy #$3a
 		sty setd+1
 		
-prnt		ldy #$12
+prnt		ldy #$14
 		sta (gzp),y		;print A
 		dey
 		txa

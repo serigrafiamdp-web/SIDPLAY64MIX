@@ -21,6 +21,7 @@
 	
 		lda #0
 		sta cmpzp		;text out på $048f
+		
 		lda #<dirscreen		;ZP pointer to write to screen
 		sta gzp
 		lda screenpos
@@ -28,9 +29,9 @@
 		adc #>dirscreen&$03ff
 		sta gzp+1
 
-		lda #<dest
+		lda #<dir_main		;d000-d3c0.. visible reu dir
 		sta rzp
-		lda #>dest
+		lda #>dir_main
 		sta rzp+1
 
              
@@ -79,10 +80,10 @@ grh		lda nofile,y		;nofile found
 		bmi tx
 
 tt
-		lda cmpzp
-		clc
-		adc tempcursor;cite		;copy of cite ;!! d017 sprite register
-		tax
+		;lda cmpzp
+		;clc
+		;adc tempcursor;cite		;copy of cite ;!! d017 sprite register
+		;tax
             
 		;jsr getpos			;get dir pos
 		;sty rzp
@@ -93,17 +94,17 @@ tt
 		;X = dir entry number
 		jsr iec_fileinfo
 .else
-		inx				;start with+1
-		txa
-		jsr gethexnum			;convert to A and X
-		ldy #$14
-		sta (gzp),y			;print A
-		dey
-		txa
-		sta (gzp),y			;print X
-		dey
-		lda #$3a			;":"
-		sta (gzp),y
+		;inx				;start with+1
+		;txa
+		;jsr gethexnum			;convert to A and X
+		;ldy #$14
+		;sta (gzp),y			;print A
+		;dey
+		;txa
+		;sta (gzp),y			;print X
+		;dey
+		;lda #$3a			;":"
+		;sta (gzp),y
 .fi
 
 		ldx #0
@@ -123,14 +124,14 @@ tv
 		dey
 		bpl tv
 		
-tx		lda gzp			;Next line
+tx		lda gzp			;Next line on screen
 		clc
 		adc #$28
 		sta gzp		
 		bcc +
 		inc gzp+1
 +
-		lda rzp
+		lda rzp			;Next line in c64 dir memory
 		clc
 		adc #filename_entry_size	;$40
 		sta rzp
@@ -139,10 +140,12 @@ tx		lda gzp			;Next line
 +		
 
 
+
 tw		
-		inc cmpzp
 		lda cmpzp
-		cmp #maxDirY		;max files displayed
+		inc cmpzp
+
+		cmp #maxDirY-1		;max files displayed
 		bcs tz
 		cmp maxfile
 		bcc tt

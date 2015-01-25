@@ -62,7 +62,7 @@ tt
 		inx				;start with+1
 		txa
 		jsr gethexnum			;convert to A and X
-		ldy #$12
+		ldy #$14
 		sta (gzp),y			;print A
 		dey
 		txa
@@ -78,8 +78,8 @@ tt
 		bne tu
 		ldx #$80
 tu		stx eorzp
-		;ldy #$0f
-		dey
+		ldy #$0f
+		;dey
 tv 		
 		lda (rzp),y		;Filename(s)
 		jsr convert_letter	;convert ascii to petscii
@@ -91,9 +91,9 @@ tv
 tx		lda gzp			;Next line
 		clc
 		adc #$28
-		bcc *+4
+		bcc +
 		inc gzp+1
-		sta gzp
++		sta gzp
 
 tw		inc cmpzp
 		lda cmpzp

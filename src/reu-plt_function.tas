@@ -1,0 +1,56 @@
+;--------------------------------------------------------------
+; "plt_advance"  (Play Loop/Limit Timer)
+;
+;  Controls Play Next and Play Random 
+;
+;--------------------------------------------------------------
+; * part of relocatable main
+; * this routine is not a subroutine. no rts.
+; * REU version!
+;--------------------------------------------------------------
+
+
+		txa			;untouched from plt_flag
+		tay
+		sei			;i think i must set sei
+		jsr wjs_resetCia	;zp $01 = 36 
+
+		lda #$38
+		sta $01
+					;X = FF
+					;Y = untouched
+		txs			;X=FF = topstack
+		tya			;0
+		bne plt_random		;1-ff
+;Y=0
+		
+		lda fcountlo
+		cmp maxfile
+		lda fcounthi
+		sbc maxfilehi
+		bcc last_plt
+					;start on top of list again
+		tya			;y=0
+		sta fcountlo
+		sta fcounthi
+		sta pos_cursor
+		jsr zero_reu_datadr	;changes A
+		jsr get_reu_dir		;changes A,X and zp $01 to 36
+		sec
+		bcs doload		;jmp
+		
+last_plt	jsr plt_inc		;reu: plt_inc is located in ram d000-e000
+
+doload		lda #$36
+		sta $01
+		ldy #1			;Set y = 1 for loading files
+		jmp (wjp_load)
+	
+plt_random
+					;reu: random routine is located in ram d000-e000
+		;lda #$38
+		;sta $01
+		jsr getrandom
+		lda #$36		;|not needed ?
+		sta $01			;|
+		bne doload		;;jmp

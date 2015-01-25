@@ -18,3 +18,10 @@ c1541.exe < c1541.mak
 
 codenet -n 192.168.80.64 -w boot.prg
 codenet -n 192.168.80.64 -e $080d
+
+rem defset=1 - normal 1541 build
+rem defset=2 - 1541u2cmd build
+rem defset=3 - iec,ide64,cmd fd,hd,rl,rd build
+rem defset=4 - sd2iec build
+rem defset=5 - 1541u1, netdrive build
+rem defset=6 - 1541u2siec build (can the 1541u2 operate in standalone mode?)

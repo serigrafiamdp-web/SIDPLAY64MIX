@@ -1,4 +1,12 @@
 ;--------------------------------------------------------------
+; REU keys subroutines:
+;--------------------------------------------------------------
+;	* static subroutines
+;	* location: d000-e000
+;--------------------------------------------------------------
+
+
+;--------------------------------------------------------------
 ;
 ;--------------------------------------------------------------
 reu_crsr_up	
@@ -20,6 +28,7 @@ torts		rts
 ;--------------------------------------------------------------
 ;
 ;--------------------------------------------------------------
+plt_inc					;called from play next function
 reu_crsr_down
 		lda fcountlo		;check if we have reached the end
 		cmp maxfile
@@ -142,42 +151,6 @@ tq		lda maxfile
 		jmp get_reu_dir		;i/o
 
 
-;--------------------------------------------------------------
-; Call this routine when loading in a new directory:
-;--------------------------------------------------------------
-prepare_loading_new_reu_dir
-		lda #dir_keys		;only a few keys available while loading dir
-		sta numb
-		lda #>tempdir
-		sta dzp+1
-
-		lda #maxDirY
-		sta filecounter
-		lda #0
-		sta fcountlo
-		sta fcounthi
-		sta maxfilehi
-
-		sta pos_cursor		;zp
-		;sta offs_cursor	;zp unused
-		sta maxfile		;zp
-		sta dzp
-		
-		;jsr zero_reu_datadr
-		;lda #<dirsize
-		;sta reu_len_lo
-		;lda #>dirsize
-		;sta reu_len_hi
-		;rts
-
-;--------------------------------------------------------------
-; Zero 24 bit reu address position:
-;--------------------------------------------------------------
-zero_reu_datadr	lda #0
-		sta reu_datadr_lo
-		sta reu_datadr_hi
-		sta reu_datadr_bank
-		rts
 
 ;--------------------------------------------------------------
 ; Move reu position by one (1) file entry upwards
@@ -240,6 +213,78 @@ adc_reu_page_position
 +		rts
 
 
+;--------------------------------------------------------------
+; Call this routine when loading in a new directory:
+;--------------------------------------------------------------
+prepare_loading_new_reu_dir
+		lda #dir_keys		;only a few keys available while loading dir
+		sta numb
+		lda #>dir_main
+		sta dzp+1
+
+		lda #maxDirY
+		sta filecounter
+		lda #0
+		sta fcountlo
+		sta fcounthi
+
+
+		sta pos_cursor		;zp
+
+		sta dzp			;zp
+		sta c64memlo
+
+		lda #$ff
+		sta maxfilehi		
+		sta maxfile		;zp		
+
+;--------------------------------------------------------------
+; Zero 24 bit reu address position:
+;--------------------------------------------------------------
+zero_reu_datadr	lda #0
+		sta reu_datadr_lo
+		sta reu_datadr_hi
+		sta reu_datadr_bank
+		rts
+
+
+;--------------------------------------------------------------
+; Called by dir fetch routine:
+;--------------------------------------------------------------
+write_reu_dir_entry
+		lda #maxDirY
+		sta filecounter
+		lda #<dir_temp
+		sta dzp
+		lda #>dir_temp
+		sta dzp+1
+
+write_reu_dir_entry2
+		lda #%10000000|c642reu
+		sta reu_comm
+		jsr wjs_exe_reucomm		;first time we transfer from "dir_main"
+		lda #>dir_temp			;next dir page we transfer from "dir_temp"
+		sta c64memhi
+		lda #<dir_temp
+		sta c64memlo	
+		jmp adc_reu_page_position
+
+
+;--------------------------------------------------------------
+; Jumped to by routines above, updates main dir memory:
+;--------------------------------------------------------------
+get_reu_dir
+		lda #%10000000|reu2c64
+		sta reu_comm
+		lda #>dir_main
+		sta c64memhi
+		lda #<dir_main
+		sta c64memlo
+		jmp wjs_exe_reucomm
+
+
+
+
 
 ;--------------------------------------------------------------
 ; Variables: Remember Zp $01 must be $38 or $34
@@ -256,13 +301,15 @@ filecounter	.byte maxDirY
 
 ;--- REU transfer / verify table
 reu_comm	.byte %10000000|c642reu		;DF01 -	REU_Command	Bit 7 set = execute REU DMA transfer on $ff00 write
-c64memlo	.byte 0				;DF02 -	REU_C64memlo	C64 adress pointer to start adress
-c64memhi	.byte >tempdir			;DF03 -	REU_C64memhi
+c64memlo	.byte <dir_main			;DF02 -	REU_C64memlo	C64 adress pointer to start adress
+c64memhi	.byte >dir_main			;DF03 -	REU_C64memhi
 reu_datadr_lo	.byte 0				;DF04 - REU_memlo	24 bit register for controlling reu memory
 reu_datadr_hi	.byte 0				;DF05 - REU_memhi
 reu_datadr_bank	.byte 0				;DF06 - REU_membank 
 reu_len_lo	.byte <dirsize			;DF07 - REU_lenlo	|
 reu_len_hi	.byte >dirsize			;DF08 - REU_lenhi	|$03c0 bytes
+reu_rirq	.byte %10000000			;DF09 - 
+reu_adrcontol	.byte FixNull			;DF0A - 
 
 
 

@@ -19,7 +19,7 @@ th		dec offs_cursor
 		
 key1		cpy #keyCrsrDown	;"Crsr down"
 		bne key2
-plt_inc		lda offs_cursor
+plt_inc		lda offs_cursor		;! also called from stack jumpb table
 		sec
 		adc pos_cursor
 		cmp maxfile

@@ -1,22 +1,14 @@
 DIRCMD	= $e808
 
-		lda #dir_keys		;only a few keys available while loading dir
-		sta numb		;00-0e
-		lda #>tempdir
-		sta dzp+1
-		
-		ldy #0
-		sty pos_cursor
-		sty offs_cursor
-		sty maxfile
-		sty dzp
-
-		lda #maxDirY
-		sta filecounter
+		ldx $01
+		lda #$38
+		sta $01
+		jsr prepare_loading_new_reu_dir	;only touch A register
+		stx $01
 
 		lda #1
 		ldx device
-;		ldy #0			;Y = 0
+		ldy #0			;Y = 0
 		jsr rom_setlfs		;sta b8,ba,b9
 		ldx #<dircmd
 		ldy #>dircmd
@@ -38,61 +30,52 @@ skip_header	jsr wjs_getbyte
 					;file entry block hi (msb)
 		dey
 		bne skip_header
-		;cmp #0
-		tay
+		tay			;cmp #0
 		bne goof		;msb 0 blocks ?
+					;Y=0
 		txa			;lsb 0 blocks ?
 goof		sta zerofile		;both 0 blocks ? then zero
-		
-gfn_start	JSR wjs_getbyte
-		cmp #$22		;skip spaces or check first "
-		bne gfn_start
-;----
-		ldx maxfile
-		ldy #0			;start of name "
-		tya
-		sta flengde,x		;zerolength
-getfname_loop	jsr wjs_getbyte		;start of name chars
 
-		cmp #$22		;end of name "
+-		JSR wjs_getbyte
+		cmp #$22		;" wait for start of filename
+		bne -
+;----
+		ldy #0
+		ldx #0 		;set filename length to zero
+
+getfname_loop	jsr wjs_getbyte		;filename letters here
+		cmp #$22		;" wait for end of filename
 		bne getfname
 		tya
-		sta flengde,x		;if file has a 16 letter limit it will be set here
-		lda #$20
-getfname	sta (dzp),y		;store name letter
+		tax			;filename length 1-16 is now in X register
+		
+		lda #$20		;"space" sign
+getfname	sta (dzp),y		;store letter
 		iny
-		cpy #$11
-		bne getfname_loop	;
-		lda flengde,x		;Check if still zero ?
-		bne aye
-		tya
-		sta flengde,x		;11
-		
-;		dey			;10
-;		tya
-;		sta flengde,x		;
-;		dey			;0f
-;		lda #$2a		;put a "*" in the filename
-;		sta (dzp),y
+		cpy #$11		;max length
+		bne getfname_loop
 
-aye		
-		
-		
-		
+		txa
+		bne +			;filename length unchanged and still zero ?
+		tya			;yes, then we have a long filename and force it to $11
++		ldy #filename_entry_size-1
+		sta (dzp),y
+	
+
 		
 ;wait for filentry to finish / scan for DIR entry
-retry_dir	ldy #3			;reset dir search
+retry_dir	ldx #3			;reset dir search
 scandir
 fn_endloop	JSR wjs_getbyte		;Scan filetype
 		beq fn_endloop2		;exit
 
 .if def_1541u_long
-		cmp d64_txt,y
+		cmp d64_txt,x		;"46D "
 		beq found_d64
 .fi		
-		cmp dir_txt,y		;Look for " DIR" (PRG SEQ REL USR DEL)
+		cmp dir_txt,x		;"RID " Look for " DIR" (PRG SEQ REL USR DEL)
 		bne retry_dir
-found_d64	dey
+found_d64	dex
 		bpl scandir
 		sta zerofile		;"R"
 
@@ -102,23 +85,28 @@ found_d64	dey
 		lda #$c0		;d64
 		.byte $2c
 adir		lda #$80		;dir
-		ora flengde,x
-		sta flengde,x
-		bne fn_endloop
+		;ldy #filename_entry_size-1
+		ora (dzp),y
+		sta (dzp),y
+		bne fn_endloop		;jmp
 
 
 .else		
-;		ldx maxfile
-		lda flengde,x		;Change file length to + $80 for DIR
-		ora #$80
-		sta flengde,x
+		;ldy #filename_entry_size-1
+		lda (dzp),y		
+		ora #$80		;Change file length to + $80 for DIR
+		sta (dzp),y
 		bne fn_endloop		;jmp
 .fi
 		
 fn_endloop2
 		lda zerofile		;dont allow zerofiles
 		beq bci
-		inc maxfile		;
+		
+		inc maxfile
+		bne +
+		inc maxfilehi
++
 		lda dzp
 		clc
 		adc #filename_entry_size
@@ -128,9 +116,8 @@ fn_endloop2
 +
 		dec filecounter
 		bne bci
-		lda #maxDirY
-		sta filecounter
 		jsr write_reu_dir_entry
+		;jsr adc_reu_page_position
 bci
 
 ;		lda #$36
@@ -147,10 +134,10 @@ bci
 getByte
 		lda #$36
 		sta $01
-		lda maxfile		;zeropage
-		cmp #maxentries	;Reached the file limit ?
-		beq endofdir		;yes
-		lda #0			;no
+		;lda maxfile
+		;cmp #maxentries	;no limit check when using REU.
+		;beq endofdir		
+		lda #0
 		sta $90
 		stx netdrivex		;TFR - Netdrive bug
 		jsr ROM_chrin
@@ -165,12 +152,18 @@ getByte
 		cmp #0
 		rts
 ;---------Finished reading directory--------
-endofdir	lda maxfile		;we dont sort 1 file
-		cmp #2			;must be 2 or more
-		bcc nofiles
-		lda #$38
-		sta $01
-		jsr iec_dir_sort
+endofdir	
+		jsr write_reu_dir_entry2
+		;jsr adc_reu_page_position
+		jsr zero_reu_datadr
+		
+;		lda maxfile		;we dont sort 1 file
+;		cmp #2			;must be 2 or more
+;		bcc nofiles
+;		lda #$38
+;		sta $01
+;		jsr iec_dir_sort
+
 nofiles		lda #$36
 		sta $01
 		pla

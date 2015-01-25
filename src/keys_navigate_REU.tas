@@ -1,6 +1,8 @@
 ;--------------------------------------------------------------
 ; REU key routines for navigating 65535 files dir:
 ;--------------------------------------------------------------
+;this code is part of the main relocatable memory 
+; and is located in lower ram memory: 0000-d000
 
 		;Y = key we pressed
 		;A = 0
@@ -13,7 +15,7 @@
 		
 key1		cpy #keyCrsrDown	;"Crsr down"
 		bne key2
-plt_inc		jmp reu_crsr_down
+		jmp reu_crsr_down	;plt_inc is in d000-e000 ... check reu_keys_subroutines*.tas
 
 key2		cpy #keyClrHome
 		bne key3
@@ -28,9 +30,8 @@ key4		cpy #keySpace		;"SPACE"
 ingenfil	pla
 		pla
 		jsr wjs_resetCia	;zp $01 = 36
-		;jsr ROM_clall           ;Close dirfile, and all other files..
+		jsr ROM_clall           ;Close dirfile, and all other files..
 		jmp (wjp_dirSelector)
-		rts
          
 key5
 .if def_iec + def_1541u2cmd
@@ -42,10 +43,15 @@ key5
 
 key6		cpy #keyReturn		;"RETURN"
 		bne key7
-		;lda maxfilehi
-		;bne ingenfil
-		ldy maxfile		;Y = 1-ff will be used at (wjp_load)
-		beq ingenfil
+		lda #$ff
+		cmp maxfilehi		;$ffff
+		beq ingenfil		;if HI is $ff then lo is $ff
+		;cmp maxfile
+		;beq ingenfil
+		tay			;y=ff
+		
+		;ldy maxfile		;Y = 1-ff will be used at (wjp_load)
+		;beq ingenfil
 dirbackw	pla
 		pla
 		jsr wjs_resetCia	;zp $01 = 36

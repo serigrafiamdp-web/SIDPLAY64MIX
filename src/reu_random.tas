@@ -1,0 +1,232 @@
+
+;plt_random
+
+newrand		lda maxfilehi
+		bne +
+		lda #0
+		sta rseed+1
+		lda rseed		;| random routine from WhiteFlame
+		beq ldoeor
+		asl
+		beq lnoeor		;if the input was $80, skip the eor
+		bcc lnoeor
+ldoeor		eor #$1d
+lnoeor		sta rseed
+
+		cmp maxfile
+		bcs newrand
+;		cmp samefile		;check if it tries to load the same file
+;		beq newrand
+;		sta samefile
+		jmp contt
+		
+		
++
+
+newrand2	jsr get_random_16bit
+		lda rseed
+		cmp maxfile
+		lda rseed+1
+		sbc maxfilehi
+		bcs newrand2
+		
+
+contt
+
+		
+; check if the seed value is within the visible dir area: 
+; if so we transfer the seed value (0-0f) to pos_cursor
+; and zero the seed value so we can transfer the very first page of dir from reu:
+		lda rseed+1
+		bne +
+		lda rseed
+		tay
+		sec
+		sbc #maxDirY
+		bcs +			;check if we are at upper visible area (0000-000f)
+		lda #0
+		sta fcounthi
+		;sta rseed+1		;already 0
+		sta rseed
+		
+		sty pos_cursor		;y=00 to 0e
+		sty fcountlo
+		
+		jmp slsb
++		
+
+; seed value is greater than #maxDirY :
+
+		lda maxfile
+		sec
+		sbc #maxDirY-1
+		sta tmplo
+		lda maxfilehi
+		sbc #0
+		sta tmphi
+
+		lda rseed
+		cmp tmplo
+		lda rseed+1
+		sbc tmphi
+		bcc +
+
+		
+		ldy #maxDirY-1
+		ldx maxfile
+-		cpx rseed
+		beq hh
+		dex
+		dey
+		bne -
+hh		sty pos_cursor
+
+;		lda maxfile
+;		sec
+;		sbc rseed
+;		sta fcountlo	;temp store
+;		lda maxfile
+;		sec
+;		sbc fcountlo
+;		sta pos_cursor
+	
+
+		lda rseed
+		sta fcountlo
+		lda rseed+1
+		sta fcounthi
+		lda tmphi
+		ldx tmplo
+		jmp getlastpage
++
+
+		
+		lda rseed
+		sta fcountlo
+		sec
+		sbc #maxDirY-1
+		sta rseed
+		lda rseed+1
+		sta fcounthi
+		sbc #0
+		sta rseed+1
+		lda #maxDirY-1
+		sta pos_cursor
+		
+slsb
+		lda rseed+1
+		ldx rseed
+
+getlastpage
+		jsr getreuadress
+		sta reu_datadr_lo
+		stx reu_datadr_hi
+		sty reu_datadr_bank
+		jmp get_reu_dir		;i/o
+		
+	
+	
+
+.comment
+;--- a = high filenumber
+;--- x = low filenumer
+zlo	= $fa
+zhi	= $fb
+zbank	= $fc
+
+getreuadress
+
+loop
+		sta zhi
+		lsr		;When hi is 0,4,8,c,10...
+		lsr
+		sta zbank	;zbank change bank to 0,1,2,3,4...
+		txa		;fcountlo, seed, lo value
+		asl
+		rol zhi		;*2
+		asl
+		rol zhi		;*4
+		asl
+		rol zhi		;*8
+		asl
+		rol zhi		;*$10
+		asl
+		rol zhi		;*$20
+		asl
+		rol zhi		;*$40
+				;returns
+		sta zlo		;a = lo
+		ldx zhi		;x = hi
+		ldy zbank	;y = bank
+		rts
+.endc
+
+
+
+.comment
+newrand		lda seed		;| random routine from WhiteFlame
+		beq doeor
+		asl
+		beq noeor		;if the input was $80, skip the eor
+		bcc noeor
+doeor		eor #$1d
+noeor		sta seed
+
+		cmp maxfile
+		bcs newrand
+		cmp samefile		;check if it tries to load the same file
+		beq newrand
+		sta samefile
+		tay
+
+		sec
+		sbc #maxDirY-1
+		bcs maax
+		lda #0
+		.byte $2c
+maax		ldy #maxDirY-1
+		sty pos_cursor	;visible limit
+		sta offs_cursor	;offset
+		sec
+		bcs doload
+.endc
+
+
+get_random_16bit
+
+;16 bit random over 0000-ffff by Whiteflame
+
+		magic = $ffed
+
+		lda rseed
+		beq lowZero	; $0000 and $8000 are special values to test for
+ 
+ 				; Do a normal shift
+		asl rseed
+		lda rseed+1
+		rol
+		bcc noEor
+doEor				; high byte is in .A
+		eor #>magic
+		sta rseed+1
+		lda rseed
+		eor #<magic
+		sta rseed
+		rts
+ 
+lowZero
+		lda rseed+1
+		beq doEor	; High byte is also zero, so apply the EOR
+				; For speed, you could store 'magic' into 'seed' directly
+				; instead of running the EORs
+ 
+				; wasn't zero, check for $8000
+		asl
+		beq noEor	; if $00 is left after the shift, then it was $80
+		bcs doEor	; else, do the EOR based on the carry bit as usual
+ 
+noEor
+		sta rseed+1
+ 		rts
+
+rseed		.word 0
