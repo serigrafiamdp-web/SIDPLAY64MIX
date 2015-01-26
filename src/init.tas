@@ -30,8 +30,18 @@ temp		= $ff
 pal		sty $02a6
 
 		lda $d41b		;get random number
-		sta seed		;set it in seed
 
+.if DEF_REU
+		pha
+		lda $d41b
+		inc $01		;38
+		sta rseed		;insert seeds for REU versions
+		pla
+		sta rseed+1
+		dec $01		;37
+.else		
+		sta seed		;insert seed for Normal versions
+.fi
 		bit $dc0b		;stop TOD timer
 
 		lda #0			;reset TOD clock

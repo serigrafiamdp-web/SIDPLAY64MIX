@@ -1,11 +1,13 @@
 
 ;plt_random
 
-newrand		lda maxfilehi
+		lda maxfilehi
 		bne +
-		lda #0
+		;A=0
+		sta valuehi		
 		sta rseed+1
-		lda rseed		;| random routine from WhiteFlame
+		
+newrand		lda rseed		;| random routine from WhiteFlame
 		beq ldoeor
 		asl
 		beq lnoeor		;if the input was $80, skip the eor
@@ -18,6 +20,7 @@ lnoeor		sta rseed
 ;		cmp samefile		;check if it tries to load the same file
 ;		beq newrand
 ;		sta samefile
+		sta valuelo
 		jmp contt
 		
 		
@@ -25,8 +28,13 @@ lnoeor		sta rseed
 
 newrand2	jsr get_random_16bit
 		lda rseed
-		cmp maxfile
+		sta valuelo
 		lda rseed+1
+		sta valuehi
+		
+		lda valuelo
+		cmp maxfile
+		lda valuehi
 		sbc maxfilehi
 		bcs newrand2
 		
@@ -37,17 +45,17 @@ contt
 ; check if the seed value is within the visible dir area: 
 ; if so we transfer the seed value (0-0f) to pos_cursor
 ; and zero the seed value so we can transfer the very first page of dir from reu:
-		lda rseed+1
+		lda valuehi
 		bne +
-		lda rseed
+		lda valuelo
 		tay
 		sec
 		sbc #maxDirY
 		bcs +			;check if we are at upper visible area (0000-000f)
 		lda #0
 		sta fcounthi
-		;sta rseed+1		;already 0
-		sta rseed
+		;sta valuehi		;already 0
+		sta valuelo
 		
 		sty pos_cursor		;y=00 to 0e
 		sty fcountlo
@@ -65,16 +73,16 @@ contt
 		sbc #0
 		sta tmphi
 
-		lda rseed
+		lda valuelo
 		cmp tmplo
-		lda rseed+1
+		lda valuehi
 		sbc tmphi
 		bcc +
 
 		
 		ldy #maxDirY-1
 		ldx maxfile
--		cpx rseed
+-		cpx valuelo
 		beq hh
 		dex
 		dey
@@ -83,7 +91,7 @@ hh		sty pos_cursor
 
 ;		lda maxfile
 ;		sec
-;		sbc rseed
+;		sbc valuelo
 ;		sta fcountlo	;temp store
 ;		lda maxfile
 ;		sec
@@ -91,9 +99,9 @@ hh		sty pos_cursor
 ;		sta pos_cursor
 	
 
-		lda rseed
+		lda valuelo
 		sta fcountlo
-		lda rseed+1
+		lda valuehi
 		sta fcounthi
 		lda tmphi
 		ldx tmplo
@@ -101,21 +109,21 @@ hh		sty pos_cursor
 +
 
 		
-		lda rseed
+		lda valuelo
 		sta fcountlo
 		sec
 		sbc #maxDirY-1
-		sta rseed
-		lda rseed+1
+		sta valuelo
+		lda valuehi
 		sta fcounthi
 		sbc #0
-		sta rseed+1
+		sta valuehi
 		lda #maxDirY-1
 		sta pos_cursor
 		
 slsb
-		lda rseed+1
-		ldx rseed
+		lda valuehi
+		ldx valuelo
 
 getlastpage
 		jsr getreuadress
@@ -163,40 +171,10 @@ loop
 
 
 
-.comment
-newrand		lda seed		;| random routine from WhiteFlame
-		beq doeor
-		asl
-		beq noeor		;if the input was $80, skip the eor
-		bcc noeor
-doeor		eor #$1d
-noeor		sta seed
-
-		cmp maxfile
-		bcs newrand
-		cmp samefile		;check if it tries to load the same file
-		beq newrand
-		sta samefile
-		tay
-
-		sec
-		sbc #maxDirY-1
-		bcs maax
-		lda #0
-		.byte $2c
-maax		ldy #maxDirY-1
-		sty pos_cursor	;visible limit
-		sta offs_cursor	;offset
-		sec
-		bcs doload
-.endc
-
-
 get_random_16bit
-
 ;16 bit random over 0000-ffff by Whiteflame
 
-		magic = $ffed
+		magic = $0053
 
 		lda rseed
 		beq lowZero	; $0000 and $8000 are special values to test for
@@ -229,4 +207,6 @@ noEor
 		sta rseed+1
  		rts
 
-rseed		.word 0
+rseed		.byte 0,0
+valuelo		.byte 0
+valuehi		.byte 0

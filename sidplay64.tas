@@ -13,7 +13,7 @@
 ; $DC0D - The irq is a timer irq, so $dc0d must be read for each irq triggered.
 ;--------------------------------------------------------------
 DEF_REU		= 1	;1 = enable reu routines (for all versions)
-def_currentdate	= 0	;1 = include current date and clock in setup
+def_currentdate	= 1	;1 = include current date and clock in setup
 def_illegal	= 1	;1 = use illegal opcodes
 def_colorselect	= 1	;use 1, 0 = for debugging new colors.
 ;--------------------------------------------------------------
