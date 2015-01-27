@@ -23,7 +23,18 @@ DIRCMD	= $e808
 
 ;zp $01 = 36 here
 
-		ldy #$10+2
+;---------- checking for zero after disk header:
+		ldy #$1e
+-		jsr wjs_getbyte
+		dey
+		bne -
+-		jsr wjs_getbyte		;wait for zero to occur (incase long winvice dirnames)
+		bne -
+;now we have 01 01 followed by lsb, msb
+;		
+;-----
+		ldy #2
+		;ldy #$10+2
 skip_header	jsr wjs_getbyte
 		tax			;file entry block lo (lsb)
 		jsr wjs_getbyte
@@ -139,16 +150,13 @@ getByte
 		;beq endofdir		
 		lda #0
 		sta $90
-		stx netdrivex		;TFR - Netdrive bug
+		stx netdrivex		;TFR - Netdrive bug - zp
 		jsr ROM_chrin
-		ldx netdrivex		;TFR - Netdrive bug
-		pha
-		lda #$38
-		sta $01
-		pla
-		inc $90			;Checks if $90 is zero without changing
-		dec $90			;A,X or Y
+		ldx #$38
+		stx $01
+		ldx $90			;If status is zero then continue
 		bne endofdir
+		ldx netdrivex		;TFR - Netdrive bug - zp
 		cmp #0
 		rts
 ;---------Finished reading directory--------

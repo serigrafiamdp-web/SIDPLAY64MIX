@@ -336,9 +336,11 @@ maxDirY		= 15
 
 ;variables 
 
+no_keys		= 0	;crsr up - but has no effect on reu registers
 dir_keys	= 5	;crsr-up/crsr-down/clrhome/sh+clrhome/space/delete
 noirq_keys	= 6	;return (load file possible)
 irq_keys	= 13	;select tune, restart, shuffle
+
 
 keyCrsrDown	= 0	;Directory keys 0-5
 keyCrsrUp	= 1	;
@@ -361,8 +363,11 @@ keyManual	= 13	;
            
 ;keyboard scan table
 
-dc00	.byte $fe	;00|crsr
-	.byte $00	;01|crsr+sh
+dc00	
+
+
+	.byte $fe	;00|crsr
+	.byte $00	;01|crsr+sh	
 	.byte $bf	;02|clrh
 	.byte $00	;03|clrh+sh
 	.byte $7f	;04|space
@@ -378,8 +383,10 @@ dc00	.byte $fe	;00|crsr
 	.byte $df	;12|-
 	.byte $ef	;13|M
 
-dc01	.byte $7f	;00|crsr  
-	.byte $6f	;01|crsr+sh  
+dc01	
+
+	.byte $7f	;00|crsr  
+	.byte $6f	;01|crsr+sh  	
 	.byte $f7	;02|clrh    
 	.byte $e7	;03|clrh+sh 
 	.byte $ef	;04|space

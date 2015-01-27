@@ -217,10 +217,12 @@ adc_reu_page_position
 ; Call this routine when loading in a new directory:
 ;--------------------------------------------------------------
 prepare_loading_new_reu_dir
-		lda #dir_keys		;only a few keys available while loading dir
+		;lda #dir_keys		;only a few keys available while loading dir
+		lda #no_keys		;no keys when loading dir
 		sta numb
 		lda #>dir_main
 		sta dzp+1
+		sta c64memhi
 
 		lda #maxDirY
 		sta filecounter
@@ -231,6 +233,7 @@ prepare_loading_new_reu_dir
 
 		sta pos_cursor		;zp
 
+		;lda #<dir_main		;zero
 		sta dzp			;zp
 		sta c64memlo
 

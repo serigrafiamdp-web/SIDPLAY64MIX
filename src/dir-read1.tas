@@ -34,43 +34,37 @@ gri		jsr wjs_getbyte		;01   01   00           ;( = jsr ROM_chrin)
 gri2		jsr wjs_getbyte		;04   01   00
 		dey
 		bne gri
-		;cmp #0
-		tay
+		tay			;cmp #0
 		bne ta
 		txa			;Skip zerolength files
 		beq ta
-
-
 
 		
 tb		jsr wjs_getbyte
 		cmp #$22		;" find start of filename
 		bne tb
 ;----
-		ldx maxfile
-		ldy #0
-		tya
-		sta flengde,x		;make this entry zero
+		;Y=0
+		ldx #0
 		
 getfname_loop	jsr wjs_getbyte
 		cmp #$22		;" find end of filename
 		bne getfname
 		tya
-		sta flengde,x		;if file is 1-16 letters it will be set here
-
+		tax			;filename length 1-16 is now in X register
 		
 		lda #$20
-getfname	
-		sta (dzp),y		;store letter
+getfname	sta (dzp),y		;store letter
 		iny
 		cpy #$11		;Get filename
 		bne getfname_loop
-		lda flengde,x		;Check if still zero ?
-		bne aye
-		tya
+
+		txa
+		bne +			;filename length unchanged and still zero ?
+		tya			;yes, then we have a long filename and force it to $11
++		ldx maxfile
 		sta flengde,x		;Store $11 for long filenames
 
-aye
 
 .if def_1541u2siec
 ;THIS assumes that all files from the 1541u2 sw iec
@@ -115,16 +109,13 @@ getByte
 		beq endofdir
 		lda #0
 		sta $90
-		stx netdrivex		;TFR - Netdrive bug
+		stx netdrivex		;TFR - Netdrive bug - zp
 		jsr ROM_chrin
-		ldx netdrivex		;TFR - Netdrive bug
-		pha
-		lda #$38
-		sta $01
-		pla
-		inc $90			;Checks if $90 is zero without changing
-		dec $90			;A,X or Y
+		ldx #$38
+		stx $01
+		ldx $90			;If status is zero then continue
 		bne endofdir
+		ldx netdrivex		;TFR - Netdrive bug - zp
 		cmp #0
 		rts
 		

@@ -78,8 +78,9 @@ tt
 		bne tu
 		ldx #$80
 tu		stx eorzp
-		ldy #$0f
-		;dey
+
+		ldy #$0f			;standard 16 letter filenames
+
 tv 		
 		lda (rzp),y		;Filename(s)
 		jsr convert_letter	;convert ascii to petscii

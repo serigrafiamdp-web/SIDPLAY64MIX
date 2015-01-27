@@ -29,15 +29,26 @@ DIRCMD	= $e808
 
 ;zp $01 = 36 here
 
-		ldy #$10+2
+;---------- checking for zero after disk header:
+		ldy #$1e
+-		jsr wjs_getbyte
+		dey
+		bne -
+-		jsr wjs_getbyte		;wait for zero to occur (incase long winvice dirnames)
+		bne -
+;now we have 01 01 followed by lsb, msb
+;		
+;-----
+		ldy #2
+		;ldy #$10+2
+		
 skip_header	jsr wjs_getbyte
 		tax			;file entry block lo (lsb)
 		jsr wjs_getbyte
 					;file entry block hi (msb)
 		dey
 		bne skip_header
-		;cmp #0
-		tay
+		tay			;cmp #0
 		bne goof		;msb 0 blocks ?
 		txa			;lsb 0 blocks ?
 goof		sta zerofile		;both 0 blocks ? then zero
@@ -46,25 +57,35 @@ gfn_start	JSR wjs_getbyte
 		cmp #$22		;skip spaces or check first "
 		bne gfn_start
 ;----
-		ldx maxfile
-		ldy #0			;start of name "
-		tya
-		sta flengde,x		;zerolength
+		ldy #0
+		ldx #0
+		;ldx maxfile
+		;ldy #0			;start of name "
+		;tya
+		;sta flengde,x		;zerolength
+		
+		
 getfname_loop	jsr wjs_getbyte		;start of name chars
 
 		cmp #$22		;end of name "
 		bne getfname
 		tya
-		sta flengde,x		;if file has a 16 letter limit it will be set here
+		tax
+		
+		;sta flengde,x		;if file has a 16 letter limit it will be set here
+		
 		lda #$20
 getfname	sta (dzp),y		;store name letter
 		iny
 		cpy #$11
 		bne getfname_loop	;
-		lda flengde,x		;Check if still zero ?
-		bne aye
-		tya
-		sta flengde,x		;11
+
+		txa
+		bne +			;filename length unchanged and still zero ?
+		tya			;yes, then we have a long filename and force it to $11
++		ldx maxfile
+		sta flengde,x
+
 		
 ;		dey			;10
 ;		tya
@@ -144,16 +165,13 @@ getByte
 		beq endofdir		;yes
 		lda #0			;no
 		sta $90
-		stx netdrivex		;TFR - Netdrive bug
+		stx netdrivex		;TFR - Netdrive bug - zp
 		jsr ROM_chrin
-		ldx netdrivex		;TFR - Netdrive bug
-		pha
-		lda #$38
-		sta $01
-		pla
-		inc $90			;Checks if $90 is zero without changing
-		dec $90			;A,X or Y
+		ldx #$38
+		stx $01
+		ldx $90			;If status is zero then continue
 		bne endofdir
+		ldx netdrivex		;TFR - Netdrive bug - zp
 		cmp #0
 		rts
 ;---------Finished reading directory--------

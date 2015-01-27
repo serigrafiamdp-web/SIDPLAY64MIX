@@ -113,7 +113,12 @@ tt
 		bne tu
 		ldx #$80
 tu		stx eorzp
-		ldy #$0f
+
+.if def_sd2iec
+		ldy #$10			;sd2iec, winvice vde has longer filenames
+.else
+		ldy #$0f			;standard 16 letter filenames
+.fi
 		
 		
 tv 		
