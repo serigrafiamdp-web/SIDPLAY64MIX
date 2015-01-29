@@ -52,9 +52,6 @@ clrtod		sta $dc08		;08,09,0a,0b
 
 		jsr $ff90		;Disable kernal io messages
 
-.if DEF_REU		
-		jsr reu_detection
-.fi		
 
 		jsr devicecheck		;Select correct device here (f1/f2/return) - needs acess to rom routines at a000-c000 and e000-fffff
 
@@ -427,6 +424,7 @@ setup_colors	tax
 		dey
 		bpl -
 
+
 .comment
 		pla
 		sta color_screen+1		;in player for $0286
@@ -457,6 +455,8 @@ setup_colors	tax
 		sta color_number_of_files+1
 .endc
 
+
+.comment
 
 		pla
 		sta color_screen2+1		;in player for $0286
@@ -523,12 +523,21 @@ setup_colors	tax
 
 		ldx #$07
 -
+		cpx #4
+		bcs +
 color_songnumbers
 		lda #$a9
 		sta (songstr1&$3ff)+$d800,x		;song number 26/26
++		
+
 color_timer	lda #$a9
+.if def_1541u2cmd
+		sta ((timestr1&$3ff)+$d800)-5,x		;tod clock color
+		sta ((timestr1&$3ff)+$d800)-5+40,x	;shuffle timer color
+.else
 		sta (timestr1&$3ff)+$d800,x		;tod clock color
 		sta ((timestr1&$3ff)+$d800)+40,x	;shuffle timer color
+.fi
 		dex
 		bpl -
 
@@ -544,10 +553,15 @@ devout = screen2+(40*10)+13
 		pla
 ;color_device_number	<-- changed to filecounter
 ;		lda #$a9
-		sta $d800+(devout&$03ff)
-		sta $d800+(devout&$03ff)+1
-		sta $d800+(devout&$03ff)+2
-		sta $d800+(devout&$03ff)+3
+		ldx #3
+-		
+.if def_1541u2cmd
+		sta $d800+($0638&$03ff),x
+.else
+		sta $d800+(devout&$03ff),x
+.fi		
+		dex
+		bpl -
 
 
 		pla
@@ -588,11 +602,24 @@ numfiles = screen2+$014d
 		pla
 ;color_number_of_files
 ;		lda #$a9
-		sta $d800+(numfiles&$03ff)
-		sta $d800+(numfiles&$03ff)+1
-		sta $d800+(numfiles&$03ff)+2
-		sta $d800+(numfiles&$03ff)+3
+
+		ldx #3
+-		
+.if def_1541u2cmd
+		sta $d800+($05e8&$03ff),x
+.else
+		sta $d800+(numfiles&$03ff),X
+.fi		
+		dex
+		bpl -
 		rts
+.endc
+
+.if def_1541u2cmd * DEF_REU
+	.include "src/init-colors-1541u2cmd-reu.tas"
+.else
+	.include "src/init-colors-normal.tas"
+.fi
 
 
 keyjoystickmsg

@@ -1,0 +1,139 @@
+;--------------------------------------------------------------
+;         Used in init to set colors on display screen
+;--------------------------------------------------------------
+		pla
+		sta color_screen2+1		;in player for $0286
+		dec $01			;37
+
+		ldx #0
+;color_screen	lda #$a9		;Main text color - whole screen
+-		sta $d800,x
+		sta $d900,x
+		sta $da00,x
+		sta $db00,x
+		inx
+		bne -
+
+
+		pla
+;color_d021	lda #0
+		sta $d021
+
+		pla
+		sta color_playmusic2+1	;in player
+
+
+		pla
+		ldx #$0f
+;color_current_filename
+;		lda #$a9
+-		sta $d82e,x
+		dex
+		bpl -
+
+
+
+		pla
+		ldx #37
+;color_iomessage lda #$a9		;IO disk messages
+-		sta $db99,x
+		dex
+		bpl -
+
+		pla
+		ldx #30
+;color_credits1	lda #$a9
+-		sta credz,x
+		sta credz+(40*1),x
+		sta credz+(40*2),x
+		dex
+		bpl -
+
+		pla
+		ldx #3
+;color_credits2	lda #$a9
+-		sta credz+(40*4),x
+		sta credz+(40*5),x
+		sta credz+(40*6),x
+		sta credz+(40*7),x
+		dex
+		bpl -
+
+		pla
+		sta color_songnumbers+1
+		pla
+		sta color_timer+1
+
+		ldx #$07
+-
+		;cpx #4
+		;bcs +
+color_songnumbers
+		lda #$a9
+		sta (songstr1&$3ff)+$d800,x		;song number 26/26
++		
+
+color_timer	lda #$a9
+		sta (timestr1&$3ff)+$d800,x		;tod clock color
+		sta ((timestr1&$3ff)+$d800)+40,x	;shuffle timer color
+		dex
+		bpl -
+
+
+devout = screen2+(40*10)+13
+
+		pla
+;color_device_number	<-- changed to filecounter
+;		lda #$a9
+		ldx #3
+-
+		sta $d800+(devout&$03ff),x
+		dex
+		bpl -
+
+
+		pla
+		sta color_dir_filenames+1
+		pla
+		sta color_dir_numbers+1
+
+
+		lda #>(dirscreen&$03ff)+$d800
+		sta gzp+1
+		lda #<dirscreen
+		sta gzp
+
+		ldx #maxDirY-1
+row		ldy #$14
+row2		cpy #$12
+		bcs numrow
+color_dir_filenames
+		lda #$a9		;light green
+		.byte $2c
+numrow
+color_dir_numbers
+		lda #$a9		;light grey
+		sta (gzp),y
+		dey
+		bpl row2
+		lda gzp
+		clc
+		adc #$28
+		bcc *+4
+		inc gzp+1
+		sta gzp
+		dex
+		bpl row
+
+numfiles = screen2+$014d
+
+		pla
+;color_number_of_files
+;		lda #$a9
+
+		ldx #3
+-		
+		sta $d800+(numfiles&$03ff),X
+		dex
+		bpl -
+		rts

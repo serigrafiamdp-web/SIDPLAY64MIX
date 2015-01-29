@@ -24,9 +24,12 @@ msgpos		= $0400+4+(40*6)
 		jsr $ab1e
 		lda #$15
 		sta $d018
-		lda #$0D
-		jsr $ffd2
-		jsr $ffd2
+
+.if DEF_REU		
+		jsr reu_detection
+.fi		
+
+		
 		
 ; check if U2 is connected and in Ultimate Command mode
 		LDA U2_Identification_register
@@ -35,7 +38,7 @@ msgpos		= $0400+4+(40*6)
 		; show message
 		lda #<u2msg
 		ldy #>u2msg
-		jsr $ab1e
+		jmp $ab1e		;change to jsr
 		jmp *
 		
 u2ison  
@@ -110,6 +113,11 @@ deviceok
 		
 		lda #$15
 		sta $d018
+
+.if DEF_REU		
+		jsr reu_detection
+.fi		
+
 
 
 		ldx #0
@@ -295,8 +303,9 @@ devmsg		.byte $1e,$08,$93,$99
 		.fi
 		* = *-2	;delete the two last bytes ($0d,$0a) created by batch echo
 .if def_1541u2cmd
-        .byte $1e,0
+        .byte $1e,$0d,0
 u2msg		
+		.byte $0d
 		.text "1541u2 not connected or",$0d,"ultimate command interface disabled!",0
 		
 .else

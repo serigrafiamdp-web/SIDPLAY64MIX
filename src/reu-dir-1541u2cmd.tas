@@ -1,0 +1,159 @@
+;credz		= (screen1&$03ff)+($d808+(40*3))
+;songstr1	= screen1+(40*6)+7
+;timestr1	= screen1+(40*20)+4
+;dirscreen	= screen2+(40*7)+13
+
+
+;--------------------------------------------------------------
+;  REU-DIR-1541U2CMD 
+;
+;  Read 1541U2 filenames + dirs and store them in REU dirbuffer.
+;
+;--------------------------------------------------------------
+; * part of relocatable main
+; * this routine is not a subroutine. no rts.
+;--------------------------------------------------------------
+
+
+		ldx $01
+		lda #$38
+		sta $01
+		jsr prepare_loading_new_reu_dir	;only touch A register
+		stx $01
+		
+		jsr wait_for_idle
+
+		lda #$01                             ; OPEN DIR
+		sta U2_Command_data_register
+		lda #$13
+		sta U2_Command_data_register
+		lda #_PUSH_CMD
+		sta U2_Control_register
+
+		jsr wjs_wait_while_busy              ; end command
+;		jsr get_status
+
+		lda #_DATA_ACC
+		sta U2_Control_register
+
+		jsr wait_for_idle
+
+		lda #$01                             ; READ DIR
+		sta U2_Command_data_register
+		lda #$14
+		sta U2_Command_data_register
+		lda #_PUSH_CMD
+		sta U2_Control_register
+
+nextdirentry
+		jsr wjs_wait_while_busy
+		ldy #0
+; no maxentries check needed		
+;		lda U2_Status_register          ; any data left to process int this packet ?
+;		bpl skipfile
+		lda U2_Response_data_register   ; attribute byte
+		sta header
+
+nextchar
+		lda U2_Status_register          ; any data left to process int this packet ?
+		bpl nomorechars
+		lda U2_Response_data_register   ; yes - print it
+
+		ldx #$38
+		stx $01
+		sta (dzp),y			;store filename
+		ldx #$36
+		stx $01
+		iny
+		cpy #filename_entry_size-1
+		bne nextchar
+		
+nomorechars	lda #$38
+		sta $01
+		
+		tya
+		tax
+-		cpy #filename_entry_size-1
+		beq dontfill
+		lda #$20			;spaceclear the remaining filename entry area
+		sta (dzp),y
+		iny
+		bne -
+dontfill
+		txa
+		;ldy #filename_entry_size-1	;y is set above
+		sta (dzp),y			;store filename length
+
+		lda header
+		and #_DA_DIR
+		beq notdir
+		txa
+		ora #$80		
+		sta (dzp),y			;store dirname length
+notdir
+
+
+		inc maxfile
+		bne +
+		inc maxfilehi
++
+		lda dzp
+		clc
+		adc #filename_entry_size
+		sta dzp
+		bcc +
+		inc dzp+1
++
+		dec filecounter
+		bne bci
+		jsr write_reu_dir_entry
+bci
+skipfile
+		lda #$36
+		sta $01
+
+;		jsr get_status                 ; here we need to get the status - after the packet is done, if we want to !
+		lda #_DATA_ACC                  ; Go to next packet, if any
+		sta U2_Control_register
+		lda U2_Status_register
+		and #_STATE
+		cmp #_STATE_COMMAND_BUSY	; check if there is any more packets to process
+		beq nextdirentry
+
+		; no more dir entries - need to update reu dir again, in case more files has entered the filcounter buffer
+		
+		lda #$38
+		sta $01
+		jsr write_reu_dir_entry2
+		jsr zero_reu_datadr
+		lda #$36
+		sta $01
+
+			
+;---------------------------------------
+;WORKAROUND for U2 Command Interface bug
+;where USB1.0 is not a directory if you don't enter it before in the selector
+;---------------------------------------
+.comment
+		ldx #$38
+		stx $01
+		lda maxfile
+		cmp #$02
+		bne outcheck
+        ldx #(16*2)-1
+        txa
+        clc
+-       adc $d000,x
+        dex
+        bpl -
+        cmp #$33        ; sum of SD + USB1.0 strings + $1f
+        bne outcheck
+		lda #$86
+		sta flengde+1
+outcheck
+		ldx #$36
+		stx $01
+.endc		
+;---------------------------------------
+
+;code continues here:

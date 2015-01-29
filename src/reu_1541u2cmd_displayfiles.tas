@@ -1,0 +1,143 @@
+;--------------------------------------------------------------
+; REU 1541u2 "displayfiles"
+;
+;  Displays files and dirs on screens.
+;
+;--------------------------------------------------------------
+; * part of relocatable main
+; * this routine is not a subroutine. no rts.
+;--------------------------------------------------------------
+
+
+		lda #$36
+		sta $01
+		
+		lda offs_cursor
+		
+		ldx #$38
+		stx $01
+		sta tempcursor
+
+	
+		lda #0
+		sta cmpzp		;text out på $048f
+		
+		lda #<dirscreen		;ZP pointer to write to screen
+		sta gzp
+		lda screenpos
+		clc
+		adc #>dirscreen&$03ff
+		sta gzp+1
+
+		lda #<dir_main		;d000-d3c0.. visible reu dir
+		sta rzp
+		lda #>dir_main
+		sta rzp+1
+
+             
+		lda maxfile		;display number of files lo
+		jsr gethexnum
+		ldy #(40*5)-2
+		sta (gzp),y 
+		txa
+		dey
+		sta (gzp),y
+
+		lda maxfilehi		;display number of files hi
+		jsr gethexnum
+		dey
+		sta (gzp),y
+		txa
+		dey
+		sta (gzp),y
+		
+		inc gzp+1
+		
+		lda fcountlo		;display current file number 
+		jsr gethexnum
+		ldy #40-18
+		sta (gzp),y 
+		txa
+		dey
+		sta (gzp),y
+
+		lda fcounthi		;display current file number
+		jsr gethexnum
+		dey
+		sta (gzp),y
+		txa
+		dey
+		sta (gzp),y
+		
+		dec gzp+1		;back to "dirscreen" adress again
+             
+		lda maxfile		;No files in dir-buffer ?
+		bne tt
+		lda maxfilehi
+		bne tt
+		ldy #$12
+grh		lda nofile,y		;nofile found
+		sta (gzp),y
+		dey
+		bpl grh
+		bmi tx
+
+tt
+
+
+		jsr iec_fileinfo
+
+		ldx #0
+		lda cmpzp
+		cmp pos_cursor
+		bne tu
+		ldx #$80
+tu		stx eorzp
+
+		dey	;ldy #$17
+	
+tv 		lda (rzp),y		;Filename(s)
+		jsr convert_letter	;convert ascii to petscii
+		eor eorzp
+		sta (gzp),y
+		dey
+		bpl tv
+		
+tx		lda gzp			;Next line on screen
+		clc
+		adc #$28
+		sta gzp		
+		bcc +
+		inc gzp+1
++
+		lda rzp			;Next line in c64 dir memory
+		clc
+		adc #filename_entry_size	;$40
+		sta rzp
+		bcc +
+		inc rzp+1
++		
+
+
+
+tw		
+		lda cmpzp
+		inc cmpzp
+
+		cmp #maxDirY-1		;max files displayed
+		bcs tz
+		cmp maxfile
+		bcc tt
+		lda maxfilehi		;$0100-$010f needs a 16 bit check
+		bne tt
+		ldy #$1a		;Fill the remaining area of the box
+		lda #$20		;with spaces
+ty		sta (gzp),y
+		dey
+		bpl ty
+		bmi tx
+tz		
+		lda #$36
+		sta $01
+		
+;code falls through here

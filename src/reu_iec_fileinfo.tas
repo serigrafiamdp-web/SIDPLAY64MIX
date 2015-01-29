@@ -1,5 +1,5 @@
 ;--------------------------------------------------------------
-; "iec_fileinfo"
+;  REU "iec_fileinfo"  
 ;
 ;  IEC sort files + directories
 ;--------------------------------------------------------------
@@ -43,7 +43,12 @@ normalfiles
 		;ldy #$3a
 		;sty setd+1
 		
-prnt		ldy #$14
+prnt		
+.if def_1541u2cmd
+		ldy #$1a
+.else
+		ldy #$14
+.fi
 		sta (gzp),y		;print A
 		dey
 		txa

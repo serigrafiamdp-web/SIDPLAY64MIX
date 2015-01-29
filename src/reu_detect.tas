@@ -22,6 +22,6 @@ noReuFound	lda #<noreutxt
 		jsr $ab1e
 		jmp *
 noreutxt
-.byte $0d,$0d
-.text "no reu detected!",$0d,0
+.byte $0d
+.text "no reu detected!",0
 ;--------------------------------------------------------------

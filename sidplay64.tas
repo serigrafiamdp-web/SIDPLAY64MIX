@@ -313,17 +313,36 @@ reu_detection
 screen1		= $0400
 screen2		= $c400
 screen2chars	= $e000 ;e000-e800
+;-----------
+.if def_1541u2cmd*DEF_REU
+credz		= (screen1&$03ff)+($d808+(40*3))
+songstr1	= screen1+(40*6)+7
+timestr1	= screen1+(40*20)+4
+dirscreen	= screen2+(40*7)+13
+;-----------
+.else
 credz		= (screen1&$03ff)+($d808+(40*3))
 songstr1	= screen1+(40*6)+8
 timestr1	= screen1+(40*20)+9
-txterror1	= screen1+$0399
 dirscreen	= screen2+(40*7)+18
+.fi
+;-----------
+txterror1	= screen1+$0399
 maxDirY		= 15
+
+
+
+
 ;--------------------------------------------------------------
 
 		* = $c400
 .if def_1541u2cmd
-		.binary "bin/screen08-1541u2.o64",2		;1541u2 cmd version
+	.if def_reu
+		.binary "bin/screen09-1541u2reu.o64",2		;1541u2cmd reu version
+	.else
+		.binary "bin/screen09-iec.o64",2		;1541u2cmd
+	.fi
+		
 .else
 	.if def_iec
 		.binary "bin/screen09-iec.o64",2		;iec + cmd + ide64 + 1541u
@@ -437,7 +456,7 @@ start                       		;JMP HERE ON FIRST TIME INIT.
 .if def_reu
 
   .if def_1541u2cmd
-		.include src/dir-1541u2cmd.tas
+		.include src/reu-dir-1541u2cmd.tas
   .else
       .if def_iec
 	    	.include src/reu-dir-iec.tas		;iec, ide64 ++
@@ -481,9 +500,13 @@ fileSelect	jsr wjs_display		;DisplayFiles+keys
 
 displayFiles
 .if DEF_REU
-.include "src/reu_displayfiles.tas"
+	.if DEF_1541u2cmd
+	.include "src/reu_1541u2cmd_displayfiles.tas"	;custom 1541u2 code
+	.else
+	.include "src/reu_displayfiles.tas"		;all other versions that use REU.
+	.fi
 .else
-.include "src/displayfiles.tas"
+.include "src/displayfiles.tas"				;all versions without reu.
 .fi
 ;zp $01 = 36 and code continues here:
 
@@ -936,7 +959,7 @@ fixdc0e		lda #%01010001
 load
 .if DEF_REU
   .if def_1541u2cmd
-  .include src/load-1541u2cmd.tas
+  .include src/reu-load-1541u2cmd.tas
   .else
   .include src/reu-load-iec-serial.tas
   .fi
