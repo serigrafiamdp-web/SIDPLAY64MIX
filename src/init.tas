@@ -218,10 +218,10 @@ main		cli
 		sei
 		cmp #$3a		;A <  39
 		bcs trkinstd
-		cmp #$31		;A >= 31
+		cmp #$30		;A >= 30
 		bcc trkinstd
 		sec
-		sbc #$31		;0-7
+		sbc #$30		;0-7
 		jsr setup_colors	;$01 = 37 at end
 		jmp main
 
@@ -292,10 +292,10 @@ fix1		stx fixdc0e+1	;located in 36 ram
 		lda #$36
 		sta $01 ;37
 
-		lda #0			;initital values for dir displayer
-		sta pos_cursor
-		sta offs_cursor
-		sta maxfile
+		;lda #0			;initital values for dir displayer
+		;sta pos_cursor
+		;sta offs_cursor
+		;sta maxfile
 
 		lda $ba
 		sta device
@@ -311,13 +311,10 @@ blinkcursor	ldx #0
 		inx                               ;|when scrolling.
 		stx $cd      ;counter to 1        ;|
 
-
-		;lda #0			;enable cursor blink
-		;sta $cc
 -		jsr $ffe4
 		beq -
 		jsr $ffd2		;print letter
-		;inc $cc			;disable cursor blink		
+		inc $cc			;disable cursor blink		
 		cmp #$59
 		rts
 
@@ -376,14 +373,16 @@ grey
 .byte cgrey,cblack,cgrey,clgrey,clgrey,cwhite,cmgrey,cwhite,clgrey,clgrey,clgrey,cmgrey,cmgrey
 lightblue
 .byte cblue,clblue,cblue,cblack,clgreen,cwhite,clgreen,cwhite,cblack,clgreen,cwhite,cblack,cblack
-;gay .byte cpink,cbrown,cpink,cyellow,ccyan,cwhite,clgreen,cwhite,clgrey,clgrey,cwhite,cyellow,cyellow
 cbm
 .byte clblue,cblue,clblue,ccyan,ccyan,cwhite,clgrey,cwhite,clgrey,clgrey,cwhite,clgrey,clgrey
 allgreen
 .byte cblack,cgreen,clgreen,cwhite,cgrey,cwhite,clgreen,cwhite,cwhite,cgrey,clgreen,cgrey,clgreen
 red
 .byte cred,cblack,cred,cpink,corange,cwhite,cyellow,cwhite,cyellow,cred,cpink,corange,corange
-
+brown
+.byte cblack,cbrown,cbrown,cblack,cblack,cmgrey,cmgrey,clgrey,cmgrey,cmgrey,clgrey,cmgrey,cblack
+;gay
+;.byte cpurple,cpink,cpurple,cblue,cblack,cyellow,clgreen,cwhite,cgrey,cyellow,cred,cblack,cred
 
 
 lopoint
@@ -396,6 +395,7 @@ lopoint
 .byte <cbm		;6
 .byte <allgreen		;7
 .byte <red		;8
+.byte <brown		;9
 
 hipoint
 .byte >default
@@ -407,6 +407,7 @@ hipoint
 .byte >cbm
 .byte >allgreen
 .byte >red
+.byte >brown
 
 setup_colors	tax
 
@@ -628,7 +629,7 @@ keyjoystickmsg
 
 rsidmsg
 .byte $0d,$0d,$1e
-.text "skip sids using $0000 as play address? ",$99,0
+.text "skip sids with play address $0000 ? ",$99,0
 
 secondsidmsg
 .byte $0d,$0d,$1e

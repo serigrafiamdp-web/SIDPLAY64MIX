@@ -1,6 +1,6 @@
 Things to check for:
 
-* 
+* Scrolling down while reading dir messes up dir entries.
 
 * ! invest_intro.sid /jt loads to $0f7c - 
 

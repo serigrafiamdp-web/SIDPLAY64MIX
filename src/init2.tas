@@ -6,6 +6,14 @@
 		cld
 		lda #$37
 		sta $01
+;-------------------------------------------
+		lda #$80
+		sta $028a		;Keys repeat
+		sta $0291		;Disable shift+cbm
+		sta $d020
+		sta $d021
+		sta $d40f		;random frqhi
+		sta $d412		;random wave
 ;-------------- pal/ntsc detector
 		jsr $ff84
 		ldy #1
@@ -21,13 +29,20 @@
 		dey		;ntsc
 pal		sty $02a6
 
-;-------------------------------------------
+		lda $d41b		;get random number
 
-		lda #$80
-		sta $028a		;Keys repeat
-		sta $0291		;Disable shift+cbm
-		sta $d020
-		sta $d021
+.if DEF_REU
+		pha
+		lda $d41b
+		inc $01		;38
+		sta rseed		;insert seeds for REU versions
+		pla
+		sta rseed+1
+		dec $01		;37
+.else		
+		sta seed		;insert seed for Normal versions
+.fi
+
 		
 		bit $dc0b		;stop TOD timer		
 				
@@ -102,7 +117,8 @@ movstack	lda stack-1,y
 		bne movstack
 		ldx #topstack
 		txs
-		
+
+.comment		
 ;---------- setup:
 		lda $ba			;secure device number
 		sta device
@@ -131,7 +147,7 @@ conbit2		asl tmp
 		and #$0f
 		ora #$30
 		sta devout+1
-
+.endc
 
 
 ;we dont backup 0300-0313 because those vectors are for basic programs only
@@ -154,9 +170,9 @@ fix1		stx fixdc0e+1	;located in 36 ram
 		sta $01 ;37
              
 		lda #0			;initital values for dir displayer
-		sta pos_cursor
-		sta offs_cursor
-		sta maxfile
+		;sta pos_cursor
+		;sta offs_cursor
+		;sta maxfile
 		;lda #0             
 		sta $dd00		;bank  
 
@@ -172,6 +188,15 @@ fix1		stx fixdc0e+1	;located in 36 ram
 ;
 ;--------------------------------------------------------------
 setup_colors
+
+
+.if def_1541u2cmd * DEF_REU
+.include src/test-colors-1541u2cmd-reu.tas
+.else
+.include src/test-colors-normal.tas
+.fi
+
+.comment
 		ldx #0
 		lda #color_screen		;Main text color - whole screen
 scrcolor	sta $d800,x
@@ -265,3 +290,4 @@ filecol		sta $d82e,x
 		sta $d021
 		rts
 
+.endc

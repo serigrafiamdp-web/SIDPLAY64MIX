@@ -1,0 +1,101 @@
+		ldx #0
+		lda #color_screen		;Main text color - whole screen
+scrcolor	sta $d800,x
+		sta $d900,x
+		sta $da00,x
+		sta $db00,x
+		inx
+		bne scrcolor
+		
+		lda #color_playmusic
+		sta color_playmusic2+1
+		
+		ldx #37
+		lda #color_iomessage		;IO disk messages
+msgcolor	sta $db99,x
+		dex
+		bpl msgcolor
+
+		ldx #30
+		lda #color_credits1
+credz1		sta credz,x
+		sta credz+(40*1),x
+		sta credz+(40*2),x
+		dex
+		bpl credz1
+		ldx #3
+		lda #color_credits2
+credz2		sta credz+(40*4),x
+		sta credz+(40*5),x
+		sta credz+(40*6),x             
+		sta credz+(40*7),x
+		dex
+		bpl credz2
+		
+		ldx #$07
+timecol		lda #color_songnumbers
+		sta (songstr1&$3ff)+$d800,x		;song number 26/26
+		lda #color_timer
+		sta (timestr1&$3ff)+$d800,x		;the clock
+		dex
+		bpl timecol
+             
+		ldx #4
+shufflecol	sta ((timestr1&$3ff)+$d800)+43,x	;shuffle timer
+		dex
+		bpl shufflecol
+             
+		lda #>(dirscreen&$03ff)+$d800
+		sta gzp+1
+		lda #<dirscreen
+		sta gzp
+
+		ldx #maxDirY-1
+row		ldy #$14
+row2		cpy #$12
+		bcs numrow
+		lda #color_dir_filenames		;light green
+		.byte $2c
+numrow		lda #color_dir_numbers		;light grey
+		sta (gzp),y
+		dey
+		bpl row2
+		lda gzp
+		clc
+		adc #$28
+		bcc *+4
+		inc gzp+1
+		sta gzp
+		dex
+		bpl row
+
+numfiles = screen2+$014d
+
+		lda #color_number_of_files
+		ldx #3
+-		
+		sta $d800+(numfiles&$03ff),X
+		dex
+		bpl -
+
+devout = screen2+(40*10)+13
+
+		ldx #$0f
+		lda #color_current_filename
+filecol		sta $d82e,x
+		dex
+		bpl filecol
+             
+		lda #color_device_number
+		ldx #3
+-
+		sta $d800+(devout&$03ff),x
+		dex
+		bpl -
+
+		
+
+		lda #color_d021
+		sta $d021
+		rts
+
