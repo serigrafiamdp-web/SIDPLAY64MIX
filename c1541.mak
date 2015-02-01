@@ -23,6 +23,9 @@ write sids/listen_twice.sid	"listen_twice.sid"
 write sids/newzealand_story.sid	"newzealand_story"
 write sids/remark_intro.sid	"remark_intro.sid"
 write sids/rambo3.sid		"rambo3.sid"
+write sids/8th_Frame.sid	"8th_Frame.sid"
+write sids/12-speed_tune.sid	"12-speed_tune.sid"
+write sids/Impulse.sid		"Impulse.sid"
 quit
 ;--------------------------------1234567890123456
 write sidplay64-normal.prg	"sidplay64 /shape"

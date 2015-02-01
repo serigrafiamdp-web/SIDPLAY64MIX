@@ -115,13 +115,13 @@ devout = screen2+(40*10)+13
 
 
 		lda #>(dirscreen&$03ff)+$d800
-		sta gzp+1
+		sta dzp+1
 		lda #<dirscreen
-		sta gzp
+		sta dzp
 
 		ldx #maxDirY-1
-row		ldy #$1a
-row2		cpy #$18
+row		ldy #$19
+row2		cpy #$17
 		bcs numrow
 color_dir_filenames
 		lda #$a9		;light green
@@ -129,15 +129,15 @@ color_dir_filenames
 numrow
 color_dir_numbers
 		lda #$a9		;light grey
-		sta (gzp),y
+		sta (dzp),y
 		dey
 		bpl row2
-		lda gzp
+		lda dzp
 		clc
 		adc #$28
 		bcc *+4
-		inc gzp+1
-		sta gzp
+		inc dzp+1
+		sta dzp
 		dex
 		bpl row
 

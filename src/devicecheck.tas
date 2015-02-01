@@ -38,7 +38,7 @@ msgpos		= $0400+4+(40*6)
 		; show message
 		lda #<u2msg
 		ldy #>u2msg
-		jmp $ab1e		;change to jsr
+		jsr $ab1e		;change to jsr
 		jmp *
 		
 u2ison  

@@ -45,7 +45,7 @@ normalfiles
 		
 prnt		
 .if def_1541u2cmd
-		ldy #$1a
+		ldy #$19
 .else
 		ldy #$14
 .fi

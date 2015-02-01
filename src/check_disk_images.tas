@@ -1,17 +1,25 @@
 ;--------------------------------------------------------------
 ; "check_disk_images"
 ;
-;  IEC sort files + directories
+;  This is a sd2iec specific routine
+;  
 ;--------------------------------------------------------------
 ;	* static subroutine 
 ;	* location: d000-e000
+;	* IRQ is OFF.
 ;--------------------------------------------------------------
 
 
 .if def_sd2iec
 	
 check_disk_images
+
+	.if DEF_REU
+		ldy #$0f	;ldy #filename_entry_size-1       - can be inserted for longer filenames.. need to check-
+	.else
 		ldy #$0f
+	.fi
+			
 cdi1		lda (rzp),y
 		cmp #$2e	;"."
 		beq dotfound

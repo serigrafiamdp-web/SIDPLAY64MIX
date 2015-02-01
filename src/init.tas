@@ -58,7 +58,7 @@ clrtod		sta $dc08		;08,09,0a,0b
 
 
 
-		lda #<secondsidmsg
+		lda #<secondsidmsg	;Do you have a 2nd sid chip ?
 		ldy #>secondsidmsg
 		jsr inputmsgyes		;returns cmp #$59
 		bne no2sid
@@ -66,7 +66,7 @@ clrtod		sta $dc08		;08,09,0a,0b
 		sta secondsid1		;d424,x
 		sta secondsid2		;d420,x
 	
-		lda #<entersidadr
+		lda #<entersidadr	;enter 2nd sid chip adr.
 		ldy #>entersidadr
 		jsr $ab1e
 	
@@ -78,7 +78,7 @@ clrtod		sta $dc08		;08,09,0a,0b
 		inc $d2
 +
 		lda #0
-		;sta $cc			;enable cursor blink
+		sta $cc			;enable cursor blink
 setkeys		sta $d3
 
 keys
@@ -129,7 +129,7 @@ hiny		txa			;$00-$0F
 		beq setkeys		;jmp
 
 		
-no2sid		lda #<rsidmsg
+no2sid		lda #<rsidmsg		;skip sids using $0000 as play call ?
 		ldy #>rsidmsg
 		jsr inputmsgyes		;returns cmp #$59
 		beq +			;no change, keep the "beq error"
@@ -137,7 +137,7 @@ no2sid		lda #<rsidmsg
 		sta skiprsid
 +
 
-		lda #<keyjoystickmsg
+		lda #<keyjoystickmsg	;Keyboard or Joystick (k/j)?
 		ldy #>keyjoystickmsg
 		jsr inputmsgyes
 		cmp #$4a		;"j"
@@ -303,7 +303,8 @@ fix1		stx fixdc0e+1	;located in 36 ram
 
 
 	
-inputmsgyes	jsr $ab1e
+inputmsgyes	
+		jsr $ab1e
 
 blinkcursor	ldx #0
 		stx $cc      ;blink cursor        ;<Makes cursor blink when idle.
@@ -313,8 +314,12 @@ blinkcursor	ldx #0
 
 -		jsr $ffe4
 		beq -
-		jsr $ffd2		;print letter
 		inc $cc			;disable cursor blink		
+		and #$7f
+		cmp #$20		;ignore all crsr, return strokes
+		bcs +
+		lda #$4e		;No
++		jsr $ffd2		;print letter
 		cmp #$59
 		rts
 
@@ -380,7 +385,7 @@ allgreen
 red
 .byte cred,cblack,cred,cpink,corange,cwhite,cyellow,cwhite,cyellow,cred,cpink,corange,corange
 brown
-.byte cblack,cbrown,cbrown,cblack,cblack,cmgrey,cmgrey,clgrey,cmgrey,cmgrey,clgrey,cmgrey,cblack
+.byte cblack,cbrown,cgrey,cblack,cblack,cmgrey,cmgrey,clgrey,cmgrey,cmgrey,clgrey,cmgrey,cblack
 ;gay
 ;.byte cpurple,cpink,cpurple,cblue,cblack,cyellow,clgreen,cwhite,cgrey,cyellow,cred,cblack,cred
 
@@ -572,9 +577,9 @@ devout = screen2+(40*10)+13
 
 
 		lda #>(dirscreen&$03ff)+$d800
-		sta gzp+1
+		sta dzp+1
 		lda #<dirscreen
-		sta gzp
+		sta dzp
 
 		ldx #maxDirY-1
 row		ldy #$14
@@ -586,15 +591,15 @@ color_dir_filenames
 numrow
 color_dir_numbers
 		lda #$a9		;light grey
-		sta (gzp),y
+		sta (dzp),y
 		dey
 		bpl row2
-		lda gzp
+		lda dzp
 		clc
 		adc #$28
 		bcc *+4
-		inc gzp+1
-		sta gzp
+		inc dzp+1
+		sta dzp
 		dex
 		bpl row
 

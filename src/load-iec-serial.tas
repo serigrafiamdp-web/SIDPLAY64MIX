@@ -4,9 +4,9 @@
 .fi		
 				;89abcde
 		lda #$2e	;|file: $042e
-		sta tzp
+		sta gzp
 		lda screenpos
-		sta tzp+1
+		sta gzp+1
 
 		lda pos_cursor	;zeropage
 		clc
@@ -35,7 +35,7 @@ setwildc
 		jsr convert_letter
 		cpy #$10
 		bcs *+4
-		sta (tzp),y		;Write filename to screen at "|PSID:    "
+		sta (gzp),y		;Write filename to screen at "|PSID:    "
 		dey
 		bpl plaz
 		lda flengde,x		;A - falls through to setfname

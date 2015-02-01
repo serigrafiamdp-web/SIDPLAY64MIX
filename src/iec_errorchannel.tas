@@ -9,11 +9,11 @@
 ;--------------------------------------------------------------
 
 		lda #<txterror1
-		sta gzp
+		sta dzp
 		lda screenpos
 		clc
 		adc #>txterror1&$03ff
-		sta gzp+1
+		sta dzp+1
 		
 		lda #0
 		sta $b7
@@ -28,13 +28,13 @@ dvm2		jsr Rom_Chrin		;IDE64 again
 		cmp #$0d
 		beq dvm1
 		and #$7f
-		sta (gzp),y
+		sta (dzp),y
 		iny
 		cpy #$26
 		bne dvm2
 		beq dvm3 ;jump
 dvm1		lda #$20
-		sta (gzp),y
+		sta (dzp),y
 		iny
 		cpy #$26
 		bne dvm1

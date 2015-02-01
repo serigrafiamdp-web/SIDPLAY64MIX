@@ -5,6 +5,7 @@
 ;--------------------------------------------------------------
 ;	* static subroutine 
 ;	* location: d000-e000
+;	* Used while IRQ is running!!
 ;--------------------------------------------------------------
 
 ;dir entry number in hex
@@ -31,11 +32,16 @@ dd64
 		bne prnt
 .fi
 		
-normalfiles	inx			;start with+1
-		txa
-		jsr gethexnum		;convert to A and X
-		ldy #$3a
-		sty setd+1
+normalfiles	
+		lda #$20		;space
+		tax			;space
+		sta setd+1		;space
+		
+		;inx			;start with+1
+		;txa
+		;jsr gethexnum		;convert to A and X
+		;ldy #$3a
+		;sty setd+1
 		
 prnt		ldy #$14
 		sta (gzp),y		;print A

@@ -40,7 +40,7 @@ skip_header	jsr wjs_getbyte
 		jsr wjs_getbyte
 					;file entry block hi (msb)
 		dey
-		bne skip_header
+skip2		bne skip_header
 		tay			;cmp #0
 		bne goof		;msb 0 blocks ?
 					;Y=0
@@ -130,13 +130,15 @@ fn_endloop2
 		jsr write_reu_dir_entry
 		;jsr adc_reu_page_position
 bci
-
 ;		lda #$36
 ;		sta $01
 		jsr wjs_display		;displayFiles+read keyboard
-;		jsr wjs_ffe4		;read keyboard
 		ldy #2
-		bne skip_header
+.if def_1541u_long		
+		bne skip2		;gives branch error on 1541u+netdrive version
+.else		
+		bne skip_header	
+.fi
 
 
 ;--------- Getbyte from Device --------------

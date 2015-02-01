@@ -60,7 +60,7 @@ status		= $90 ;
 endAdrHi	= $af	;$f0 ;|
 endAdrLo	= $ae	;$f1 ;|
 
-ldzp		= endAdrLo	;for 1541u2
+ldzp		= endAdrLo	;For 1541u2 only - same as zp $ae,af
 
 netdrivex	= $f1
 countdir	= $f2	;Zp dir sorter
@@ -68,7 +68,7 @@ countfile	= $f3	;Zp dir sorter
 tmp		= $f4 ;
 relocsize	= $f5 ;
 startbank	= $f6 ;
-dzp		= $fc ;|word
+dzp		= $fc ;|word - zp for reading in new directory
 loadAdrLo	= $fe ;|Startadress - header offset ($76 or $7c)
 loadAdrHi	= $ff ;|
 
@@ -77,26 +77,32 @@ loadAdrHi	= $ff ;|
 ;         Zeropages used during play and irq:
 ;--------------------------------------------------------------
 
-pos_cursor		= $02	;Visible # limit for filenames
+pos_cursor	= $02	;Visible # limit for filenames
 zerop		= pos_cursor
 maxfile		= $03	;Keeps track of # of files in memory
 gzp		= $04	;word
 rzp		= $06	;word
-tzp		= $08	;word
-;zp01		= $0b	;Backup zp $01 during d000-e000 access
-
+;tzp		= $08	;word
+;--------------------------------------------------------------
 firstzp		= pos_cursor
-lastzp		= tzp+1
+lastzp		= rzp+1
 
 zpBuffSize	= ( lastzp - firstzp) +1 ;9 end of zeropage address 
-stackClear	= zpBuffSize + 1
+
+zpclear		= zpBuffsize + 3	;$0008-$00ff
+
+;stackClear	= zpBuffSize + 1	- unused?
+;--------------------------------------------------------------
+;zps in void: 08,09,0a,0b
+speedbit	= $08;tzp	;byte	- note : this zp is updated by dotunenumbers.tas and should not be zerofilled by "ciareset"
+			;       make it point to $08 when tzp has been removed/changed
 
 
 ;-------- Safe Zeropages when restarting a tune (000c-0100 is zero filled during init)
-speedbit	= tzp	;byte
-bcd		= $0c	;word
-bin		= bcd+2	;word
-bincount	= bin+2 ;byte
+
+bcd		= $0c	;|word	- dotuneumbers.tas
+bin		= bcd+2	;|word  - dotuneumbers.tas
+bincount	= bin+2 ;|byte  - dotuneumbers.tas
 
 ;--------------- static memory adressing:
 fname		= $0200
@@ -215,16 +221,16 @@ wait_for_idle
 		bne -
 		rts
 get_status	lda #<txterror1
-		sta gzp
+		sta rzp
 		lda screenpos
 		clc
 		adc #>txterror1&$03ff
-		sta gzp+1
+		sta rzp+1
 		ldy #0
 -		bit U2_Status_register
 		bvc +
 		lda U2_Staus_data_register
-		sta (gzp),y
+		sta (rzp),y
 		iny
 		bne -            
 +		rts
@@ -261,8 +267,11 @@ panicload	lda #1			;For cases where ther is no memory and sid is a rsid (playadd
 		jsr initmus
 		jmp *
 .fi
-
-nofile		.text "no files present   "
+;----------------------0123456789abcdef01234
+.if DEF_REU
+.else
+nofile		.text "no files present!    "	;present here in the normal non-reu version
+.fi
 ;----------------------0123456789abcdef012
               
 ;-------------------------
@@ -315,7 +324,7 @@ screen2		= $c400
 screen2chars	= $e000 ;e000-e800
 ;-----------
 .if def_1541u2cmd*DEF_REU
-credz		= (screen1&$03ff)+($d808+(40*3))
+credz		= (screen1&$03ff)+($d807+(40*3))
 songstr1	= screen1+(40*6)+7
 timestr1	= screen1+(40*20)+4
 dirscreen	= screen2+(40*7)+13
@@ -358,7 +367,7 @@ maxDirY		= 15
 no_keys		= 0	;crsr up - but has no effect on reu registers
 dir_keys	= 5	;crsr-up/crsr-down/clrhome/sh+clrhome/space/delete
 noirq_keys	= 6	;return (load file possible)
-irq_keys	= 13	;select tune, restart, shuffle
+irq_keys	= 14	;select tune, restart, shuffle
 
 
 keyCrsrDown	= 0	;Directory keys 0-5
@@ -373,13 +382,14 @@ keyReturn	= 6	;No irq keys    0-6
 keyF7		= 7	;IRQ keys	0-15
 keyComma	= 8	;          
 keyPeriod	= 9	;
-;keyRandom	= 10	;
-;keyNext		= 11	;
 keyF1		= 10	;
 keyPlus		= 11	;
 keyMinus	= 12	;
 keyManual	= 13	;
-           
+KeyScreenoff	= 14	;
+
+;keyRandom	= 10	;
+;keyNext	= 11	;
 ;keyboard scan table
 
 dc00	
@@ -395,14 +405,17 @@ dc00
 	.byte $fe	;07|F7
 	.byte $df 	;08|<
 	.byte $df	;09|>
-;	.byte $fb	;10|R
-;	.byte $ef	;11|N
 	.byte $FE	;10|F1
 	.byte $df	;11|+
 	.byte $df	;12|-
 	.byte $ef	;13|M
+	.byte $fd	;14|S	
+	
+;	.byte $fb	;10|R
+;	.byte $ef	;11|N
 
-dc01	
+
+dc01
 
 	.byte $7f	;00|crsr  
 	.byte $6f	;01|crsr+sh  	
@@ -414,12 +427,15 @@ dc01
 	.byte $f7	;07|F7
 	.byte $7f	;08|,
 	.byte $ef	;09|.
-;	.byte $fd	;10|R
-;	.byte $7f	;11|N
 	.byte $EF	;10|F1
 	.byte $fe	;11|+
 	.byte $f7	;12|-
 	.byte $ef	;13|M
+	.byte $df	;14|S	
+
+;	.byte $fd	;10|R
+;	.byte $7f	;11|N
+	
 
 ;-------------------------------------
 ;
@@ -491,9 +507,12 @@ fileSelect	jsr wjs_display		;DisplayFiles+keys
 		lda #$36
 		sta $01
 .fi
-		lda #$1b		;Screen on
-		sta $d011
-		bne fileSelect		;JMP
+		sec			;SLC screen onoff
+		bcs fileselect		;SLC screen onoff
+		
+		;lda #$1b		;orignally we 
+		;sta $d011		;set d011 here all the time
+		;bne fileSelect		;JMP
 
 ; Dir-buffer is located at $d000 ->
 
@@ -521,11 +540,11 @@ ffe4key
 
 ;TOD Clock is printed to screen:
 		lda #<timestr1
-		sta tzp
+		sta gzp
 		lda screenpos
 		clc
 		adc #>timestr1&$03ff
-		sta tzp+1
+		sta gzp+1
 
 		ldx #2
 		ldy #0       ;0-1  3-4  6-7
@@ -536,12 +555,12 @@ timeloop	lda $dc09,x  ;dc09,dc0a,dc0b
 		lsr
 		lsr
 		ora #$30
-		sta (tzp),y
+		sta (gzp),y
 		pla
 		iny
 		and #$0f
 		ora #$30
-		sta (tzp),y
+		sta (gzp),y
 		iny
 		iny
 		dex
@@ -550,17 +569,17 @@ timeloop	lda $dc09,x  ;dc09,dc0a,dc0b
 ;mode is printed to screen:
 		ldy #41
 		lda plt_letter
-		sta (tzp),y
+		sta (gzp),y
 
 ;timer is printed to screen:
 		lda #<timestr1+3   ;adjust to minutes, : and seconds only
-		sta tzp
+		sta gzp
             
 		ldx #4
 		;ldy #40
 		dey
 -		lda minuteshi-40,y
-		sta (tzp),y
+		sta (gzp),y
 		iny
 		dex
 		bpl -
@@ -576,7 +595,7 @@ timeloop	lda $dc09,x  ;dc09,dc0a,dc0b
 		bne scankeys
 		tay			;A=0
 
-checkdigits	lda (tzp),y
+checkdigits	lda (gzp),y
 		cmp minuteshi,y
 		beq equ
 		bcc scankeys
@@ -758,7 +777,14 @@ skmanual	sta plt_flag
 
 
 plton
-		ldx tune
+		cpy #KeyScreenoff
+		bne kso
+		lda $d011
+		eor #$10
+		sta $d011
+		rts
+		
+kso		ldx tune
 		cpy #keyF1		;"F1"
 		beq restT
 		cpy #keyMinus		;"-"
@@ -790,7 +816,7 @@ restartTune
 ;		sta $01
 
 
-		jsr wjs_resetCia	;zp 01 = 36
+		jsr wjs_resetCia	;zp 01 = 36 (clears zp 000c-0100 and 020c-0300)
 
 ;   | Bit 4 |   Force Load Timer A: 1 = Yes
 ;   | Bit 0 |   Start/Stop Timer A: 1 = Start, 0 = Stop
@@ -1152,12 +1178,8 @@ nomorechars2
 		cmp #_STATE_COMMAND_BUSY        ; check if there is any more packets to process
 		beq nextpacket2
 		
-		
-		;lda tzp
-		;sta endAdrLo
-		;lda tzp+1
-		;sta endAdrHi
-		;.. see ldzp
+;ldzp = endAdrLo and now contains the end load adress.
+
 
 .else
 		lda #0
@@ -1197,21 +1219,21 @@ errormsg
 		sta $01
 
 		lda #$45
-		sta tzp
+		sta gzp
 		lda screenpos		;0445/0845/0c45...c445
-		sta tzp+1
+		sta gzp+1
 
 		ldy #3
 		lda v2loadaddress
-		jsr printhexnum
+		jsr printhexnum		;tzp
 		lda v2loadaddress+1
-		jsr printhexnum
+		jsr printhexnum		;tzp
         
 		ldy #9
 		lda endAdrLo
-		jsr printhexnum
+		jsr printhexnum		;tzp
 		lda endAdrHi
-		jsr printhexnum
+		jsr printhexnum		;tzp
 
 ;------> initialize loaded file <--------------
 		;jsr wjs_resetCia	;clear all zeropage memory - important!
@@ -1219,6 +1241,7 @@ errormsg
 		ldx #irq_keys		;Set corret key range when irq is running
 		stx numb
 		jsr wjs_restartTune	;RestartTune, also call wjs_resetCia
+		
 		;zp $01 = 35 here
 		      ;76543210	
 		;lda #%10000001
@@ -1227,6 +1250,8 @@ errormsg
 		;sta $d01a		;Raster IRQ compare flag off
 		;lsr $d019
 		;lda $dc0d
+		lda #$1b		;SLC screen onoff
+		sta $d011		;SLC screen onoff
 		cli
 		jmp (wjp_fileselect)
 
@@ -1298,10 +1323,10 @@ doheaderstuff
 .include src/doheaderstuff.tas
 
 printhexnum	jsr gethexnum
-		sta (tzp),y
+		sta (gzp),y
 		dey
 		txa
-		sta (tzp),y
+		sta (gzp),y
 		dey
 		rts
 
@@ -1422,6 +1447,15 @@ system         .text "<?> " ;00
 
 msgmemory      .text "no memory!"
                      ;0123456789012345678901234
+
+;----------------------0123456789abcdef0123456789-
+.if def_1541u2cmd*DEF_REU
+nofile19        .text "no files present          "	;1541u2cmd reu version
+.else
+nofile14        .text "no files present     "		;all other reu versions
+.fi
+;----------------------0123456789abcdef0123456789-
+
 
 static_code_end
 

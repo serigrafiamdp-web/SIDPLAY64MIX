@@ -7,30 +7,36 @@
 ;	* location: d000-e000
 ;--------------------------------------------------------------
 
+;gzip+1 is set in the *load-iec-serial/*load-1541u2cmd source
+
              lda #$29		;|psid/rsid: $0429
-             sta tzp
+             sta gzp
              lda magicid	;P or R
              ldy #0
-             sta (tzp),y
+             sta (gzp),y
 
-             lda #$78+8		;tzp is 0478/c478
-             sta tzp
+.if def_1541u2cmd*def_reu
+             lda #$78+7
+.else
+             lda #$78+8		;gzp is 0478/c478
+.fi             
+             sta gzp
              ldy #30
 getsn        lda sidname,y	;title of sid/song
-             sta (tzp),y
+             sta (gzp),y
              dey
              bpl getsn
              ldx #30
              ldy #40+30
 getsa        lda sidauthor,x	;name of composer
-             sta (tzp),y
+             sta (gzp),y
              dey
              dex
              bpl getsa
              ldx #30
              ldy #80+30
 getsr        lda sidreleased,x	;year, copyright
-             sta (tzp),y
+             sta (gzp),y
              dey
              dex
              bpl getsr
@@ -46,7 +52,7 @@ getsr        lda sidreleased,x	;year, copyright
              tax
              ldy #160
 getchip      lda chiptype,x
-             sta (tzp),y
+             sta (gzp),y
              inx
              iny
              cpy #164
@@ -64,7 +70,7 @@ getchip      lda chiptype,x
              
              ldy #200
 getsyst      lda system,x
-             sta (tzp),y
+             sta (gzp),y
              inx
              iny
              cpy #204
@@ -84,7 +90,7 @@ getsyst      lda system,x
              jsr printhexnum
              
              
-             inc tzp+1      ;tzp is 0578
+             inc gzp+1      ;gzp is 0578
                             ;but we want 0590
 
 
@@ -272,14 +278,14 @@ bankok      stx relocsize
             
 
 pageerr     lda #<txterror1
-            sta tzp
+            sta gzp
             lda screenpos
             clc
             adc #>txterror1&$03ff                
-            sta tzp+1
+            sta gzp+1
             ldy #9
 getmsgm     lda msgmemory,y
-            sta (tzp),y
+            sta (gzp),y
             dey
             bpl getmsgm
             lda screenpos
@@ -304,14 +310,14 @@ wepanic
 		beq stackjump
 
 pageok     
-            ldx startpage 
-            bne movecode
+		ldx startpage 
+		bne movecode
             
             
             
 
-cleanfile   lda #$f8        ;$f800 font pos for c400 screen
-            sta fontpos
+cleanfile	lda #$f8        ;$f800 font pos for c400 screen
+		sta fontpos
 
 
 .if def_1541u2cmd
@@ -333,61 +339,57 @@ cleanfile   lda #$f8        ;$f800 font pos for c400 screen
 .fi
 
 movecode    
+		ldy screenpos    ;Current screen position
+		sty rzp+1        ;Forward copy: $1000-$2000 to $0c00-$1c00, not killing driver
+		stx gzp+1
+		stx screenpos    ;Set new screen position
 
-            ldy screenpos    ;Current screen position
-            sty rzp+1        ;Forward copy: $1000-$2000 to $0c00-$1c00, not killing driver
-            stx gzp+1
-            
-            stx screenpos    ;Set new screen position
-
-            ldx #12
-            ldy #0
-            sty gzp
-            sty rzp
-            
-            lda gzp+1         ;New screenpos
-            cmp rzp+1        ;Currentscreenpos
-            bcc copyforward  ;Determine Forward or Backward memory copy:
+		ldx #12
+		ldy #0
+		sty gzp
+		sty rzp
+		lda gzp+1         ;New screenpos
+		cmp rzp+1        ;Currentscreenpos
+		bcc copyforward  ;Determine Forward or Backward memory copy:
                              ;is new screenpos above/equal/below current screenpos ?
                              ;Above = Backward copy
                              ;Below = Forward copy
                              
                              ;backward copy: $2000-$1000 to $2400-$1400, not killing driver
-            clc
-            adc #$0b         ;driver range (0c00)-0100
-            sta gzp+1
-            lda rzp+1
-            clc
-            adc #$0b         ;driver range (0c00)-0100
-            sta rzp+1
+		clc
+		adc #$0b         ;driver range (0c00)-0100
+		sta gzp+1
+		lda rzp+1
+		clc
+		adc #$0b         ;driver range (0c00)-0100
+		sta rzp+1
            
-            dey             ;Y=ff
-move2       lda (rzp),y
-            sta (gzp),y
-            dey
-            cpy #$ff
-            bne move2
-            dec rzp+1
-            dec gzp+1
-            dex
-            bne move2
-            beq stackjump
-
+		dey             ;Y=ff
+move2		lda (rzp),y
+		sta (gzp),y
+		dey
+		cpy #$ff
+		bne move2
+		dec rzp+1
+		dec gzp+1
+		dex
+		bne move2
+		beq stackjump
 
 copyforward
-move1       lda (rzp),y
-            sta (gzp),y
-            iny
-            bne move1
-            inc rzp+1
-            inc gzp+1
-            dex
-            bne move1
+move1		lda (rzp),y
+		sta (gzp),y
+		iny
+		bne move1
+		inc rzp+1
+		inc gzp+1
+		dex
+		bne move1
 stackjump
-            lda screenpos
-            clc
-            adc #>((returnHere-1)-screen2)
-            pha
-            lda #<returnHere-1
-            pha
-            rts   ;Stack jump to "returnHere"
+		lda screenpos
+		clc
+		adc #>((returnHere-1)-screen2)
+		pha
+		lda #<returnHere-1
+		pha
+		rts   ;Stack jump to "returnHere"

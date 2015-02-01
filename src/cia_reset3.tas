@@ -22,7 +22,7 @@ uoo		sta $0200,x
 		sta $d01a
 		inc $d019
 		sta stopmusic		;=00
-		ldx #zpBuffSize+1
+		ldx #zpClear
 CLRZP		sta $00,x	;Zeropage $000c-$0100 zerofilled
 		sta $0200,x	;Buffer 0200-0300 zerofilled
 		inx

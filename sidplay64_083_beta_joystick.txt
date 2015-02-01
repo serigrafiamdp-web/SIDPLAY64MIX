@@ -3,6 +3,7 @@ Rewrote some small routines to shorten the program.
 Removed R and N keys.
 
 M       Mode select: Manual, Next or Random
+S       Screen on/off. (reduce video chip noise).
 
 Other than that the Keyboard version is the same as before.
 

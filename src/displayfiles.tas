@@ -11,33 +11,34 @@
 
 		lda #$36
 		sta $01
-		
-		lda offs_cursor
-		
-		ldx #$38
-		stx $01
-		sta tempcursor
-		
-		lda #0
-		sta cmpzp		;text out på $048f
+
 		lda #<dirscreen		;ZP pointer to write to screen
 		sta gzp
 		lda screenpos
 		clc
 		adc #>dirscreen&$03ff
 		sta gzp+1
-             
-		lda maxfile		;display number of files 
-		jsr gethexnum
+		
+		lda offs_cursor
+		
+		ldx #$38
+		stx $01
+
+		ldx #0
+		stx cmpzp		;text out på $048f
+		
+		sta tempcursor
+		sec
+		adc pos_cursor		;display current pos
+		ldy #120-2
+		jsr printhexnum
 		ldy #40-2
-		sta (gzp),y 
-		txa
-		dey
-		sta (gzp),y
+		lda maxfile		;display number of files 
+		jsr printhexnum		
              
 		lda maxfile		;No files in dir-buffer ?
 		bne tt
-		ldy #$12
+		ldy #$14
 grh		lda nofile,y		;nofile found
 		sta (gzp),y
 		dey
@@ -48,7 +49,7 @@ tt
 		lda cmpzp
 		clc
 		adc tempcursor;cite		;copy of cite ;!! d017 sprite register
-		tax
+		tax				;X for the "iec_fileinfo"
             
 		jsr getpos			;get dir pos
 		sty rzp
@@ -59,17 +60,12 @@ tt
 		;X = dir entry number
 		jsr iec_fileinfo
 .else
-		inx				;start with+1
-		txa
-		jsr gethexnum			;convert to A and X
-		ldy #$14
-		sta (gzp),y			;print A
-		dey
-		txa
-		sta (gzp),y			;print X
-		dey
-		lda #$3a			;":"
-		sta (gzp),y
+		;inx				;start with+1
+		;txa
+		;ldy #$14		
+		;jsr printhexnum
+		;lda #$3a			;":"
+		;sta (gzp),y
 .fi
 
 		ldx #0
@@ -102,7 +98,7 @@ tw		inc cmpzp
 		bcs tz
 		cmp maxfile
 		bcc tt
-		ldy #$12		;Fill the remaining area of the box
+		ldy #$14		;Fill the remaining area of the box
 		lda #$20		;with spaces
 ty		sta (gzp),y
 		dey

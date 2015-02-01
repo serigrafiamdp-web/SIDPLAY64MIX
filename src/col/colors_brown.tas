@@ -20,7 +20,7 @@ clgrey		= $0f
 color_screen		= cblack
 color_d021		= cbrown
 
-color_playmusic		= cbrown
+color_playmusic		= cgrey
 
 color_current_filename	= cblack
 

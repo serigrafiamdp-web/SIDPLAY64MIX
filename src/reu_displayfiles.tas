@@ -35,45 +35,52 @@
 		sta rzp+1
 
              
-		lda maxfile		;display number of files lo
-		jsr gethexnum
 		ldy #40-2
-		sta (gzp),y 
-		txa
-		dey
-		sta (gzp),y
+		lda maxfile		;display number of files lo
+		jsr printhexnum
+		;jsr gethexnum
+		;ldy #40-2
+		;sta (gzp),y 
+		;txa
+		;dey
+		;sta (gzp),y
 
 		lda maxfilehi		;display number of files hi
-		jsr gethexnum
-		dey
-		sta (gzp),y
-		txa
-		dey
-		sta (gzp),y
+		jsr printhexnum
+		;jsr gethexnum
+		;dey
+		;sta (gzp),y
+		;txa
+		;dey
+		;sta (gzp),y
 
-		lda fcountlo		;display current file number 
-		jsr gethexnum
 		ldy #120-2
-		sta (gzp),y 
-		txa
-		dey
-		sta (gzp),y
+		lda fcountlo		;display current file number 
+		jsr printhexnum
+		
+		;jsr gethexnum
+		;ldy #120-2
+		;sta (gzp),y 
+		;txa
+		;dey
+		;sta (gzp),y
 
 		lda fcounthi		;display current file number
-		jsr gethexnum
-		dey
-		sta (gzp),y
-		txa
-		dey
-		sta (gzp),y
+		jsr printhexnum		
+		;jsr gethexnum
+		;dey
+		;sta (gzp),y
+		;txa
+		;dey
+		;sta (gzp),y
 		
              
 		lda maxfile		;No files in dir-buffer ?
 		bne tt
 		lda maxfilehi
 		bne tt
-		ldy #$12
-grh		lda nofile,y		;nofile found
+		ldy #$14
+grh		lda nofile14,y		;nofile found
 		sta (gzp),y
 		dey
 		bpl grh

@@ -4,9 +4,9 @@
 .fi		
 				;89abcde
 		lda #$2e	;|file: $042e
-		sta tzp
+		sta gzp
 		lda screenpos
-		sta tzp+1
+		sta gzp+1
 
 		lda #$38
 		sta $01
@@ -15,10 +15,11 @@
 		sta rzp			;lo adress
 		stx rzp+1		;hi adress
 		
-		
+
+		;ldy #filename_entry_size-1		- need to check closer on longer filenames
 		ldy #$10
-		lda #$2a		;"*" wildcard
-		.byte $2c		;falls through
+		lda #$2a		;Insert "*" wildcard
+		.byte $2c		;skip last letter
 		;ldy #$0f
 plaz		lda (rzp),y
 
@@ -30,7 +31,7 @@ setwildc
 		jsr convert_letter
 		cpy #$10
 		bcs *+4
-		sta (tzp),y		;Write filename to screen at "|PSID:    "
+		sta (gzp),y		;Write filename to screen at "|PSID:    "
 		dey
 		bpl plaz
 

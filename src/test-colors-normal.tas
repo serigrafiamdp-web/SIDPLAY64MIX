@@ -1,3 +1,8 @@
+;--------------------------------------------------------------
+;         Used in init2 to test colors on display screen
+;--------------------------------------------------------------
+
+
 		ldx #0
 		lda #color_screen		;Main text color - whole screen
 scrcolor	sta $d800,x
@@ -46,9 +51,9 @@ shufflecol	sta ((timestr1&$3ff)+$d800)+43,x	;shuffle timer
 		bpl shufflecol
              
 		lda #>(dirscreen&$03ff)+$d800
-		sta gzp+1
+		sta dzp+1
 		lda #<dirscreen
-		sta gzp
+		sta dzp
 
 		ldx #maxDirY-1
 row		ldy #$14
@@ -57,15 +62,15 @@ row2		cpy #$12
 		lda #color_dir_filenames		;light green
 		.byte $2c
 numrow		lda #color_dir_numbers		;light grey
-		sta (gzp),y
+		sta (dzp),y
 		dey
 		bpl row2
-		lda gzp
+		lda dzp
 		clc
 		adc #$28
 		bcc *+4
-		inc gzp+1
-		sta gzp
+		inc dzp+1
+		sta dzp
 		dex
 		bpl row
 
