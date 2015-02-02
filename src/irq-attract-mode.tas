@@ -1,0 +1,190 @@
+;--------------------------------------------------------------
+;Attract mode irq scroller, when selecting colors.
+;--------------------------------------------------------------
+;attract_mode
+
+;---------- ZEROPAGES -----------------------------------------
+scrl1				= $ff
+;--------------------------------------------------------------
+
+-		lda $d012
+		bne -
+		sei
+		lda #>attirq
+		sta $ffff
+		;lda #>atthwirq
+		sta $0315
+		lda #<attirq
+		sta $fffe
+		lda #<atthwirq
+		sta $0314
+		lda #$7f
+		sta $dc0d
+		lda #(sprite1&$3fff)/64
+		sta screen2+$03f9
+		sta screen2+$03fb
+		lda #(sprite2&$3fff)/64
+		sta screen2+$03f8
+		sta screen2+$03fa
+		
+		ldx #$1d
+-		lda vic,x
+		sta $d000,x
+		dex
+		bpl -
+		ldx #$c8
+		stx scrl1
+
+		dec $d019
+		bit $dc0d
+		cli
+		rts
+
+attirq		pha
+		txa
+		pha
+		tya
+		pha
+atthwirq	lda $01
+		pha
+		lda #$36
+		sta $01
+		ldx scrl1
+		stx $d016
+
+
+		
+		lda $d021
+		sta $d028
+		sta $d02a
+		lda $d800+(40*23)
+		sta $d027
+		lda $d800+(40*23)+39
+		sta $d029
+		
+		inc $d019
+
+-		lda $d012
+		cmp #$f4
+		bcc -
+		
+		lda #$c8
+		sta $d016
+
+stmr		lda #0			;1-7f is stop scroller
+		beq scroll
+		dec stmr+1
+		bpl nscrl
+
+scroll
+		lda scrl1
+		sec
+spd		sbc #$03
+		tax
+		and #$07
+		ora #$c8
+		sta scrl1
+		cpx scrl1
+		bcs nscrl
+
+		ldx #$00
+sl1		lda screen2+1+(40*23)+1,x
+		sta screen2++1+(40*23),x
+		;lda #scroll_color
+		;sta $d800+(screen&$03ff)+$01e0,x
+		inx
+		cpx #$26
+		bne sl1
+ok1
+		inc fetch+1
+		bne fetch
+		inc fetch+2
+
+fetch		lda text
+		beq rst
+		bpl go1
+		ldx spd+1
+		and #$07
+		sta spd+1
+		bne uff
+		lda #$7f			;stop scroller for 127 frames
+		sta stmr+1
+		stx spd+1
+		bne uff
+rst		lda #<text
+		ldx #>text
+		sta fetch+1
+		stx fetch+2
+uff		lda #$20			;"Space"
+go1		sta screen2+(40*23)+38
+
+nscrl
+
+		jsr $ea87
+		pla
+		sta $01
+		pla
+		tay
+		pla
+		tax
+		pla
+		rti
+
+xp
+yp	= $e8
+vic     
+.byte $18,yp 		;d000,d001
+.byte $18,yp		;d002,d003 black layer
+.byte $50,yp		;d004,d005
+.byte $48,yp		;d006,d007 black layer
+.byte $00,$00
+.byte $00,$00
+.byte $00,$00
+.byte $00,$00
+.byte %00001100		;d010
+.byte $1b		;d011
+.byte $e8		;d012
+.byte $00		;d013
+.byte $00
+.byte %00001111		;d015
+.byte $c8,$00,$18	;d016,17,18
+.byte $00		;d019
+.byte $01		;d01a
+.byte $00		;d01b
+.byte $00		;d01c
+.byte $00		;d01d
+
+
+
+
+text
+.enc screen
+.byte $20
+.BYTE $81
+.text " MINIMAL 1 intro by 6R6. "
+.byte $80
+.text " Memory:0900 -> upwards "
+.byte $82
+.text " Scroll text use large and small letters, end byte is 00. "
+.byte $83
+.text " Modify relocator paramaters to your needs.. "
+.byte $81
+.text " Use 81-87 to set scroll speed and 80 "
+.text "to stop scroller "
+.byte $80
+.text "for a little while....                 "
+	
+;--------------------------------------------------------------
+.byte $20,$85
+.text " Cosmic Clash (c) 1984 K-Tel  ",$84,$83,$82,$81,$80,$81,$82,$83,$84,$85
+.text " Cracked from disk by Nostalgia ",$84,$83,$82,$81,$80,$81,$82,$83
+.text " Hellos to :  "
+;--------------------------------------------------------------
+.text " Remember, Triad, Onslaught, G*P, Cosine, Laxity, Cyberpunx, Hitmen, The Walker Group, "
+.text " TRSI, Hokuto Force, Booze, Dreams, WOW, Scs+Trc"
+.text " and you ...   "
+.text "                         "
+;--------------------------------------------------------------
+.byte 0	;end byte for scroller
+.enc none
+		

@@ -1,0 +1,94 @@
+;--------------------------------------------------------------
+;Attract mode scroller, when selecting colors.
+;--------------------------------------------------------------
+;attract_mode
+
+;---------- ZEROPAGES -----------------------------------------
+scrl1				= $ff
+;--------------------------------------------------------------
+
+
+
+stmr		lda #$ff		;1-7f is stop scroller
+		beq scroll
+		dec stmr+1
+		bne nscrl
+
+scroll
+		lda scrl1
+		sec
+spd		sbc #$01
+		tax
+		and #$07
+		ora #$c8
+		sta scrl1
+		cpx scrl1
+		bcs nscrl
+
+		ldx #$00
+sl1		lda screen2+1+(40*23)+1,x
+		sta screen2++1+(40*23),x
+		;lda #scroll_color
+		;sta $d800+(screen&$03ff)+$01e0,x
+		inx
+		cpx #$26
+		bne sl1
+ok1
+		inc fetch+1
+		bne fetch
+		inc fetch+2
+
+fetch		lda text
+		beq rst
+		bpl go1
+		ldx spd+1
+		and #$07
+		sta spd+1
+		bne uff
+		lda #$7f			;stop scroller for 127 frames
+		sta stmr+1
+		stx spd+1
+		bne uff
+rst		lda #<text
+		ldx #>text
+		sta fetch+1
+		stx fetch+2
+uff		lda #$20			;"Space"
+go1		sta screen2+(40*23)+38
+
+nscrl
+		rts
+
+
+text
+.enc screen
+;-----|123456789012345678901234567890123456789|
+.text "   4096 files is the directory limit.  ",$80
+.text "   S : toggles screen on/off           ",$80
+.text " MINIMAL 1 intro by 6R6. "
+.byte $80
+.text " Memory:0900 -> upwards "
+.byte $82
+.text " Scroll text use large and small letters, end byte is 00. "
+.byte $83
+.text " Modify relocator paramaters to your needs.. "
+.byte $81
+.text " Use 81-87 to set scroll speed and 80 "
+.text "to stop scroller "
+.byte $80
+.text "for a little while....                 "
+	
+;--------------------------------------------------------------
+.byte $20,$85
+.text " Cosmic Clash (c) 1984 K-Tel  ",$84,$83,$82,$81,$80,$81,$82,$83,$84,$85
+.text " Cracked from disk by Nostalgia ",$84,$83,$82,$81,$80,$81,$82,$83
+.text " Hellos to :  "
+;--------------------------------------------------------------
+.text " Remember, Triad, Onslaught, G*P, Cosine, Laxity, Cyberpunx, Hitmen, The Walker Group, "
+.text " TRSI, Hokuto Force, Booze, Dreams, WOW, Scs+Trc"
+.text " and you ...   "
+.text "                         "
+;--------------------------------------------------------------
+.byte 0	;end byte for scroller
+.enc none
+

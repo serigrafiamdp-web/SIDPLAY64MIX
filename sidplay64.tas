@@ -16,6 +16,7 @@ DEF_REU		= 1	;1 = enable reu routines (for all versions)
 def_currentdate	= 1	;1 = include current date and clock in setup
 def_illegal	= 1	;1 = use illegal opcodes
 def_colorselect	= 1	;use 1, 0 = for debugging new colors.
+def_attractmode = 1	;1 = use attract mode
 ;--------------------------------------------------------------
 ;compile like this:
 ;64tass --m6502 -D defset=1 -a sidplay64.tas -o sidplay64-normal.o64
@@ -153,10 +154,10 @@ wjs_wait_while_busy jmp wait_while_busy ;06-jmp $XX00
 .else
 wjs_getbyte	jmp getbyte         ;06-jmp $XX00
 .fi
-stack_irq	jmp irq             ;07-jmp $XX00
-stack_hwirq	jmp hwirq           ;08-jmp $XX00
+stack_irq	jmp irq             ;07-jmp $XX00	fffe/ffff
+stack_hwirq	jmp hwirq           ;08-jmp $XX00	0314/0315
 ;\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\
-stack_nmi	sei
+stack_nmi	sei					;0318+fffa
 		ldx #topstack
 		txs
 		inx
@@ -310,6 +311,13 @@ endstacker
 reu_detection
 .include src/reu_detect.tas
 .fi
+
+.if def_attractmode
+.align $0100
+attract_mode
+;.include src/irq-attract-mode.tas
+.include src/attract_mode2.tas
+.fi
 ;--------------------------------------------------------------
 
 
@@ -324,10 +332,10 @@ screen2		= $c400
 screen2chars	= $e000 ;e000-e800
 ;-----------
 .if def_1541u2cmd*DEF_REU
-credz		= (screen1&$03ff)+($d807+(40*3))
-songstr1	= screen1+(40*6)+7
-timestr1	= screen1+(40*20)+4
-dirscreen	= screen2+(40*7)+13
+credz		= (screen1&$03ff)+($d807+(40*3))	;|REU
+songstr1	= screen1+(40*6)+7			;|
+timestr1	= screen1+(40*20)+4			;|
+dirscreen	= screen2+(40*7)+13			;|
 ;-----------
 .else
 credz		= (screen1&$03ff)+($d808+(40*3))
@@ -364,7 +372,7 @@ maxDirY		= 15
 
 ;variables 
 
-no_keys		= 0	;crsr up - but has no effect on reu registers
+no_keys		= $ff	;REU only - avoid keyboard while loading dir to reu
 dir_keys	= 5	;crsr-up/crsr-down/clrhome/sh+clrhome/space/delete
 noirq_keys	= 6	;return (load file possible)
 irq_keys	= 14	;select tune, restart, shuffle
@@ -507,12 +515,14 @@ fileSelect	jsr wjs_display		;DisplayFiles+keys
 		lda #$36
 		sta $01
 .fi
-		sec			;SLC screen onoff
-		bcs fileselect		;SLC screen onoff
 		
 		;lda #$1b		;orignally we 
 		;sta $d011		;set d011 here all the time
 		;bne fileSelect		;JMP
+
+		sec			;SLC screen onoff
+		bcs fileselect		;SLC screen onoff (JMP)
+		
 
 ; Dir-buffer is located at $d000 ->
 
@@ -634,6 +644,9 @@ scankeys
 		sta rzp+1
 
 		ldy numb     ;04/09/0c/10
+.if DEF_REU
+		bmi wewait	;Reu version set numb = $ff to avoid any crsr scrolling while reading dir to reu.
+.fi
 looker		lda (gzp),y
 		sta $dc00
 		lda (rzp),y
@@ -1482,3 +1495,8 @@ vectors
 ;It will load to $df84 because of the $7c sid header
 maxentries = (lastpos-dirpos)/16 ;=183 files
 
+
+.if def_attractmode
+* = $e800
+.include src/sprites_attractmode.tas
+.fi

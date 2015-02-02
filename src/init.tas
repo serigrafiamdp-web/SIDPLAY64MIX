@@ -212,8 +212,19 @@ conbit2		asl tmp
 		lda #0
 		jsr setup_colors	;$01 = 37 on end
 
+;--------------
+;--------------
+
+
 main		cli
--		jsr $ffe4
+-
+.if def_attractmode
+		lda #$fa
+-		cmp $d012
+		bne -
+		jsr attract_mode
+.fi		
+		jsr $ffe4
 		beq -
 		sei
 		cmp #$3a		;A <  39
@@ -226,24 +237,32 @@ main		cli
 		jmp main
 
 
-trkinstd	lda #$38
-		sta $01		;inc $01			;38
+trkinstd	
 
+.if def_attractmode
+		ldx #37
+		lda #$20
+-		sta screen2+(40*23)+1,x		;clear scroller area
+		dex
+		bpl -
+.fi
+
+		lda #$38
+		sta $01		;inc $01			;38
 		lda #$7e		;$ea7e (no keyboard scan)
 		sta $0314
-;lda #$8e
-;sta $0328
-;lda #$e6
-;sta $0329
+		;lda #$8e
+		;sta $0328
+		;lda #$e6
+		;sta $0329
 		lda #$ea		;$f6ea (no stop key)
 		sta $0328
-
-
 		ldx #5
 copyp1		lda $0314,x		;0314,15,16,17,18,19
 		sta panic_0314,x	;Buffer irq vectors for panic load
 		dex
 		bpl copyp1
+
 ;------
 ;IRQ
 ;------
