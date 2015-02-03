@@ -294,7 +294,7 @@ devmsg		.byte $1e,$08,$93,$99
         .if def_1541u2cmd
 		.text "-1541u2-cmd"
         .fi
-		.text " v0.87",$0d
+		.text " v0.88",$0d
 		.text "beta "
 		.if def_currentdate
 		.binary timedate.log	;created by batch echo in root dir

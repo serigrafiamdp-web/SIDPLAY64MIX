@@ -227,7 +227,12 @@ get_status	lda #<txterror1
 		clc
 		adc #>txterror1&$03ff
 		sta rzp+1
-		ldy #0
+		ldy #38
+		lda #$20	;clear "dos" error message area
+-		sta (rzp),y
+		dey
+		bpl -
+		iny
 -		bit U2_Status_register
 		bvc +
 		lda U2_Staus_data_register
@@ -458,6 +463,9 @@ dirSelector	ldy #0
 		jmp (wjp_fileselect)
 ;--------------------------------------------------------------
 ;LOAD NEW DIR:
+
+start                       		;JMP HERE FIRST TIME from SRC/INIT.TAS
+
 dodir		lda #2
 		sta plt_flag
 		lda #$4d		;"M"-anual selection
@@ -474,7 +482,7 @@ clrmsg2		sta (dzp),y
 		dey
 		bpl clrmsg2
 
-start                       		;JMP HERE ON FIRST TIME INIT.
+
 
 
 .if def_reu

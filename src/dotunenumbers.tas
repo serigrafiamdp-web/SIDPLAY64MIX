@@ -70,11 +70,17 @@ lodec         lda bcd
               iny
               inx
               bne nextnumber
-endbin        lda #$20          ;put some spaces behind
-              sta (dzp),y
-              iny
-              cpy #5		;was 8 --> 5 ("99/99") should be enough... no sid will ever have more than 99 songs ?
-              bcc endbin
+endbin        
+.if def_1541u2cmd*def_reu
+		cpy #4
+		bcs +
+.fi
+-		lda #$20          ;put some spaces behind
+		sta (dzp),y
+		iny
+		cpy #5		;was 8 --> 5 ("99/99") should be enough... no sid will ever have more than 99 songs ?
+		bcc -
++
 
 ;Find speedbit for this song#
 

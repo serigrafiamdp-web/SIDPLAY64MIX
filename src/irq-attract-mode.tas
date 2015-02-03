@@ -1,5 +1,5 @@
 ;--------------------------------------------------------------
-;Attract mode irq scroller, when selecting colors.
+;Attract mode irq smooth scroller, when selecting colors.
 ;--------------------------------------------------------------
 ;attract_mode
 
