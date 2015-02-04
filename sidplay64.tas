@@ -227,18 +227,28 @@ get_status	lda #<txterror1
 		clc
 		adc #>txterror1&$03ff
 		sta rzp+1
-		ldy #38
-		lda #$20	;clear "dos" error message area
--		sta (rzp),y
-		dey
-		bpl -
-		iny
+;		ldy #38-1
+;		lda #$20	;clear "dos" error message area
+;-		sta (rzp),y
+;		dey
+;		bpl -
+;		iny
+		ldy #$00
+		
 -		bit U2_Status_register
 		bvc +
 		lda U2_Staus_data_register
 		sta (rzp),y
 		iny
-		bne -            
+		bne -
+; clear area
+-		cpy #38
+		beq +
+		lda #$20	;clear "dos" error message area
+		sta (rzp),y
+		iny
+		bne -
+		
 +		rts
 		
 .else
@@ -385,8 +395,8 @@ irq_keys	= 14	;select tune, restart, shuffle
 
 keyCrsrDown	= 0	;Directory keys 0-5
 keyCrsrUp	= 1	;
-keyClrHome	= 2	;
-keyShClrHome	= 3	;
+keyCrsrRight = 3	;
+keyCrsrLeft	= 2	;
 keySpace	= 4	;
 keyDelete	= 5	;
 
@@ -408,10 +418,10 @@ KeyScreenoff	= 14	;
 dc00	
 
 
-	.byte $fe	;00|crsr
-	.byte $00	;01|crsr+sh	
-	.byte $bf	;02|clrh
-	.byte $00	;03|clrh+sh
+	.byte $fe	;00|crsru
+	.byte $00	;01|crsru+sh	
+	.byte $fe	;02|crsrr
+	.byte $00	;03|crsrr+sh
 	.byte $7f	;04|space
 	.byte $fe	;05|delete
 	.byte $fe	;06|Return
@@ -430,10 +440,10 @@ dc00
 
 dc01
 
-	.byte $7f	;00|crsr  
-	.byte $6f	;01|crsr+sh  	
-	.byte $f7	;02|clrh    
-	.byte $e7	;03|clrh+sh 
+	.byte $7f	;00|crsru  
+	.byte $6f	;01|crsru+sh  	
+	.byte $fb	;02|crsrr  
+	.byte $eb	;03|crsrr+sh 
 	.byte $ef	;04|space
 	.byte $fe	;05|delete
 	.byte $fd	;06|Return

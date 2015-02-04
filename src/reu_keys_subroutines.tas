@@ -49,7 +49,7 @@ reu_crsr_down
 ;--------------------------------------------------------------
 ;
 ;--------------------------------------------------------------
-reu_clrHome
+reu_crsr_right
 		ldx pos_cursor		;x = 0 is cursor at top of screen?
 		beq ton
 					;x = 1-15 no, then move it to top
@@ -91,7 +91,7 @@ tdp		lda fcountlo
 ;--------------------------------------------------------------
 ;
 ;--------------------------------------------------------------
-reu_Shift_ClrHome
+reu_shift_crsr_right
 		lda maxfilehi		;zero ?
 		bne tpp
 		ldx maxfile

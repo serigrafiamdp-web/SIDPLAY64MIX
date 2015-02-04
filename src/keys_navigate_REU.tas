@@ -17,13 +17,13 @@ key1		cpy #keyCrsrDown	;"Crsr down"
 		bne key2
 		jmp reu_crsr_down	;plt_inc is in d000-e000 ... check reu_keys_subroutines*.tas
 
-key2		cpy #keyClrHome
+key2		cpy #keyCrsrRight
 		bne key3
-		jmp reu_clrHome		;15 up
+		jmp reu_crsr_right		;15 up
 
-key3		cpy #keyShClrHome
+key3		cpy #keyCrsrLeft
 		bne key4
-		jmp reu_Shift_ClrHome	;15 down
+		jmp reu_shift_crsr_right	;15 down
 		
 key4		cpy #keySpace		;"SPACE"
 		bne key5
