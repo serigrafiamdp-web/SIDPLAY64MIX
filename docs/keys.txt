@@ -31,12 +31,37 @@ Bit 2    X       T       F       C       6       D       R       5
 Bit 1    LSHIFT  E       S       Z       4       A       W       3
 Bit 0    CRSR DN F5      F3      F1      F7      CRSR RT RETURN  DELETE
 
+-------- CRSR RT VS SHIFT
 
-
-	lda #%10111111	;z
+-	lda #$be		;set crsr rt + rshift
 	sta $dc00
 	lda $dc01
-	and #%00010000
+	cmp #$fb		;only crsr rt will make it fall through
+	bne -
+	rts
+	
+-	lda #$be		;set crsr rt + rshift
+	sta $dc00
+	lda $dc01
+	cmp #$eb		;only both bits will make it fall through
+	bne -
+	rts
+
+-	lda #$be		;set crsr rt + rshift
+	sta $dc00
+	lda $dc01
+	cmp #$7f		;only crsr dn will make it fall through
+	bne -
+	rts
+
+-	lda #$be		;set crsr rt + rshift
+	sta $dc00
+	lda $dc01
+	cmp #$6f		;only bot bits will make it fall through
+	bne -
+	rts
+	
+
 
 
 ;--- F5 ---------
@@ -59,4 +84,9 @@ dof5 rts
 dof3 rts
 
 
+
+	lda #%10111111	;z
+	sta $dc00
+	lda $dc01
+	and #%00010000
 

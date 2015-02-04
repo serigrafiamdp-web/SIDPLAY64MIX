@@ -7,7 +7,7 @@
 
 
 ;--------------------------------------------------------------
-;
+;	Line up:
 ;--------------------------------------------------------------
 reu_crsr_up	
 		lda fcountlo
@@ -26,7 +26,7 @@ torts		rts
 
 
 ;--------------------------------------------------------------
-;
+;	Line down:
 ;--------------------------------------------------------------
 plt_inc					;called from play next function
 reu_crsr_down
@@ -47,9 +47,9 @@ reu_crsr_down
 		jmp get_reu_dir			;i/o
 
 ;--------------------------------------------------------------
-;
+;	Page UP:
 ;--------------------------------------------------------------
-reu_crsr_right
+reu_crsr_left
 		ldx pos_cursor		;x = 0 is cursor at top of screen?
 		beq ton
 					;x = 1-15 no, then move it to top
@@ -89,9 +89,9 @@ tdp		lda fcountlo
 		jmp get_reu_dir		;i/o
 
 ;--------------------------------------------------------------
-;
+;	Page Down:
 ;--------------------------------------------------------------
-reu_shift_crsr_right
+reu_crsr_right
 		lda maxfilehi		;zero ?
 		bne tpp
 		ldx maxfile

@@ -5,6 +5,9 @@
 		;Y = key we pressed
 		;A = 0
 
+;--------------------------------------------------------------
+;	Line up:
+;--------------------------------------------------------------
 		cpy #keyCrsrUp		;"Crsr up"
 		bne key1
 		lda offs_cursor
@@ -16,7 +19,10 @@
 		rts
 th		dec offs_cursor
 		rts
-		
+
+;--------------------------------------------------------------
+;	Line down:
+;--------------------------------------------------------------
 key1		cpy #keyCrsrDown	;"Crsr down"
 		bne key2
 plt_inc		lda offs_cursor		;! also called from stack jumpb table
@@ -31,8 +37,10 @@ plt_inc		lda offs_cursor		;! also called from stack jumpb table
 		rts
 tj		inc offs_cursor
 td		rts
-
-key2		cpy #keyClrHome
+;--------------------------------------------------------------
+;	Page UP:
+;--------------------------------------------------------------
+key2		cpy #keyCrsrLeft
 		bne key3
 		ldx pos_cursor
 		bne bd1
@@ -46,7 +54,10 @@ bd2		sta offs_cursor
 bd1		sta pos_cursor		;cursor pos to top of screen
 		rts		
 
-key3		cpy #keyShClrHome
+;--------------------------------------------------------------
+;	Page Down:
+;--------------------------------------------------------------
+key3		cpy #keyCrsrRight
 		bne key4
 .if def_illegal
 		lax maxfile
