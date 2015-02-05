@@ -241,7 +241,7 @@ get_status	lda #<txterror1
 		sta (rzp),y
 		iny				;$0100 status mesage ?  
 		bne -
-
++
 ; clear area				this clear probably never runs
 -		cpy #38
 		beq +
