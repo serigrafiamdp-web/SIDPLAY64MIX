@@ -235,22 +235,24 @@ get_status	lda #<txterror1
 ;		iny
 		ldy #$00
 		
+		bit U2_Status_register
+		bvc nostatus			; no message - don't clear status, leave it
 -		bit U2_Status_register
-		bvc +				;
+		bvc +				; if finished clear the rest of the line
 		lda U2_Staus_data_register
 		sta (rzp),y
 		iny				;$0100 status mesage ?  
 		bne -
 +
-; clear area				this clear probably never runs
+; clear area				
 -		cpy #38
-		beq +
+		bcs nostatus
 		lda #$20	;clear "dos" error message area
 		sta (rzp),y
 		iny
 		bne -
-		
-+		rts
+nostatus		
+		rts
 		
 .else
 panic_load				;zp $01 = 36
