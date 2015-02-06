@@ -14,9 +14,12 @@
 ;color_dir_filenames	= clgreen
 ;color_dir_numbers	= clgrey
 ;color_number_of_files	= clgrey
+;color_d020		= cblack
+
+
 
 default
-.byte cgreen,cblack,cgreen,clgrey,clgrey,cwhite,cwhite,cwhite,cwhite,clgreen,clgreen,clgrey,clgrey 
+.byte cgreen,cblack,cgreen,clgrey,clgrey,cwhite,cwhite,cwhite,cwhite,clgreen,clgreen,clgrey,clgrey	,cblack
 
 
 lopoint

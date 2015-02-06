@@ -40,10 +40,13 @@ color_playmusic2
 		lda #$35        ;So we force it...
 		sta $01
 
+color_d020	lda #0
+		sta $d020
+
 		ldx #$7f	;|saves 1 byte
 		stx $dc00	;|
-		inx		;|$80
-		stx $d020	;|$00=black
+		;inx		;|$80
+		;stx $d020	;|$00=black
 		lda $dc01
 joymode1	cmp #$fd	;change to cbm for joystick mode
 		beq goplay

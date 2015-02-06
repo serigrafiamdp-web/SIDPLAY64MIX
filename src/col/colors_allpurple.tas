@@ -35,5 +35,6 @@ color_dir_filenames	= ccyan
 color_dir_numbers	= cpink
 color_number_of_files	= ccyan
 
+color_d020		= cblack
 ;----------------------------------------
 

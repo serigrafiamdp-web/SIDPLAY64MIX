@@ -212,21 +212,42 @@ conbit2		asl tmp
 		lda #0
 		jsr setup_colors	;$01 = 37 on end
 
-;--------------
-;--------------
-
-
+;---------------------------------
+.if def_attractmode=2
+		ldx #5
+-		lda $0314,x
+		pha
+		dex
+		bpl -
+		ldx #3
+-		lda screen2+$03f8,x
+		pha
+		dex
+		bpl -
+		jsr attract_mode
+main
+		jsr $ffe4
+		beq main
+.fi
+;----------------------------------
+.if def_attractmode=1
 main		cli
--
-.if def_attractmode
 		lda #$fa
 -		cmp $d012
 		bne -
 		jsr attract_mode
-.fi		
 		jsr $ffe4
-		beq -
+		beq main
 		sei
+.fi
+;----------------------------------
+.if def_attractmode=0
+main		cli
+		jsr $ffe4
+		beq main
+		sei
+.fi
+;----------------------------------
 		cmp #$3a		;A <  39
 		bcs trkinstd
 		cmp #$30		;A >= 30
@@ -235,11 +256,36 @@ main		cli
 		sbc #$30		;0-7
 		jsr setup_colors	;$01 = 37 at end
 		jmp main
-
+;----------------------------------
 
 trkinstd	
 
-.if def_attractmode
+.if def_attractmode=2
+
+		ldx #0
+		stx $d01a		
+		stx $d015
+		lda #$7f
+		sta $dc0d
+		sta $dd0d
+		bit $dc0d
+		bit $dd0d
+
+-		pla		
+		sta screen2+$03f8,x
+		inx
+		cpx #4
+		bne -
+		
+		ldx #0
+-		pla
+		sta $0314,x
+		inx
+		cpx #6
+		bne -
+.fi
+
+.if def_attractmode>0
 		ldx #37
 		lda #$20
 -		sta screen2+(40*23)+1,x		;clear scroller area
@@ -377,36 +423,35 @@ clgrey		= $0f
 ;color_dir_numbers	= clgrey
 ;color_number_of_files	= clgrey
 
+;color_d020		= cblack
 
 
 
-
+;-----d800, d021, music, currfn, iomsg, cred1, cred2, song#, clock, maxfile, filenames, dir ,fcount     ,d020
 
 
 default
-.byte cgreen,cblack,cbrown,clgrey,clgrey,cwhite,cwhite,cwhite,cwhite,clgreen,clgreen,clgrey,clgrey
+.byte cgreen,cblack,cbrown,clgrey,clgrey,cwhite,cwhite,cwhite,cwhite,clgreen,clgreen,clgrey,clgrey	,cblack
 allgrey
-.byte cblack,cgrey,cmgrey,clgrey,cmgrey,cwhite,clgrey,cwhite,clgrey,cmgrey,clgrey,cmgrey,clgrey
+.byte cblack,cgrey,cmgrey,clgrey,cmgrey,cwhite,clgrey,cwhite,clgrey,cmgrey,clgrey,cmgrey,clgrey		,cblack
 allblue
-.byte cblack,cblue,clblue,ccyan,clblue,cwhite,clblue,cwhite,clgrey,clgrey,ccyan,clblue,clgrey
+.byte cblack,cblue,clblue,ccyan,clblue,cwhite,clblue,cwhite,clgrey,clgrey,ccyan,clblue,clgrey		,cblue
 allred
-.byte cblack,cred,cpink,cyellow,clgrey,cwhite,clgrey,cwhite,cpink,cyellow,cyellow,cpink,cpink
+.byte cblack,cred,cblack,cyellow,clgrey,cwhite,clgrey,cwhite,cpink,cyellow,cyellow,cpink,cpink		,cred
 ;allpurple
 ;.byte cblue,cpurple,cblue,ccyan,clblue,cwhite,cyellow,cwhite,cyellow,clgrey,ccyan,cpink,ccyan
 grey
-.byte cgrey,cblack,cgrey,clgrey,clgrey,cwhite,cmgrey,cwhite,clgrey,clgrey,clgrey,cmgrey,cmgrey
+.byte cgrey,cblack,cgrey,clgrey,clgrey,cwhite,cmgrey,cwhite,clgrey,clgrey,clgrey,cmgrey,cmgrey		,cblack
 lightblue
-.byte cblue,clblue,cblue,cblack,clgreen,cwhite,clgreen,cwhite,cblack,clgreen,cwhite,cblack,cblack
+.byte cblue,clblue,cblue,cblack,clgreen,cwhite,clgreen,cwhite,cblack,clgreen,cwhite,cblack,cblack	,cblack
 cbm
-.byte clblue,cblue,clblue,ccyan,ccyan,cwhite,clgrey,cwhite,clgrey,clgrey,cwhite,clgrey,clgrey
+.byte clblue,cblue,cblack,ccyan,ccyan,cwhite,clgrey,cwhite,clgrey,clgrey,cwhite,clgrey,clgrey		,clblue
 allgreen
-.byte cblack,cgreen,clgreen,cwhite,cgrey,cwhite,clgreen,cwhite,cwhite,cgrey,clgreen,cgrey,clgreen
-red
-.byte cred,cblack,cred,cpink,corange,cwhite,cyellow,cwhite,cyellow,cred,cpink,corange,corange
+.byte cblack,cgreen,clgreen,cwhite,cgrey,cwhite,clgreen,cwhite,cwhite,cgrey,clgreen,cgrey,clgreen	,cblack
+lightgrey
+.byte cmgrey,clgrey,cmgrey,cwhite,cblack,cblack,cgrey,cblack,cgrey,cgrey,cblack,cgrey,cblack		,cgrey
 brown
-.byte cblack,cbrown,cgrey,cblack,cblack,cmgrey,cmgrey,clgrey,cmgrey,cmgrey,clgrey,cmgrey,cblack
-;gay
-;.byte cpurple,cpink,cpurple,cblue,cblack,cyellow,clgreen,cwhite,cgrey,cyellow,cred,cblack,cred
+.byte cblack,cbrown,cgrey,cblack,cblack,cmgrey,cmgrey,clgrey,cmgrey,cmgrey,clgrey,cmgrey,cblack		,cblack
 
 
 lopoint
@@ -418,7 +463,7 @@ lopoint
 .byte <lightblue	;5
 .byte <cbm		;6
 .byte <allgreen		;7
-.byte <red		;8
+.byte <lightgrey	;8
 .byte <brown		;9
 
 hipoint
@@ -430,7 +475,7 @@ hipoint
 .byte >lightblue
 .byte >cbm
 .byte >allgreen
-.byte >red
+.byte >lightgrey
 .byte >brown
 
 setup_colors	tax
@@ -443,7 +488,7 @@ setup_colors	tax
 		lda lopoint,x
 		sta dzp
 
-		ldy #12
+		ldy #13
 -		lda (dzp),y
 		pha
 		dey
@@ -478,6 +523,9 @@ setup_colors	tax
 		sta color_dir_numbers+1
 		pla
 		sta color_number_of_files+1
+		
+		pla
+		sta color_d020+1
 .endc
 
 

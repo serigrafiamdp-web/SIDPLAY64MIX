@@ -34,6 +34,7 @@ color_device_number	= cmgrey
 color_dir_filenames	= clgrey
 color_dir_numbers	= cmgrey
 color_number_of_files	= cblack
+color_d020		= cblack
 
 ;----------------------------------------
 

@@ -71,7 +71,7 @@ atthwirq	lda $01
 		lda #$c8
 		sta $d016
 
-stmr		lda #0			;1-7f is stop scroller
+stmr		lda #$7f	;1-7f is stop scroller
 		beq scroll
 		dec stmr+1
 		bpl nscrl
@@ -79,7 +79,7 @@ stmr		lda #0			;1-7f is stop scroller
 scroll
 		lda scrl1
 		sec
-spd		sbc #$03
+spd		sbc #$01
 		tax
 		and #$07
 		ora #$c8
@@ -155,36 +155,78 @@ vic
 .byte $00		;d01d
 
 
-
-
 text
 .enc screen
-.byte $20
-.BYTE $81
-.text " MINIMAL 1 intro by 6R6. "
-.byte $80
-.text " Memory:0900 -> upwards "
-.byte $82
-.text " Scroll text use large and small letters, end byte is 00. "
-.byte $83
-.text " Modify relocator paramaters to your needs.. "
-.byte $81
-.text " Use 81-87 to set scroll speed and 80 "
-.text "to stop scroller "
-.byte $80
-.text "for a little while....                 "
-	
+
+;-----|123456789012345678901234567890123456789|
+.if defset=1					;normal
+.text " This version works best on serial disk "
+.text "drives like the 1541, 1571, 1581 etc.  ",$80
+ .if def_REU
+.text "  A 512 kb REU allows you to have 4096 "
+.text "filenames present in REU memory.",$80
+ .else
+.text " You can have 171 filenames in memory.",$80
+ .fi
+.text "Using a fastload cartridge such as the Action Replay, Retro Replay, TFC, Epyx Fastload etc. is  highly recommended. "
+.fi ;defset1
+
+;-----|123456789012345678901234567890123456789|
+.if defset=2
+.text " This is the ultimate sidplay64 version!",$80
+.text " The 1541U-II with REU utilizing the command interface, it allows you to have "
+.text "atleast 4096 filenames in memory.  And the file loading is instant! ",$80
+.text " Thanks to Tom-Cat of Nostalgia for helping out implementing the 1541U2cmd routines. "
+.text "Without him this version would have never seen the daylight.  "
+.fi;defset2
+
+;-----|123456789012345678901234567890123456789|
+.if defset=3
+.text " This version works best on *IEC* devices, but also IDE64(+ pclink), CMD FD, CMD HD, CMD Ramlink/Ramdrive. ",$80
+.if def_REU
+.text "  A 512 kb REU allows you to have 4096 "
+.text "filenames present in REU memory.",$80
+ .else
+.text " You can have 171 filenames in memory.",$80
+ .fi
+.fi;defset3
+
+;-----|123456789012345678901234567890123456789|
+.if defset=4
+.text " This is the SD2IEC version, it allows you to mount disk images like .d64 .d71 .d81 and .dnp ",$80
+.if def_REU
+.text "  A 512 kb REU allows you to have 4096 "
+.text "filenames present in REU memory.",$80
+ .else
+.text " You can have 171 filenames in memory.",$80
+ .fi
+.fi;defset4
+
+;-----|123456789012345678901234567890123456789|
+.if defset=5
+.text " The 1541U works best in iec/standalone mode. It can mount .d64 images and browse dirs. ",$80
+.text "If you use The Final Replay together with Netdrive (on the pc) you can load sid files directly from your PC hard drive via your LAN. "
+.if def_REU
+.text "  A 512 kb REU allows you to have 4096 "
+.text "filenames present in REU memory.",$80
+ .else
+.text "   You can have 171 filenames in memory.",$80
+ .fi
+.fi;defset5
+
+
+;-----|123456789012345678901234567890123456789|
+.text "       S : Toggles screen on/off.      ",$80
+.text "          ",$1f," : Fast Forward.           ",$80
+.text "     CBM : Exit Rsid's (if possible).  ",$80
+.text "Both playlist modes (Play Next and Play Random) can be selected by pressing 'M'.  ",$80
+
 ;--------------------------------------------------------------
-.byte $20,$85
-.text " Cosmic Clash (c) 1984 K-Tel  ",$84,$83,$82,$81,$80,$81,$82,$83,$84,$85
-.text " Cracked from disk by Nostalgia ",$84,$83,$82,$81,$80,$81,$82,$83
-.text " Hellos to :  "
-;--------------------------------------------------------------
-.text " Remember, Triad, Onslaught, G*P, Cosine, Laxity, Cyberpunx, Hitmen, The Walker Group, "
-.text " TRSI, Hokuto Force, Booze, Dreams, WOW, Scs+Trc"
-.text " and you ...   "
-.text "                         "
+.text "  Support this tool by visiting : "
+.text "https://sourceforge.net/projects/sidplay64/",$80,$80,$80
+.text "                                      "
 ;--------------------------------------------------------------
 .byte 0	;end byte for scroller
 .enc none
+
 		

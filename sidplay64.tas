@@ -16,7 +16,7 @@ DEF_REU		= 1	;1 = enable reu routines (for all versions)
 def_currentdate	= 1	;1 = include current date and clock in setup
 def_illegal	= 1	;1 = use illegal opcodes
 def_colorselect	= 1	;use 1, 0 = for debugging new colors.
-def_attractmode = 1	;1 = use attract mode
+def_attractmode = 2	;0 = no attract mode, 1= basic attract mode, 2 = smooth attract mode
 ;--------------------------------------------------------------
 ;compile like this:
 ;64tass --m6502 -D defset=1 -a sidplay64.tas -o sidplay64-normal.o64
@@ -328,12 +328,16 @@ reu_detection
 .include src/reu_detect.tas
 .fi
 
-.if def_attractmode
+
 .align $0100
 attract_mode
-;.include src/irq-attract-mode.tas
+.if def_attractmode = 1
 .include src/attract_mode2.tas
 .fi
+.if def_attractmode = 2
+.include src/irq-attract-mode.tas
+.fi
+
 ;--------------------------------------------------------------
 
 
@@ -1515,7 +1519,7 @@ vectors
 maxentries = (lastpos-dirpos)/16 ;=183 files
 
 
-.if def_attractmode
+.if def_attractmode=2
 * = $e800
 .include src/sprites_attractmode.tas
 .fi

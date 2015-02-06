@@ -35,5 +35,6 @@ color_dir_filenames	= clblue
 color_dir_numbers	= ccyan
 color_number_of_files	= clgrey
 
+color_d020		= cblack
 ;----------------------------------------
 

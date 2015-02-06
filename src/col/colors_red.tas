@@ -17,23 +17,23 @@ clgrey		= $0f
 
 ;---------------------------------------
 
-color_screen		= cred
-color_d021		= cblack
+color_screen		= cmgrey
+color_d021		= clgrey
 
-color_playmusic		= cred
+color_playmusic		= cgrey
 
-color_current_filename	= cpink
+color_current_filename	= cwhite
 
-color_iomessage		= corange
-color_credits1		= cwhite
-color_credits2		= cyellow
+color_iomessage		= cblack
+color_credits1		= cblack
+color_credits2		= cgrey
 color_songnumbers	= cwhite
-color_timer		= cyellow		;clock and shuffle
+color_timer		= cgrey		;clock and shuffle
 
-color_device_number	= cred
-color_dir_filenames	= cpink
-color_dir_numbers	= corange
-color_number_of_files	= corange
+color_device_number	= cgrey
+color_dir_filenames	= cblack
+color_dir_numbers	= cgrey
+color_number_of_files	= cgrey
 
 ;----------------------------------------
 

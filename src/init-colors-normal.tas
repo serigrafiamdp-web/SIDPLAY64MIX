@@ -136,4 +136,8 @@ numfiles = screen2+$014d
 		sta $d800+(numfiles&$03ff),X
 		dex
 		bpl -
+		
+		pla
+		sta color_d020+1
+		sta $d020
 		rts
