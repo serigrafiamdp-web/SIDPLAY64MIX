@@ -1,32 +1,44 @@
-SIDPLAY64 V0.8 (c) GRG/SHAPE 2013
-----------------------------------
+SIDPLAY64 V0.9 (c) GRG/SHAPE 2015
+---------------------------------------------------------------
 Welcome to this latest version of Sidplay64 (SP64).
 
 About the program:
-------------------
+---------------------------------------------------------------
 This is a program that can playback .SID files found in the 
 HVSC collection (http://hvsc.c64.org/) on a real Commodore 64/128.
 Make sure you have the most recent HVSC version for your sid files.
 It was designed for both PAL and NTSC computers, and will play all sid 
 songs at correct system speed.
 
+
+Versions of the program:
+---------------------------------------------------------------
+You will find different versions of SP64 in this package, most of them
+will work on all devices.  But I suggest you use the correct version for 
+for your device, since they might contain special commands:
+
+sidplay64-reu-1541u2cmd.prg      - 1541 Ultimate II version with REU.
+sidplay64-reu-sd2iec.prg         - SD2IEC version with REU. 
+sidplay64-reu-1541u-netdrive.prg - 1541 Ultimate & Netdrive with REU.
+sidplay64-reu-iec-cmd-ide64.prg  - CMD drives, IDE64 devices & other IEC devices, with REU.
+sidplay64-reu-normal.prg         - REU version for 1541, 1571, 1581 and clones of these.
+
+sidplay64-normal.prg             - Standard version for 1541, 1571, 1581 and clones.
+sidplay64-1541u-netdrive.prg     - 1541 Ultimate & Netdrive.
+sidplay64-iec-cmd-ide64.prg      - CMD drives, IDE64 devices & other IEC devices.
+sidplay64-sd2iec.prg             - SD2IEC.
+
+(The 1541U2 software iec mode has been disabled for this build.)
+
+
 How to use:
------------
-You will find 5 different versions of SP64 in this package:
-
-Sidplay64_08.prg                 -  Standard version - will work on all disk drives and devices.
-sidplay64_08_1541u2.prg          -  Only for 1541u2
-Sidplay64_08_1541u_netdrive.prg  -  Only for 1541u or netdrive.
-sidplay64_08_iec_cmd_ide64.prg   -  Only for iec, cmd or ide64 devices.
-sidplay64_08_sd2iec.prg          -  Only for Sd2iec.
-
-
+---------------------------------------------------------------
 When you first start SP64 you will see the drive selector screen.
 You can use F1/F2 to select device number 6-30. Press return when done.
 If you for any reason want to force the device number you can press CBM+Return.
 Both netdrive and 1541u (in iec mode) returns: "@? :31,syntax error,00,00" when
-SP64 tries to read the error channel. The same goes for 1541u2 in software iec mode.
-The three mentioned devices doesn't return a proper device message when sending "UI".
+SP64 tries to read the error channel. The two mentioned devices doesn't return a 
+proper device message when sending "UI".
 Just press return to start the program when you see this message.
 
 Then you have the option to configure a second sid chip.
@@ -42,30 +54,87 @@ Both RSIDs and PSIDs can have this play address and they will stop
 the random Shuffle play and the play next routine in your playlist.
 Selecting Y here will avoid loading these "troublesome" sids.
 
+Last question : Controlling the program with Joystick Port #1 or Keyboard ?
+Selecting Joystick allows you to conrol the program from your favourite
+sofa or armchair. Just sit back and relax
+See further below for Joystick controls.
+
 Now the mains screen shows up and you have the option to select skin colors
-with the keys 1-9. Or press any other key to make SP64 load the directory.
+with the keys 0-9. Or press any other key to make SP64 load the directory.
 
 When a fresh directory is loaded you can only use some of these keys:
 
-Cursor keys   :Select sid tune
-Return        :Load a sid tune / open directory / open disk image file
-Instdel       :Go back a directory level (Only for the versions that supports directory browsing)
-Space         :Load/Reload directory
+KEYBOARD COMMANDS:
+---------------------------------------------------------------
+CRSR UP/DOWN  :Select sid tune
+RETURN        :Load a sid tune / open directory / open disk image file
+INSTDEL       :Go back a directory level (Only for the versions that supports directory browsing)
+SPACE         :Load/Reload directory
 F1            :Restart song
 F7            :Pause/Continue song
 + / -         :Select songs  (if any)
-< / >         :Set shuffle time
-R             :Randomly load sid tune (when shuffle time has been reached)
-N             :Load next sid tune (when shuffle time has been reached)
-M             :Manually select sid tune
-ClrHome       :Top of directory
-Shift+ClrHome :Bottom of directory
-Restore       :Restart program (inits values and variables and loads directory.)
-<-(left arrow):Fast forward (when song is playing)
-CBM key       :Exit an RSID or PSID with $0000 as play address.
+, / .         :Set timer for when NEXT or RANDOM tune is going to be loaded.
+M             :Mode select: Manual, Next or Random
+CRSR LEFT     :jump 15 lines upwards.
+CRSR RIGHT    :jump 15 lines downwards.  (In the non REU version this jumps all the way down.)
+RESTORE       :Restart program (inits values and variables and loads directory.)
+<-(LEFT ARROW):Fast forward (when song is playing)
+CBM KEY       :Exit an RSID or PSID with $0000 as play address.
+S             :Screen on/off. (reduce video chip noise).
 
 When the sid is playing/present in memory you can use all keys.
 
+MODE SELECT:
+---------------------------------------------------------------
+Next to the Timer on screen you will see the letters M N R appear when you press
+the M key. This sets the Mode for the timer.
+M = Manual selection - The timer is not used.
+N = Play Next - The next song in the list is played when the Clock reach the Timer value.
+R = Random Play - A random song is played when the Clock reach the Timer value.
+
+
+JOYSTICK CONTROLS:
+---------------------------------------------------------------
+When in joystick mode, these keys and stick commands applies:
+
+FIRE BUTTON   :Load SID
+SPACEBAR:     :Load Directory
+COMMODORE KEY :Fast Forwards
+
+Joystick control without firebutton pressed:
+
+
+                 CURSOR UP
+                    |
+                    |
+PREVIOUS SONG   ---- ---- NEXT SONG
+                    |
+                    |
+                CURSOR DOWN
+
+
+Joystick control with firebutton pressed:
+
+Important: First move and hold the stick in the desired direction, 
+           then press fire, then release fire button.
+
+
+                JUMP UPWARDS
+                    |
+PREVIOUS DIRECTORY  |   RESTART SONG
+                  \ | /
+                   \|/
+TIMER DECREASE  ----*---- TIMER INCREASE (NEXT/RANDOM)
+                   /|\
+                  / | \
+         SET MODE   |   PAUSE/CONTINUE SONG
+                    |
+                JUMP DOWNWARDS
+
+
+
+LOADING A SID FILE:
+---------------------------------------------------------------
 SP64 determines if the file is a sid by scanning the sid header of the file. That means the .sid
 extension in the filename doesn't need to be present on the disk.
 If the file is a wrong format it will exit with a red border (and reload dir incase the disk was swapped).
@@ -75,9 +144,8 @@ If the file is a PSID you will see a black border and you can use all keys to co
 There's One exception though, some PSIDs also has $0000 as play address and will behave like a RSID.
 
 
-
 About RSIDs:
--------------
+---------------------------------------------------------------
 RSIDs runs with its own interrupt handler. The play call address is always set to $0000.
 And you will see the letters "RSID" in the the top left corner.
 The border turns grey when an RSID is playing. (Unless the rsid itself changes the border colors)
@@ -91,21 +159,48 @@ If that doesn't work. You have to reset and reload the program.
 If you sucessfully exited and RSID the normal way (CBM key) you can select subtunes with +/- and
 you can start and stop the song with F1 and F7.
 
-1541U2 using Software IEC:
------------------------------------
-Rename all *.sid files to *.prg
-Put all files into root folder.
-Filenames must not be larger than 16 letters (include the ".prg" ).
+
+REU - The Ram Expansion Unit.
+---------------------------------------------------------------
+This device is now supported in all versions.
+It allows you to have several thousand sid file in your directory.
+
+The 1541U2 has support for up to 16 mb reu. 
+
+If you are looking for real hardware, then you will find that
+Commodore produced 3 reu versions, with memory sizes of 128kb, 256kb and 512kb.
+Crative Micro Design (CMD) produced 512kb and 2mb versions, named 1750 XXL.
+Chip Level Designs' (CLD) Superclone 1750 has 512kb of memory.
+
+
+A 512kb re will give you access to 4096 filenames per directory. 
+The 256kb one will have space for 2048 filenames per directory.
+
+
+1541 Ultimate II Command Interface:
+---------------------------------------------------------------
+This version only works with 1541u2 firmware update 2.6d or higher.
+Recommended version is 2.6k
+It comes with REU support. You need to enable the REU support.
+It uses the Command Interface. You need to enable that as well.
+
+Currently there are two bugs in the latest 1541u2 firmware (v2.6k):
+
+1. When USB drive is connected you first need to enter the USB directory with 
+   the U2 Browser or it will show up as a File in SidPlay64 instead of directory.
+2. You can only go up to the Root of the U2 drive once and choose the SD Card or 
+   USB directory, after that you cannot go completely up to the Root again.
 
 
 1541U (In IEC mode/Standalone mode):
-------------------------------------
+---------------------------------------------------------------
 You can browse dirs and open .d64 images.
 You can load sids from filesystem or from within .d64 images.
 
 
 Netdrive + The Final Replay 0.8:
---------------------------------
+---------------------------------------------------------------
+Select 6 or 7 as your device number in the setup screen.
 You can browse dirs.
 You need to prepare the files you want to use with netdrive:
 1) To be able to load files from your PC filesystem you need to convert 
@@ -134,6 +229,12 @@ Random shuffle and play next mode doesn't work on DTV.
 Reason: the DTV doesn't have the TOD clock registers.
 
 
+WinVice:
+--------
+Use the REU SD2IEC version with WinVice to browse the Windows file system and the
+complete HVSC directory.
+
+
 Unsupported sid files:
 ----------------------
 * Sid files with PSID in the filename.
@@ -143,16 +244,51 @@ Unsupported sid files:
 
 Bugs:
 -----
-Some sid files will cause bugs or even a crash. 
-Especially RSIDs and PSIDs using $0000 as play address.
+Many sid files are badly ripped and will crash or cause strange bugs on sidplay64.
+Reasons are many:
+
+* The sid header has no free relocation pages set. (sidplay64 will print "no memory")
+* The free relocation pages offered by the sid header is wrong and crashes sidplay64.
+* The sid will overwite other music data when selecting subtunes. (sidplay on pc load the file back from a buffer.)
+* The sid load to area at d000-e000.  That wont work on a stock c64 without a fastload cartridge. Or a custom software loader.
+* The sid overwrite irq and nmi vectors (fffa-ffff)
+* The sid use wrong zeropage $01 and they might set cli or sei in the play call.
+* The sid contains routines that change graphic mode, memory banks, color ram etc.
+
+Especially RSIDs and PSIDs using $0000 as play address seems to be problematic.
 Be sure to help the HVSC crew by identifying those sids so that they
 can be fixed to work with this program.
 
 
 Thanks for help & support:
 --------------------------
+The 1541U2 cmd routines was developed by my friend Tom-Cat/Nostalgia,
+without his help this version would never have seen daylight. 
+I shared the sources with him on gitlab and within 2 days we had a working beta.
+So kudos to him for his work.
+(I should buy one of those myself someday.)
+
+Also thanks to these people for help, ideas, bug testing:
+
 iAN CooG, Tom-Cat, Erhan, Ready, Fredric, Lemming
 And to anyone I might have forgotten.
+
+Also a big thanks to Whiteflame for sharing his 'random' routines on codebase.
+
+
+SIDPLAY 64 v.09 (xx/02/2015):
+-----------------------------
+* Added:     1541U2 command interface routines.
+* Added:     REU support, possible with 65534 filenames in a directory.
+* Added:     A few routines optimized for size.
+* Added:     Attract mode.  A scrolling message.
+* Updated:   ClrHome (+shift) keys has changed to crsr left and crsr right.
+* Added:     Joystick mode for port #1.
+* Updated:   Select skin colors with 0-9. New skins.
+* Updated:   M now selects Manual, Next, Random.
+* Removed:   R and N keys.
+* Added:     S Turns screen on/off, this to reduce videochip noise.
+* Disabled:  1541U2 software iec mode support.
 
 SIDPLAY 64 v.08 (12/12/2013):
 -----------------------------

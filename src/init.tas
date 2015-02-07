@@ -29,27 +29,7 @@ temp		= $ff
 		dey		;ntsc
 pal		sty $02a6
 
-		lda $d41b		;get random number
-
-.if DEF_REU
-		pha
-		lda $d41b
-		inc $01		;38
-		sta rseed		;insert seeds for REU versions
-		pla
-		sta rseed+1
-		dec $01		;37
-.else		
-		sta seed		;insert seed for Normal versions
-.fi
-		bit $dc0b		;stop TOD timer
-
-		lda #0			;reset TOD clock
-		ldx #3
-clrtod		sta $dc08		;08,09,0a,0b
-		dex
-		bpl clrtod
-
+;-------------------------
 		jsr $ff90		;Disable kernal io messages
 
 
@@ -292,6 +272,32 @@ trkinstd
 		dex
 		bpl -
 .fi
+
+
+;-------------------------
+		lda $d41b		;get random number
+
+.if DEF_REU
+		pha
+		lda $d41b
+		inc $01		;38
+		sta rseed		;insert seeds for REU versions
+		pla
+		sta rseed+1
+		dec $01		;37
+.else		
+		sta seed		;insert seed for Normal versions
+.fi
+		bit $dc0b		;stop TOD timer
+
+		lda #0			;reset TOD clock
+		ldx #3
+clrtod		sta $dc08		;08,09,0a,0b
+		dex
+		bpl clrtod
+;-------------------------
+
+
 
 		lda #$38
 		sta $01		;inc $01			;38

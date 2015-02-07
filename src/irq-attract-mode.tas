@@ -134,9 +134,9 @@ xp
 yp	= $e8
 vic     
 .byte $18,yp 		;d000,d001
-.byte $18,yp		;d002,d003 black layer
+.byte $15,yp		;d002,d003 black layer
 .byte $50,yp		;d004,d005
-.byte $48,yp		;d006,d007 black layer
+.byte $50,yp		;d006,d007 black layer
 .byte $00,$00
 .byte $00,$00
 .byte $00,$00
@@ -173,11 +173,11 @@ text
 
 ;-----|123456789012345678901234567890123456789|
 .if defset=2
-.text " This is the ultimate sidplay64 version!",$80
-.text " The 1541U-II with REU utilizing the command interface, it allows you to have "
-.text "atleast 4096 filenames in memory.  And the file loading is instant! ",$80
-.text " Thanks to Tom-Cat of Nostalgia for helping out implementing the 1541U2cmd routines. "
-.text "Without him this version would have never seen the daylight.  "
+.text " Welcome to SIDPLAY64 for the 1541 Ultimate II. ",$80,$82
+.text " This version utilizes the REU capabilties together with the Command Interface of the 1541U-II.    Almost no limits on how many files you can have in a directory.   "
+.text "Instant directory and file loading.     You need the latest firmware, although all version from v2.6d and upwards should work.   ",$81
+.text "   This special edition was programmed by:   GRG/SHAPE/[N0] and Tom-Cat/[N0].  ",$80,$82
+
 .fi;defset2
 
 ;-----|123456789012345678901234567890123456789|
@@ -193,7 +193,7 @@ text
 
 ;-----|123456789012345678901234567890123456789|
 .if defset=4
-.text " This is the SD2IEC version, it allows you to mount disk images like .d64 .d71 .d81 and .dnp ",$80
+.text " Welcome to the SD2IEC version, it allows you to mount disk images like .D64 .D71 .D81 and .DNP ",$80
 .if def_REU
 .text "  A 512 kb REU allows you to have 4096 "
 .text "filenames present in REU memory.",$80
@@ -215,11 +215,12 @@ text
 .fi;defset5
 
 
+.byte $83
 ;-----|123456789012345678901234567890123456789|
 .text "       S : Toggles screen on/off.      ",$80
 .text "          ",$1f," : Fast Forward.           ",$80
-.text "     CBM : Exit Rsid's (if possible).  ",$80
-.text "Both playlist modes (Play Next and Play Random) can be selected by pressing 'M'.  ",$80
+.text "     CBM : Exit Rsid's (if possible).  ",$80,$82
+.text "Both playlist modes",$81,"(Play Next and Play Random) can be selected by pressing 'M'.  ",$80
 
 ;--------------------------------------------------------------
 .text "  Support this tool by visiting : "
@@ -227,6 +228,7 @@ text
 .text "                                      "
 ;--------------------------------------------------------------
 .byte 0	;end byte for scroller
+
 .enc none
 
 		

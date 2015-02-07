@@ -1,8 +1,11 @@
 ;--------------------------------------------------------------
-;         SIDPLAY 64 V.083
+;         SIDPLAY 64 V0.9
 ;--------------------------------------------------------------
 ;         Programmed by:
-;         Glenn Rune Gallefoss / SHAPE (2005-2013)
+;         Glenn Rune Gallefoss / SHAPE / Nostalgia (2005-2015)
+;
+;         Additional programming:
+;         Tomaz Kac (Tom-Cat) / Nostalgia          (2015)
 ;--------------------------------------------------------------
 ; * All hvsc sids are version 2 or version 3
 ; * All hvsc sids have a $7c header
@@ -227,32 +230,20 @@ get_status	lda #<txterror1
 		clc
 		adc #>txterror1&$03ff
 		sta rzp+1
-;		ldy #38-1
-;		lda #$20	;clear "dos" error message area
-;-		sta (rzp),y
-;		dey
-;		bpl -
-;		iny
 		ldy #$00
-		
 		bit U2_Status_register
 		bvc nostatus			; no message - don't clear status, leave it
 -		bit U2_Status_register
 		bvc +				; if finished clear the rest of the line
 		lda U2_Staus_data_register
-		sta (rzp),y
-		iny				;$0100 status mesage ?  
-		bne -
-+
-; clear area				
--		cpy #38
-		bcs nostatus
-		lda #$20	;clear "dos" error message area
+		.byte $2c
++		lda #$20		
 		sta (rzp),y
 		iny
+		cpy #38				;1541u2 status messages are never longer than 38 letters.
 		bne -
-nostatus		
-		rts
+nostatus	rts
+
 		
 .else
 panic_load				;zp $01 = 36
