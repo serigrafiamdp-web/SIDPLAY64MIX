@@ -8,32 +8,38 @@
 ;
 ; check "get_reu_dir" & "write_reu_dir_entry" in d000-e000
 ;
+;zp $01 is always 38 or 34 when caling this :
 
 ;execute_reu_command
 
-		ldx #10
--		lda reu_comm-1,x
+
+		ldx $01			;38 (34)
+		
+		ldy #10
+-		lda reu_comm-1,y
 		pha
-		dex
+		dey
 		bne -
 		
-		lda #$36
+		lda #$35
 		sta $01
 
 -		pla
-		sta REU_command,x
-		inx
-		cpx #10
+		sta REU_command,y
+		iny
+		cpy #10
 		bne -
 
-		ldx #$38
-		stx $01			;38	;all RAM available
+		dec $01			;34 all RAM available
+		;ldx #$38
+		;stx $01			;38	;all RAM available
 		lda $ff00			;Read and ...
 		sta $ff00			;.. write to execute DMA transfer
-		lda #$36
-		sta $01			;36
+		;lda #$36
+		;sta $01			;36
+		inc $01			;35
 		lda REU_status
-		stx $01			;38
+		stx $01			;38 (34)
 		rts
 
 		

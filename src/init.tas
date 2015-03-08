@@ -443,9 +443,9 @@ allgrey
 allblue
 .byte cblack,cblue,clblue,ccyan,clblue,cwhite,clblue,cwhite,clgrey,clgrey,ccyan,clblue,clgrey		,cblue
 allred
-.byte cblack,cred,cblack,cyellow,clgrey,cwhite,clgrey,cwhite,cpink,cyellow,cyellow,cpink,cpink		,cred
+.byte cblack,cred,corange,cyellow,clgrey,cwhite,clgrey,cwhite,cpink,cyellow,cyellow,cpink,cpink		,cblack
 ;allpurple
-;.byte cblue,cpurple,cblue,ccyan,clblue,cwhite,cyellow,cwhite,cyellow,clgrey,ccyan,cpink,ccyan
+;.byte cblue,cpurple,cblue,ccyan,clgreen,cwhite,cyellow,cwhite,cyellow,clgrey,ccyan,cpink,ccyan		,cblack
 grey
 .byte cgrey,cblack,cgrey,clgrey,clgrey,cwhite,cmgrey,cwhite,clgrey,clgrey,clgrey,cmgrey,cmgrey		,cblack
 lightblue

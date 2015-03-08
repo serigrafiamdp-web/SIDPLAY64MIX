@@ -1,5 +1,5 @@
 ;--------------------------------------------------------------
-;         SIDPLAY 64 V0.9
+;         SIDPLAY 64 V0.9.1
 ;--------------------------------------------------------------
 ;         Programmed by:
 ;         Glenn Rune Gallefoss / SHAPE / Nostalgia (2005-2015)
@@ -1025,14 +1025,22 @@ load
   .include src/load-iec-serial.tas
   .fi
 .fi ;DEF_REU
+
+;zp $01 = 36
 		lda magicid+1
 		cmp #$53		;pSid/rSid
 		beq idook
 file_error	ldx plt_flag
 		beq donext		;0   next
 		bmi donext   		;80+ random
-		stx $d020
-		jmp (wjp_dirselector)
+		stx $d020		;2 = error
+		
+		;jmp (wjp_dirselector)	;|old behaviour - if error with loading sid file reload directory
+		
+		lda #$1b		;|new
+		sta $d011		;|new
+		jmp (wjp_fileselect)	;|new behaviour - if error loading sid file, return to file selectort
+		
 donext		jmp (wjp_pltadvance)	;try next file in dir
 ;siderror	jmp (wjp_fileselect)	;return to fileselector - this sid is using $0000 as play address - unfortunately with all keys on.
          
@@ -1377,10 +1385,15 @@ hex2sb		rts
 dotunenumbers
 .include src/dotunenumbers.tas
 convert_letter
+
+.if DEF_REU*DEF_1541u2cmd
+.include src/reu_1541u2cmd_convertletter.tas	;1541u2 only
+.else
 .include src/convertletter.tas	;convert pc letter, signs, underscore to c64
+.fi
 
 .if !DEF_REU
-;this routine is not neede for reu version:
+;this routine is not needed for reu version:
 getpos		pha		;a=0-ff - for getting filename pos in dirbuffer d000-e000
 		asl
 		asl

@@ -1,6 +1,11 @@
 Things to check for:
 
-* Scrolling down while reading REU dir messes up dir entries.
+* When loading dir on 1541u2 version it would be nice to see the file counter increase.
+
+* sid with song numbers 10 or highes doest not clear last numbers with space when going down to song number 1-9.
+  Check any sid that has 10 or more subsongs.
+
+* Scrolling down while reading REU dir messes up dir entries. disabled but possible to fix it someday.
 
 * ! invest_intro.sid /jt loads to $0f7c - 
 
