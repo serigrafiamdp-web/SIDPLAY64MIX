@@ -1,4 +1,4 @@
-SIDPLAY64 V0.9 (c) GRG/SHAPE 2015
+SIDPLAY64 V0.9.2 (c) GRG/SHAPE 2015
 ---------------------------------------------------------------
 Welcome to this latest version of Sidplay64 (SP64).
 
@@ -191,6 +191,10 @@ Currently there are two bugs in the latest 1541u2 firmware (v2.6k):
 2. You can only go up to the Root of the U2 drive once and choose the SD Card or 
    USB directory, after that you cannot go completely up to the Root again.
 
+3. This is perhaps not a bug, but worth a note:
+   When you have a huge 1541u2 directory each file will take longer to load.
+
+
 
 1541U (In IEC mode/Standalone mode):
 ---------------------------------------------------------------
@@ -275,6 +279,14 @@ And to anyone I might have forgotten.
 
 Also a big thanks to Whiteflame for sharing his 'random' routines on codebase.
 
+SIDPLAY 64 v.09.2 (xx/02/2015):
+-------------------------------
+* Fixed:     Replaced the red border skin. We use red border as a error message.
+* Fixed:     1541u2: display: Error with song numbers above 10.
+* Added:     1541u2: loading dir: display maxfiles while loading dir.
+* Added:     1541u2: turn off screen when loading file.
+* Behaviour: When you get a red border the dir will NOT be reloaded.
+             
 
 SIDPLAY 64 v.09 (xx/02/2015):
 -----------------------------
