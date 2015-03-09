@@ -241,6 +241,11 @@ prepare_loading_new_reu_dir
 		sta maxfilehi		
 		sta maxfile		;zp		
 
+
+.if def_1541u2cmd
+		jsr u2_prepare_dirscreen_zp	;This will set up gzp to be used for displaying number of files.
+.fi
+
 ;--------------------------------------------------------------
 ; Zero 24 bit reu address position:
 ;--------------------------------------------------------------

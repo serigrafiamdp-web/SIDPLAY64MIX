@@ -1,5 +1,5 @@
 ;--------------------------------------------------------------
-;         SIDPLAY 64 V0.9.1
+;         SIDPLAY 64 V0.9.2
 ;--------------------------------------------------------------
 ;         Programmed by:
 ;         Glenn Rune Gallefoss / SHAPE / Nostalgia (2005-2015)
@@ -1388,6 +1388,23 @@ convert_letter
 
 .if DEF_REU*DEF_1541u2cmd
 .include src/reu_1541u2cmd_convertletter.tas	;1541u2 only
+
+u2_prepare_dirscreen_zp
+		lda #<dirscreen		;ZP pointer to write to screen
+		sta gzp
+		lda screenpos
+		clc
+		adc #>dirscreen&$03ff
+		sta gzp+1
+		rts
+u2_print_maxfile
+		ldy #(40*5)-2
+		lda maxfile		;display number of files lo
+		jsr printhexnum
+		lda maxfilehi		;display number of files hi
+		jmp printhexnum
+
+
 .else
 .include src/convertletter.tas	;convert pc letter, signs, underscore to c64
 .fi

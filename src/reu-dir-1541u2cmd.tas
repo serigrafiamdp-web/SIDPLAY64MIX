@@ -107,6 +107,8 @@ notdir
 		dec filecounter
 		bne bci
 		jsr write_reu_dir_entry
+		jsr u2_print_maxfile			;display number of files present in dir while loading dir
+		
 bci
 skipfile
 		lda #$36
