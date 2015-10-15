@@ -42,7 +42,7 @@ header		= $0c
 magicID		= header	;+00 - 4 bytes	- "psid" or"rsid"
 version		= header+$04	;+04 - word	-  version 0001/0002/0003 (rsid+psid v2ng)
 dataoffset	= header+$06	;+06 - word	- dataoffset to the c64 binary
-loadAddress	= header+$08	;
+loadAddress	= header+$08	; used for timer minutes
 initAddress	= header+$0a
 playAddress	= header+$0c
 songs		= header+$0e
@@ -55,7 +55,7 @@ v1data
 flags		= header+$76
 startPage	= header+$78   ;at 84
 pageLength	= header+$79   ;at 85
-reserved	= header+$7a
+reserved	= header+$7a   ; used for timer seconds
 v2data
 v2loadaddress	= header+$7c ;binary loadadress
 

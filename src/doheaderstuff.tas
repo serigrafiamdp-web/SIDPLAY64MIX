@@ -21,6 +21,18 @@
              lda #$78+8		;gzp is 0478/c478
 .fi             
              sta gzp
+
+             lda reserved   ; check if we filled in playing time or not
+             beq +
+             sta secondshi
+             lda reserved+1
+             sta secondslo
+             lda loadaddress
+             sta minuteshi
+             lda loadaddress+1
+             sta minuteslo
++             
+             
              ldy #30
 getsn        lda sidname,y	;title of sid/song
              sta (gzp),y
