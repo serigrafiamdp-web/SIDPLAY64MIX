@@ -22,16 +22,27 @@
 .fi             
              sta gzp
 
-             lda reserved   ; check if we filled in playing time or not
-             beq +
-             sta secondshi
-             lda reserved+1
-             sta secondslo
-             lda loadaddress
-             sta minuteshi
-             lda loadaddress+1
-             sta minuteslo
-+             
+             lax reserved           ; Inject song length information if present
+             ora reserved+1
+             beq notimerincluded
+             ldy #3
+             .byte $2c
+-            ldy #0
+             txa
+             and #%00001111
+             ora #%00110000  ; $3x
+             sta minuteslo,y
+             txa
+             lsr
+             lsr
+             lsr
+             lsr
+             ora #%00110000
+             sta minuteshi,y
+             ldx reserved+1
+             dey
+             bpl -
+notimerincluded         
              
              ldy #30
 getsn        lda sidname,y	;title of sid/song

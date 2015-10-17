@@ -99,24 +99,26 @@ namespace InjectSongLengths
 
             }
 
-            if (verbose)
-            {
-                Console.WriteLine("Found MD5 for: {0}", found.filename);
-            }
-
             byte selsong = (byte)(sidfile[0x10]*256 + sidfile[0x11] - 1);
             string sstext = found.times[selsong];
             if (sstext.IndexOf(':') == 1)
             {
                 sstext = "0" + sstext;
             }
-            sidfile[0x08] = (byte)sstext[0]; // minutes
-            sidfile[0x09] = (byte)sstext[1];
+            //            sidfile[0x08] = (byte)sstext[0]; // minutes
+            //            sidfile[0x09] = (byte)sstext[1];
+            //            sidfile[0x7a] = (byte)sstext[3]; // seconds
+            //            sidfile[0x7b] = (byte)sstext[4];
 
-            sidfile[0x7a] = (byte)sstext[3]; // seconds
-            sidfile[0x7b] = (byte)sstext[4];
+            sidfile[0x7a] = (byte)((((byte)sstext[3] & 0x0f) << 4) | ((byte)sstext[4] & 0x0f)); // seconds
+            sidfile[0x7b] = (byte)((((byte)sstext[0] & 0x0f) << 4) | ((byte)sstext[1] & 0x0f)); // minutes
 
             File.WriteAllBytes(filename, sidfile);
+
+            if (verbose)
+            {
+                Console.WriteLine("Found MD5 for: {0}  Song: {1}  Time: {2}", found.filename, selsong+1, sstext.Substring(0,5));
+            }
 
             converted++;
         }
