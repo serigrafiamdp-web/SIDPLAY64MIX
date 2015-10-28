@@ -218,6 +218,8 @@ tunesystem	.byte 1              ;00 = unknown  bits 1,0  byte $00
                                      ;01 = pal      bits 1,0  byte $01
                                      ;10 = ntsc     bits 1,0  byte $02
                                      ;11 = both     bits 1,0  byte $03
+scronoff    .byte $10           ; Flag is creen is turned on or off
+
 .if def_1541u2cmd
 wait_for_idle
 -		lda U2_Status_register
@@ -811,6 +813,8 @@ plton
 		lda $d011
 		eor #$10
 		sta $d011
+        and #$10
+        sta scronoff
 		rts
 		
 kso		ldx tune
@@ -1288,9 +1292,13 @@ errormsg
 		;lsr $d019
 		;lda $dc0d
 		lda #$1b		;SLC screen onoff
-		sta $d011		;SLC screen onoff
+        ldx scronoff
+        bne +
+        eor #$10
++		sta $d011		;SLC screen onoff
 		cli
 		jmp (wjp_fileselect)
+
 
 ;--------------------------------------------------------------
 ;----------- 0314/0315 & FFFE/FFFF IRQ ------------------------
