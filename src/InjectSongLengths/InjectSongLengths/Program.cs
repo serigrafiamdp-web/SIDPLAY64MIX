@@ -16,6 +16,7 @@ namespace InjectSongLengths
     class Program
     {
         static bool verbose = false;
+        static bool subdirs = false;
         static string[] songlengthsfile;
         static Dictionary<string, FileLenInfo> fileLengths = new Dictionary<string,FileLenInfo>();
         static byte[] sidfile;
@@ -286,11 +287,22 @@ namespace InjectSongLengths
 
         static void Main(string[] args)
         {
-            if (args.Length > 0)
+            for (int i = 0; i < args.Length; i++)
             {
-                if (args[0].ToLower().Equals("-v"))
+                if (args[i].ToLower().Equals("-v"))
                 {
                     verbose = true;
+                }
+                if (args[i].ToLower().Equals("-s"))
+                {
+                    subdirs = true;
+                }
+                if (args[i].ToLower().Equals("-h"))
+                {
+                    Console.WriteLine("InjectSongLengths [-v] [-s] : Inject song lengths into SID files.");
+                    Console.WriteLine("  -v : Verbose mode");
+                    Console.WriteLine("  -s : Include Subdirectories");
+                    return;
                 }
             }
             try
@@ -309,11 +321,19 @@ namespace InjectSongLengths
                 {
                     Console.WriteLine("-- Injecting Times...");
                 }
-                var files = from file in Directory.EnumerateFiles(@".") select file;
+                IEnumerable<string> files;
+                if (subdirs)
+                {
+                    files = from file in Directory.EnumerateFiles(@".", "*", SearchOption.AllDirectories) select file;
+                }
+                else
+                {
+                    files = from file in Directory.EnumerateFiles(@".") select file;
+                }
 
                 foreach (var file in files)
                 {
-                    HandleFile(Path.GetFileName(file));
+                    HandleFile(file);
                 }
             }
             catch (UnauthorizedAccessException UAEx)
