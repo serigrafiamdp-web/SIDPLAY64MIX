@@ -30,8 +30,8 @@ namespace InjectSongLengths
             {
                 Console.WriteLine("- {0}", filename);
             }
-            if (filename.ToLower().Equals(@"songlengths.txt") ||
-                filename.ToLower().Equals(@"injectsonglengths.exe"))
+            if (filename.ToLower().Equals(@".\songlengths.txt") ||
+                filename.ToLower().Equals(@".\injectsonglengths.exe"))
             {
                 if (verbose)
                 {
