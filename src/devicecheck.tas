@@ -297,9 +297,9 @@ devmsg		.byte $1e,$08,$93,$99
         .if def_1541u2cmd
 		.text "-1541u2-cmd"
         .fi
-		.text " v0.92",$0d
-		.text "beta "	;enable beta when in develop mode
-		;.text "build "
+		.text " v1.00",$0d
+		;.text "beta "	;enable beta when in develop mode
+		.text "build "
 		.if def_currentdate
 		.binary timedate.log	;created by batch echo in root dir
 		.else

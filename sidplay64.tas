@@ -1,5 +1,5 @@
 ;--------------------------------------------------------------
-;         SIDPLAY 64 V0.9.2
+;         SIDPLAY 64 V1.00
 ;--------------------------------------------------------------
 ;         Programmed by:
 ;         Glenn Rune Gallefoss / SHAPE / Nostalgia (2005-2015)
@@ -55,7 +55,7 @@ v1data
 flags		= header+$76
 startPage	= header+$78   ;at 84
 pageLength	= header+$79   ;at 85
-reserved	= header+$7a   ; used for timer seconds
+reserved	= header+$7a   ;v3+v4 sid header contains adress for 2nd and 3rd sid - (WE USE THEM FOR INJECTING SONGLENGTH MINUTES|SECONDS)
 v2data
 v2loadaddress	= header+$7c ;binary loadadress
 
@@ -117,6 +117,7 @@ offs_cursor	= $d017		;Offset for filenames
 keydelay	= $d010
 seed		= $d01c
 lastkey		= $d01d
+bakd011		= $d01b
 
 ;d015	;cant use
 ;d01b	;free
@@ -218,7 +219,7 @@ tunesystem	.byte 1              ;00 = unknown  bits 1,0  byte $00
                                      ;01 = pal      bits 1,0  byte $01
                                      ;10 = ntsc     bits 1,0  byte $02
                                      ;11 = both     bits 1,0  byte $03
-scronoff    .byte $10           ; Flag is creen is turned on or off
+
 
 .if def_1541u2cmd
 wait_for_idle
@@ -370,16 +371,16 @@ maxDirY		= 15
 		* = $c400
 .if def_1541u2cmd
 	.if def_reu
-		.binary "bin/screen09-1541u2reu.o64",2		;1541u2cmd reu version
+		.binary "bin/screen100-1541u2reu.o64",2		;1541u2cmd reu version
 	.else
-		.binary "bin/screen09-iec.o64",2		;1541u2cmd
+		.binary "bin/screen100-iec.o64",2		;1541u2cmd
 	.fi
 		
 .else
 	.if def_iec
-		.binary "bin/screen09-iec.o64",2		;iec + cmd + ide64 + 1541u
+		.binary "bin/screen100-iec.o64",2		;iec + cmd + ide64 + 1541u
 	.else		
-		.binary "bin/screen09-ser.o64",2		;normal + 1541u2swiec
+		.binary "bin/screen100-ser.o64",2		;normal + 1541u2swiec
 	.fi		
 .fi	
 ;--------------------------------------------------------------
@@ -813,8 +814,7 @@ plton
 		lda $d011
 		eor #$10
 		sta $d011
-        and #$10
-        sta scronoff
+		sta bakd011
 		rts
 		
 kso		ldx tune
@@ -1291,11 +1291,10 @@ errormsg
 		;sta $d01a		;Raster IRQ compare flag off
 		;lsr $d019
 		;lda $dc0d
-		lda #$1b		;SLC screen onoff
-        ldx scronoff
-        bne +
-        eor #$10
-+		sta $d011		;SLC screen onoff
+		
+		;lda #$1b		;SLC screen onoff
+		lda bakd011		;SLC screen onoff
+		sta $d011		
 		cli
 		jmp (wjp_fileselect)
 
@@ -1347,6 +1346,7 @@ getrandom
 
 ;--------------------------------------------------------------
 ;note: The 1541u2 have space for 188 files
+;note2: We dont compile this version for u2 anymore:
 .if def_1541u2cmd
 * = $dbc0	;dbc0-d000/16=188 files
 lastpos
@@ -1354,10 +1354,10 @@ lastpos
 flengde
 
 .else
-; other versions has less mem for files:
-* = $dab0		;dab0-d000/16 = 171 files
+; normal versions (1541, sdiec ++) with no reu:
+* = $da80		;da80-d000/16 = 168 files
 lastpos
-* = $dab2		;176 bytes table
+* = lastpos+1		;da80+168 = DB28 		(dir routine overwrites last byte with $20 so we have to start at lastpos+1)
 flengde
 .fi
 		* = vectors-(static_code_end-static_code_start)
@@ -1547,7 +1547,7 @@ vectors
 
 ;If a file loads to $e000:
 ;It will load to $df84 because of the $7c sid header
-maxentries = (lastpos-dirpos)/16 ;=183 files
+maxentries = (lastpos-dirpos)/16 ;=168 files
 
 
 .if def_attractmode=2

@@ -34,7 +34,7 @@ pal		sty $02a6
 
 
 		jsr devicecheck		;Select correct device here (f1/f2/return) - needs acess to rom routines at a000-c000 and e000-fffff
-
+	
 
 
 
@@ -117,6 +117,21 @@ no2sid		lda #<rsidmsg		;skip sids using $0000 as play call ?
 		sta skiprsid
 +
 
+		lda #<moddedsidmsg	;enable songlengths for injected sids ?
+		ldy #>moddedsidmsg
+		jsr inputmsgyes		;returns cmp #$59
+		bne nomods
+		sei
+					;code to be modified is under IO rom
+		inc $01			;38
+		lda #$ad
+		sta slm1		;lda minuteslo
+		sta slm2		;lda minuteshi
+		dec $01			;37
+		
+nomods
+
+
 		lda #<keyjoystickmsg	;Keyboard or Joystick (k/j)?
 		ldy #>keyjoystickmsg
 		jsr inputmsgyes
@@ -125,7 +140,8 @@ no2sid		lda #<rsidmsg		;skip sids using $0000 as play call ?
 		jsr init_joyport1
 
 +
-		
+
+
 		sei
 		inc $cc			;disable cursor blink
 		lda #$33		;Char-rom
@@ -368,6 +384,9 @@ fix1		stx fixdc0e+1	;located in 36 ram
 		;sta offs_cursor
 		;sta maxfile
 
+		lda #$1b
+		sta bakd011
+		
 		lda $ba
 		sta device
 		jmp start
@@ -700,6 +719,9 @@ numfiles = screen2+$014d
 	.include "src/init-colors-normal.tas"
 .fi
 
+moddedsidmsg
+.byte $0d,$0d,$1e
+.text "disable songlengths for modded sids ? ",$99,0
 
 keyjoystickmsg
 .byte $0d,$0d,$1e

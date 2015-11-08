@@ -9,6 +9,8 @@
 ;--------------------------------------------------------------
 ;
 ;replaced tzp by dzp
+;
+;bin and bcd are zp adresses.
 
               ldx tune
               inx
@@ -63,7 +65,7 @@ lodec         lda bcd
               ora #$30
               sta (dzp),y
               iny
-              cpx #0
+              txa			;replaces cpx #0
               bne endbin
               lda #$2f
               sta (dzp),y

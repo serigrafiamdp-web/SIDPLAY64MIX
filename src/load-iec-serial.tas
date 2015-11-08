@@ -117,11 +117,12 @@ loadfile
 
 ;Load sid header
 		
+		
 		ldx #<fname
 		ldy #>fname
 		jsr ROM_setnam
-		ldy #0		;Turn off screen
-		sty $d011
+		ldy #0
+		sty $d011		;screen off
 		lda #2			;2
 		ldx device
 ;		ldy #0			;Y=0 LOADING
@@ -129,7 +130,7 @@ loadfile
 		jsr ROM_open
 		ldx #2			;2
 		jsr ROM_chkin
-		ldy #0
+		ldy #0			;must set y again. rom_open changes y ?
 getheada	jsr ROM_chrin
 		cpy #$76		;Convert text strings to petscii
 		bcs gethb

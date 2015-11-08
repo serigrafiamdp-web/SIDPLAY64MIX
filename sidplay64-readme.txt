@@ -1,5 +1,10 @@
-SIDPLAY64 V0.9.2 (c) GRG/SHAPE 2015
+SIDPLAY64 V1.0.0 (c) GRG/SHAPE 2015
 ---------------------------------------------------------------
+
+Doc is work in progress. need to have some info on
+the new injector tool. 
+
+
 Welcome to this latest version of Sidplay64 (SP64).
 
 About the program:
@@ -222,9 +227,15 @@ You can browse directories, and you can open
 the the following disk images : .d64, .d71, .d81 and .dnp
 
 
-IEC(UIEC/IEC-ATA)/CMD FD/CMD HD/CMD RAMLINK/IDE64(+PClink):
------------------------------------------------------------
+IEC(UIEC/IEC-ATA/IEC2ATA)/CMD FD/CMD HD/CMD RAMLINK/IDE64(+PClink):
+-------------------------------------------------------------------
 You can browse directories.
+
+
+UNO2IEC (The Arduino Project):
+------------------------------
+Doesn't work with sidplay64 at the moment.
+Possibly a bug in the iec implementation on the device ?
 
 
 DTV:
@@ -270,7 +281,7 @@ The 1541U2 cmd routines was developed by my friend Tom-Cat/Nostalgia,
 without his help this version would never have seen daylight. 
 I shared the sources with him on gitlab and within 2 days we had a working beta.
 So kudos to him for his work.
-(I should buy one of those myself someday.)
+(I should buy one of those myself someday. (Edit: And I did))
 
 Also thanks to these people for help, ideas, bug testing:
 
@@ -279,8 +290,14 @@ And to anyone I might have forgotten.
 
 Also a big thanks to Whiteflame for sharing his 'random' routines on codebase.
 
-SIDPLAY 64 v.09.2 (xx/02/2015):
+
+SIDPLAY 64 v.1.00 (xx/02/2015):
 -------------------------------
+* Fixed:     Small changes for shortening code.
+* Added:     Windows program for inject sids with correct songlengths.
+* Added:     Code to handle songlengths for injected sids.
+* Added:     Option to disable sonlength info from injected sids.
+* Fixed:     Turn screen off/on value is permanent when loading new sids.
 * Fixed:     Replaced the red border skin. We use red border as a error message.
 * Fixed:     1541u2: display: Error with song numbers above 10.
 * Added:     1541u2: loading dir: display maxfiles while loading dir.

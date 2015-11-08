@@ -1,14 +1,14 @@
 
 
-*) Seperate screen design for 1541u2 version ?
+*) Seperate screen design for 1541u2 version ? DONE !
 
-*) 1541u2 version needs to detect if 1541u2 is present ?
+*) 1541u2 version needs to detect if 1541u2 is present ? DONE !
 
-*) 1541u2 version needs to detect if sd card is present ?
+*) 1541u2 version needs to detect if sd card is present ? 
 
 *) Joystick routine was asked for - DONE!
 
-*) A key to turn screen on/off to reduce videochip noise.
+*) A key to turn screen on/off to reduce videochip noise. DONE !
 
 *) Change F7 to work as pause/continue - DONE!
 

@@ -30,19 +30,19 @@
 -            ldy #0
              txa
              and #%00001111
-             ora #%00110000  ; $3x
-             sta minuteslo,y
+             ora #%00110000	; $3x
+slm1         sta minuteslo,y	;changed to lda by setup.
              txa
              lsr
              lsr
              lsr
              lsr
              ora #%00110000
-             sta minuteshi,y
+slm2         sta minuteshi,y	;changed to lda by setup.
              ldx reserved+1
              dey
              bpl -
-notimerincluded         
+notimerincluded
              
              ldy #30
 getsn        lda sidname,y	;title of sid/song

@@ -166,7 +166,7 @@ text
 .text "  A 512 kb REU allows you to have 4096 "
 .text "filenames present in REU memory.",$80
  .else
-.text " You can have 171 filenames in memory.",$80
+.text " You can have 168 filenames in memory.",$80
  .fi
 .text "Using a fastload cartridge such as the Action Replay, Retro Replay, TFC, Epyx Fastload etc. is  highly recommended. "
 .fi ;defset1
@@ -187,7 +187,7 @@ text
 .text "  A 512 kb REU allows you to have 4096 "
 .text "filenames present in REU memory.",$80
  .else
-.text " You can have 171 filenames in memory.",$80
+.text " You can have 168 filenames in memory.",$80
  .fi
 .fi;defset3
 
@@ -198,7 +198,7 @@ text
 .text "  A 512 kb REU allows you to have 4096 "
 .text "filenames present in REU memory.",$80
  .else
-.text " You can have 171 filenames in memory.",$80
+.text " You can have 168 filenames in memory.",$80
  .fi
 .fi;defset4
 
@@ -210,7 +210,7 @@ text
 .text "  A 512 kb REU allows you to have 4096 "
 .text "filenames present in REU memory.",$80
  .else
-.text "   You can have 171 filenames in memory.",$80
+.text "   You can have 168 filenames in memory.",$80
  .fi
 .fi;defset5
 
@@ -221,6 +221,7 @@ text
 .text "          ",$1f," : Fast Forward.           ",$80
 .text "     CBM : Exit Rsid's (if possible).  ",$80,$82
 .text "Both playlist modes",$81,"(Play Next and Play Random) can be selected by pressing 'M'.  ",$80
+.text "Take full advantage of the playlist modes by using our songlength inject tool on your favourite sids.  "
 
 ;--------------------------------------------------------------
 .text "  Support this tool by visiting : "
