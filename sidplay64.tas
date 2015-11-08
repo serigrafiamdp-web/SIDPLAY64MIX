@@ -371,16 +371,16 @@ maxDirY		= 15
 		* = $c400
 .if def_1541u2cmd
 	.if def_reu
-		.binary "bin/screen100-1541u2reu.o64",2		;1541u2cmd reu version
+		.binary "bin/screen-1541u2reu.o64",2	;1541u2cmd reu version
 	.else
-		.binary "bin/screen100-iec.o64",2		;1541u2cmd
+		.binary "bin/screen-iec.o64",2		;1541u2cmd
 	.fi
 		
 .else
 	.if def_iec
-		.binary "bin/screen100-iec.o64",2		;iec + cmd + ide64 + 1541u
+		.binary "bin/screen-iec.o64",2		;iec + cmd + ide64 + 1541u
 	.else		
-		.binary "bin/screen100-ser.o64",2		;normal + 1541u2swiec
+		.binary "bin/screen-ser.o64",2		;normal + 1541u2swiec
 	.fi		
 .fi	
 ;--------------------------------------------------------------
