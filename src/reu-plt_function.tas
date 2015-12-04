@@ -12,8 +12,8 @@
 
 		txa			;untouched from plt_flag
 		tay
-		sei			;i think i must set sei
-		jsr wjs_resetCia	;zp $01 = 36 
+		;sei			;i think i must set sei
+		jsr wjs_resetCia	;sei & zp $01=36 
 
 		lda #$38
 		sta $01

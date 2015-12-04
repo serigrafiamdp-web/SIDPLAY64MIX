@@ -12,8 +12,7 @@
 
 		txa			;untouched from plt_flag
 		tay
-		sei			;i think i must set sei
-		jsr wjs_resetCia	;zp $01 = 36 
+		jsr wjs_resetCia	;sei & zp $01=36 
 					;X = FF
 					;Y = untouched
 		txs			;X=FF = topstack

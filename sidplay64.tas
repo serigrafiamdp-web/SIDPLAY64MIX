@@ -15,7 +15,7 @@
 ; $D019 Not used in irq, but enabled when jumping into a song using own interrupt handler.
 ; $DC0D - The irq is a timer irq, so $dc0d must be read for each irq triggered.
 ;--------------------------------------------------------------
-DEF_REU		= 1	;1 = enable reu routines (for all versions)
+DEF_REU		= 0	;1 = enable reu routines (for all versions)
 def_currentdate	= 1	;1 = include current date and clock in setup
 def_illegal	= 1	;1 = use illegal opcodes
 def_colorselect	= 1	;use 1, 0 = for debugging new colors.
@@ -391,7 +391,7 @@ maxDirY		= 15
 no_keys		= $ff	;REU only - avoid keyboard while loading dir to reu
 dir_keys	= 5	;crsr-up/crsr-down/clrhome/sh+clrhome/space/delete
 noirq_keys	= 6	;return (load file possible)
-irq_keys	= 14	;select tune, restart, shuffle
+irq_keys	= 15	;select tune, restart, shuffle
 
 
 keyCrsrDown	= 0	;Directory keys 0-5
@@ -411,6 +411,7 @@ keyPlus		= 11	;
 keyMinus	= 12	;
 keyManual	= 13	;
 KeyScreenoff	= 14	;
+keyNextRandom	= 15
 
 ;keyRandom	= 10	;
 ;keyNext	= 11	;
@@ -434,6 +435,7 @@ dc00
 	.byte $df	;12|-
 	.byte $ef	;13|M
 	.byte $fd	;14|S	
+	.byte $fb	;15|X
 
 ;	.byte $fb	;10|R
 ;	.byte $ef	;11|N
@@ -457,6 +459,8 @@ dc01
 	.byte $ef	;13|M
 	.byte $df	;14|S	
 
+	.byte $7f	;15|X
+	
 ;	.byte $fd	;10|R
 ;	.byte $7f	;11|N
 	
@@ -647,10 +651,10 @@ scankeys
 ;ctrl_delay = keydelay
 ;ctrl_cmp   = lastkey
 
-		ldx #$ff
-		stx $dc02
-		inx
-		stx $dc03
+		ldy #$ff
+		sty $dc02
+		iny
+		sty $dc03
             
 		lda #<dc00
 		sta gzp
@@ -668,42 +672,54 @@ scankeys
 .fi
 looker		lda (gzp),y
 		sta $dc00
-		lda (rzp),y
+		lda (rzp),y	;6f-fe
 		cmp $dc01
 		beq finner
 		dey
 		bpl looker
 
-		lda #10
+		lda #15
 		sta lastkey		;any value not == $ff
 		sta keydelay
 wewait		rts
 
 
-finner		lda #0
+finner		
+		cpy #keyNextRandom
+		bne +
+		;x= value from plt_flag above
+		;M+R = random
+		;N   = next
+		jmp (wjp_pltadvance)
++
+
+		lda #0
 		cmp lastkey
 		beq thesame	;new key pressed ?
-		ldx #10		;yes
+		ldx #15		;yes
 		stx keydelay	;set long delay
 		bne newchar	;and jump to give Y to keycheckers below
 		
 thesame				;the same key is being pressed
 		dec keydelay	;count 10 or 3 times
 		bpl wewait
-		ldx #3		;Then we shift to 3 in delay
+		ldx #2		;Then we shift to 3 in delay
 		stx keydelay
 
-newchar		sta lastkey	;A=FF = CTRL note (see notetable)
+newchar		sta lastkey
 
 ;---------------------------------------
 		;Y = key we pressed
-		;A = 0
+		;A = must be 0 (some navigate routines expect that)
+
 
 .if DEF_REU
 		.include "src/keys_navigate_REU.tas"
 .else
 		.include "src/keys_navigate_normal.tas"
 .fi
+
+
 
 		cpy #keyF7		;"F7	"
 		bne tmm
