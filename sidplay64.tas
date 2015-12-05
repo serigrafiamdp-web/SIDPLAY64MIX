@@ -470,7 +470,7 @@ dc01
 ;-------------------------------------
 memoryerror	.byte $2c		;stack jump here with Y <> 0
 dirSelector	ldy #0
-		jsr wjs_resetCia	;Y = not used, zp 01 = $36
+		jsr wjs_resetCia	;SEI, zp01=$36, Y=not used
 		lda #$1b		;screen on
 		sta $d011
 		tya			;instead of cpy #0
@@ -497,9 +497,9 @@ clrmsg2		sta (dzp),y
 		dey
 		bpl clrmsg2
 
-
-
-
+		;a=20
+		;x=ff
+		;y=ff		
 .if def_reu
 
   .if def_1541u2cmd
@@ -730,10 +730,9 @@ secondsid1	bit $d424;,x		;second sid
 		lda #$ff		;
 		.byte $cb,7		;Illegal opcode sbx #7 (txa,sec,sbc#7,tax):
          	bpl -
-
-		lda stopmusic		;0 = pause
-		eor #$ff		;1-ff = unpause
-		sta stopmusic	
+		;A=ff			;A is untouched.
+		eor stopmusic		;0=    music paused
+		sta stopmusic		;1-ff= music on
 		ldx #3
 -		lda $dc08,x		;8,9,A,B - reading $dc0b here pauses the clock
 		sta $dc08,x
@@ -861,11 +860,8 @@ restartTune
 		lda #$38
 		sta $01
 		jsr dotunenumbers
-;		lda #$35
-;		sta $01
 
-
-		jsr wjs_resetCia	;zp 01 = 36 (clears zp 000c-0100 and 020c-0300)
+		jsr wjs_resetCia	;SEI, zp01=$36 (clears zp 000c-0100 and 020c-0300)
 
 ;   | Bit 4 |   Force Load Timer A: 1 = Yes
 ;   | Bit 0 |   Start/Stop Timer A: 1 = Start, 0 = Stop

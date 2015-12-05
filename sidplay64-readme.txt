@@ -168,12 +168,12 @@ you can start and stop the song with F1 and F7.
 REU - The Ram Expansion Unit.
 ---------------------------------------------------------------
 This device is now supported in all versions.
-It allows you to have several thousand sid file in your directory.
+It allows you to have several thousand sid files in your directory.
 
 The 1541U2 has support for up to 16 mb reu. 
 
 If you are looking for real hardware, then you will find that
-Commodore produced 3 reu versions, with memory sizes of 128kb, 256kb and 512kb.
+Commodore manufactured 3 reu versions, with memory sizes of 128kb, 256kb and 512kb.
 Crative Micro Design (CMD) produced 512kb and 2mb versions, named 1750 XXL.
 Chip Level Designs' (CLD) Superclone 1750 has 512kb of memory.
 
@@ -291,12 +291,12 @@ And to anyone I might have forgotten.
 Also a big thanks to Whiteflame for sharing his 'random' routines on codebase.
 
 
-SIDPLAY 64 v.1.00 (xx/02/2015):
+SIDPLAY 64 v.1.00 (xx/12/2015):
 -------------------------------
-* Fixed:     Small changes for shortening code.
-* Added:     Windows program for inject sids with correct songlengths.
+* Fixed:     Some shortening of code might have happened along the way.
+* Added:     Windows program for injecting sids with correct songlengths.
 * Added:     Code to handle songlengths for injected sids.
-* Added:     Option to disable sonlength info from injected sids.
+* Added:     Option to disable songlength info from injected sids.
 * Fixed:     Turn screen off/on value is permanent when loading new sids.
 * Fixed:     Replaced the red border skin. We use red border as a error message.
 * Fixed:     1541u2: display: Error with song numbers above 10.

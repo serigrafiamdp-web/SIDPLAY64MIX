@@ -1,15 +1,21 @@
 DIRCMD	= $e808
 
+
+		;a=20
+		;x=ff
+		;y=ff
+
 		lda #dir_keys		;only a few keys available while loading dir
 		sta numb
 		lda #>dirpos
 		sta dzp+1
 
-		lda #0
-		sta pos_cursor
-		sta offs_cursor
-		sta maxfile
-		sta dzp
+		;ldy #0
+		iny
+		sty pos_cursor
+		sty offs_cursor
+		sty maxfile
+		sty dzp
 
 		
 		lda #$01

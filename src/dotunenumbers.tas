@@ -10,14 +10,15 @@
 ;
 ;replaced tzp by dzp
 ;
-;bin and bcd are zp adresses.
+;bin, bincount, bcd and dzp are Zeropages
+
 
               ldx tune
               inx
               stx bin
               ldx maxtune
               inx
-              stx bin+1
+              stx bin+1	
 
               lda #<songstr1
               sta dzp
