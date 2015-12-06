@@ -327,8 +327,9 @@ getmsgm     lda msgmemory,y
 
 wepanic
 .if def_1541u2cmd
+		dec panic_load_u2	;set value to 0
 .else
-		dec panicload+1	;set to 0
+		dec panicload+1		;set value to 0
 .fi
 		beq stackjump
 

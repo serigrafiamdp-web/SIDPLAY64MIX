@@ -1,21 +1,16 @@
-wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwDIRCMD	= $e808
+DIRCMD	= $e808
 
-
-		;a=20
-		;x=ff
-		;y=ff
-
+;x+y=0
 		lda #dir_keys		;only a few keys available while loading dir
-		sta numb		;00-0e
-		lda #>dirpos
-		sta dzp+1
-		
+		sta numb		;00-0e - abs
+
+		;lda #>dirpos
+		;sta dzp+1
 		;ldy #0
-		iny
-		sty pos_cursor
-		sty offs_cursor
-		sty maxfile
-		sty dzp
+		;sty pos_cursor		;zp
+		;sty offs_cursor	;abs
+		;sty maxfile		;zp
+		;sty dzp		;zp
 
 
 		lda #1

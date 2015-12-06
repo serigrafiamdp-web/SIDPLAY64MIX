@@ -1,0 +1,57 @@
+;--------------------------------------------------------------
+; PANIC LOAD for 1541U2 (REU)
+;
+; Handles panic load when there is no memory pages left
+; play adress must be $0000
+;--------------------------------------------------------------
+;	* static subroutine at $d000-$e000
+;	* code is moved to "panic_load_u2" in stack area
+;	* jsr music at end of loading. no return.
+;--------------------------------------------------------------
+
+.logical panic_load_u2
+
+;see nextpacket2 in sidplay64.tas
+
+nextpacket3	lda #$35
+		sta $01
+
+-		lda U2_Status_register
+		and #_STATE
+		cmp #_STATE_COMMAND_BUSY
+		beq -
+		
+		;jsr wjs_wait_while_busy
+		
+		
+-		lda U2_Status_register          ; any data left to process int this packet ?
+		bpl nomorechars3
+		lda U2_Response_data_register   ; yes - print it
+		
+		; A = DATA here
+		dec $01				;34
+		sta (ldzp),y			;write to 0200-ffff
+		inc $01				;35
+		inc ldzp
+		bne -
+		inc ldzp+1
+		bne -				;(jmp) never zero
+		
+nomorechars3
+
+		jsr get_status
+
+		lda #_DATA_ACC                  ; Go to next packet, if any
+		sta U2_Control_register
+		lda U2_Status_register
+		and #_STATE
+		cmp #_STATE_COMMAND_BUSY        ; check if there is any more packets to process
+		beq nextpacket3
+		lda #$36			; Sids requires c64 rom to be on.
+		sta $01
+		lax tune
+		tay
+		jsr initmus
+		jmp *
+
+.here

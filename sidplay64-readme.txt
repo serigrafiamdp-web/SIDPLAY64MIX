@@ -86,6 +86,7 @@ RESTORE       :Restart program (inits values and variables and loads directory.)
 <-(LEFT ARROW):Fast forward (when song is playing)
 CBM KEY       :Exit an RSID or PSID with $0000 as play address.
 S             :Screen on/off. (reduce video chip noise).
+X             :Load Next or Random sid
 
 When the sid is playing/present in memory you can use all keys.
 
@@ -135,6 +136,26 @@ TIMER DECREASE  ----*---- TIMER INCREASE (NEXT/RANDOM)
          SET MODE   |   PAUSE/CONTINUE SONG
                     |
                 JUMP DOWNWARDS
+
+
+SP64 INJECTOR TOOL:
+---------------------------------------------------------------
+With this tool you can inject default songlengths into your sids.
+Place the sids you want into a dir with this tool.
+You also need a copy of the file \HVSC\C64Music\DOCUMENTS\Songlengths.txt
+to be present in the dir.
+Once all files are present, go to the dos shell and from the command line call:
+
+sp64injector.exe
+
+If you want to include sub dirs:
+
+sp64injector.exe -r 
+
+This way you can inject songlengths into the whole hvsc collection.
+
+The injector will give error messages on sid files that is impossible to inject.
+Those sids are 2sids and 3sids,
 
 
 
@@ -293,7 +314,10 @@ Also a big thanks to Whiteflame for sharing his 'random' routines on codebase.
 
 SIDPLAY 64 v.1.00 (xx/12/2015):
 -------------------------------
-* Fixed:     Some shortening of code might have happened along the way.
+* Added:     Panic load for 1541u2 - some of the larger sids can now be loaded
+             and executed. No return to sidplay64 possible.
+* Added:     "X" key to skip to next or random sid.
+* Fixed:     Some shortening of code have happened along the way.
 * Added:     Windows program for injecting sids with correct songlengths.
 * Added:     Code to handle songlengths for injected sids.
 * Added:     Option to disable songlength info from injected sids.

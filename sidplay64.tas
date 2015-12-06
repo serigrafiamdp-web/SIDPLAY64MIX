@@ -15,7 +15,7 @@
 ; $D019 Not used in irq, but enabled when jumping into a song using own interrupt handler.
 ; $DC0D - The irq is a timer irq, so $dc0d must be read for each irq triggered.
 ;--------------------------------------------------------------
-DEF_REU		= 0	;1 = enable reu routines (for all versions)
+DEF_REU		= 1	;1 = enable reu routines (for all versions)
 def_currentdate	= 1	;1 = include current date and clock in setup
 def_illegal	= 1	;1 = use illegal opcodes
 def_colorselect	= 1	;use 1, 0 = for debugging new colors.
@@ -246,6 +246,8 @@ get_status	lda #<txterror1
 		cpy #38				;1541u2 status messages are never longer than 38 letters.
 		bne -
 nostatus	rts
+
+panic_load_u2	.byte 1
 
 		
 .else
@@ -480,26 +482,43 @@ dirSelector	ldy #0
 ;LOAD NEW DIR:
 
 start                       		;JMP HERE FIRST TIME from SRC/INIT.TAS
+dodir
 
-dodir		lda #2
-		sta plt_flag
+;000c-0100 is zerofilled
+;020c-0300 is zerofilled
+;X=$ff
+;Y=$00
+
+
+		ldx #2
+		stx plt_flag
 		lda #$4d		;"M"-anual selection
 		sta plt_letter
-		lda #<txterror1
+		lda #<txterror1-1
 		sta dzp
 		lda screenpos
 		clc
 		adc #>txterror1&$03ff
 		sta dzp+1
-		ldy #$25
+		ldy #$26
 		lda #$20		;Clear text error area with spacebar
 clrmsg2		sta (dzp),y
 		dey
-		bpl clrmsg2
+		bne clrmsg2
+;x=$02
+;a=$20
+;y=$00
 
-		;a=20
-		;x=ff
-		;y=ff		
+;Clear whole zp area - see start of each dir routine:
+		sty offs_cursor
+-		sty $00,x
+		inx
+		bne -
+		lda #>dirpos
+		sta dzp+1
+;x+y=0		
+;y must be zero here:
+
 .if def_reu
 
   .if def_1541u2cmd
@@ -678,7 +697,7 @@ looker		lda (gzp),y
 		dey
 		bpl looker
 
-		lda #15
+		lda #7
 		sta lastkey		;any value not == $ff
 		sta keydelay
 wewait		rts
@@ -1130,12 +1149,12 @@ returnHere                      ;returns with stackjump here from doheaderstuff
 		lsr
 .fi
 		pha
-		lda #$33
+		lda #$33		;Enable char rom (D000-E000)
 		sta $01
 		lda #$d8
 		sta rzp+1
 	
-		ldx #8		;7 pages of font to copy
+		ldx #8			;7 pages of font to copy
 		ldy #0
 		sty rzp
 		sty gzp
@@ -1185,6 +1204,9 @@ adjust2		lda screenpos
            
 ;load file into mem
 
+;X=$fd
+;y=$ff
+
 .if def_1541u2cmd
 ; Read remaining stuff here
 		;lda v2loadaddress	- load adress is set in src/doheaderstuff.tas
@@ -1192,20 +1214,27 @@ adjust2		lda screenpos
 		;lda v2loadaddress+1
 		;sta ldzp+1
 
-		jsr wait_for_idle
+		jsr wait_for_idle		;x+y untouched
 
-		lda #$01
-		sta U2_Command_data_register
+		ldx #$01
+		stx U2_Command_data_register
 		lda #_DOS_CMD_READ_DATA
 		sta U2_Command_data_register
-		lda #$ff
+		tya
+		;lda #$ff
 		sta U2_Command_data_register
-		lda #$ff
+		;lda #$ff
 		sta U2_Command_data_register
-		lda #_PUSH_CMD
-		sta U2_Control_register
+		;ldx #_PUSH_CMD			;=$01
+		stx U2_Control_register
 
-		ldy #0
+
+		;ldy #0
+		iny	;0
+		lda panic_load_u2
+		bne nextpacket2
+		sta $01				;all ram 0000-fffff
+		jmp u2_start_panic_load		
 nextpacket2
 		jsr wjs_wait_while_busy		
 		
@@ -1250,7 +1279,13 @@ nopanic		lda #0
 		;sty endAdrHi
 .endif
 
-;-----------------------------------         
+;--------------------------------------------------------------         
+.if def_1541u2cmd
+
+;1541u2 has no io messages here
+
+.else
+;--------------------------------------------------------------         
 ;IOmessages can be disabled to gain memory:
 .if IOMessages
 		php
@@ -1263,11 +1298,10 @@ nopanic		lda #0
 		jmp (wjp_dirSelector)         
 		
 .fi
-;-----------------------------------
-errormsg
+errormsg	sei			;sei only present in versions using kernal loader calls
+;--------------------------------------------------------------
+.fi ;def_1541u2cmd
 
-
-		sei
 		lda #$38
 		sta $01
 
@@ -1424,6 +1458,16 @@ u2_print_maxfile
 		lda maxfilehi		;display number of files hi
 		jmp printhexnum
 
+u2_start_panic_load
+		ldx #getpanicend-getpanic
+-		lda getpanic,x
+		sta panic_load_u2,x
+		dex
+		bpl -
+		jmp panic_load_u2
+getpanic	
+.include src/reu_1541u2cmd_panic.tas
+getpanicend
 
 .else
 .include src/convertletter.tas	;convert pc letter, signs, underscore to c64

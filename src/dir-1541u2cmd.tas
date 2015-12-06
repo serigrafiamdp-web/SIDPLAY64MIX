@@ -9,14 +9,14 @@
 ;--------------------------------------------------------------
 
 
-		lda #>dirpos
-		sta dzp+1
-		
-		ldy #0
-		sty pos_cursor
-		sty offs_cursor
-		sty maxfile
-		sty dzp
+;x+y=0
+		;lda #>dirpos
+		;sta dzp+1
+		;ldy #0
+		;sty pos_cursor		;zp
+		;sty offs_cursor	;abs
+		;sty maxfile		;zp
+		;sty dzp		;zp
 
 		jsr wait_for_idle
 

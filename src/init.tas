@@ -377,7 +377,7 @@ fix1		stx fixdc0e+1	;located in 36 ram
 
 
 		lda #$36
-		sta $01 ;37
+		sta $01
 
 		;lda #0			;initital values for dir displayer
 		;sta pos_cursor
@@ -389,6 +389,9 @@ fix1		stx fixdc0e+1	;located in 36 ram
 		
 		lda $ba
 		sta device
+
+		ldy #0			;all new DIR reads needs Y=0
+		;jsr resetCia		;SEI, clear 000c-0100 and 020c-0300 returns with zp$01 = 36
 		jmp start
 
 

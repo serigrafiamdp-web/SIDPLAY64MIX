@@ -12,9 +12,9 @@ echo %date% %HH24%:%MI%>timedate.log
 if %errorlevel% neq 0 exit /b %errorlevel% 
 pucrunch -x$%startadr% sidplay64-sd2iec.o64 sidplay64-sd2iec.prg
 
-REM 64tass.exe --m6502 -l _s64labels-normal.log -L _s64list-normal.log -D defset=1 -a sidplay64.tas -o sidplay64-normal.o64
-REM if %errorlevel% neq 0 exit /b %errorlevel% 
-REM pucrunch -x$%startadr% sidplay64-normal.o64 sidplay64-normal.prg
+64tass.exe --m6502 -l _s64labels-normal.log -L _s64list-normal.log -D defset=1 -a sidplay64.tas -o sidplay64-normal.o64
+if %errorlevel% neq 0 exit /b %errorlevel% 
+pucrunch -x$%startadr% sidplay64-normal.o64 sidplay64-normal.prg
 
 64tass.exe --m6502 -l _s64labels-1541u2cmd.log -L _s64list-1541u2cmd.log -D defset=2 -a sidplay64.tas -o sidplay64-1541u2cmd.o64
 if %errorlevel% neq 0 exit /b %errorlevel%

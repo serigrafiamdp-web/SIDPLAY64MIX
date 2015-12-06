@@ -1,22 +1,16 @@
 DIRCMD	= $e808
 
-
-		;a=20
-		;x=ff
-		;y=ff
-
+;x+y=0
 		lda #dir_keys		;only a few keys available while loading dir
 		sta numb
-		lda #>dirpos
-		sta dzp+1
-
+		;lda #>dirpos
+		;sta dzp+1
 		;ldy #0
-		iny
-		sty pos_cursor
-		sty offs_cursor
-		sty maxfile
-		sty dzp
-
+		;iny
+		;sty pos_cursor		;zp
+		;sty offs_cursor	;abs
+		;sty maxfile		;zp
+		;sty dzp		zp
 		
 		lda #$01
 		ldx device
@@ -117,18 +111,18 @@ getByte
 		sta $90
 		stx netdrivex		;TFR - Netdrive bug - zp
 		jsr ROM_chrin
-		ldx #$38
-		stx $01
 		ldx $90			;If status is zero then continue
 		bne endofdir
+		ldx #$38
+		stx $01
 		ldx netdrivex		;TFR - Netdrive bug - zp
 		cmp #0
 		rts
 		
 ;falls through here         
 ;---------Finished reading directory--------
-endofdir	lda #$36
-		sta $01
+endofdir	;lda #$36		;saves 4 bytes
+		;sta $01
 		pla
 		pla
 		lda #$01
