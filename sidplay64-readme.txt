@@ -1,6 +1,5 @@
 SIDPLAY64 V1.0.0 (c) GRG/SHAPE 2015
 ---------------------------------------------------------------
-
 Doc is work in progress. need to have some info on
 the new injector tool. 
 
@@ -59,6 +58,12 @@ Both RSIDs and PSIDs can have this play address and they will stop
 the random Shuffle play and the play next routine in your playlist.
 Selecting Y here will avoid loading these "troublesome" sids.
 
+Then you have a new option to disable songlengths for modded/injected sids.
+The sids we are talking about here are modified sids done with our little
+program called sp64injector.exe. 
+You can read more about that program further below. 
+If you select Y, any information about songlengths in the sids will be ignored.
+
 Last question : Controlling the program with Joystick Port #1 or Keyboard ?
 Selecting Joystick allows you to conrol the program from your favourite
 sofa or armchair. Just sit back and relax
@@ -66,6 +71,9 @@ See further below for Joystick controls.
 
 Now the mains screen shows up and you have the option to select skin colors
 with the keys 0-9. Or press any other key to make SP64 load the directory.
+
+If you don't like to answer these question next time, simply press
+return 6 times to get the default values.
 
 When a fresh directory is loaded you can only use some of these keys:
 
@@ -138,7 +146,7 @@ TIMER DECREASE  ----*---- TIMER INCREASE (NEXT/RANDOM)
                 JUMP DOWNWARDS
 
 
-SP64 INJECTOR TOOL:
+SP64INJECTOR.EXE:
 ---------------------------------------------------------------
 With this tool you can inject default songlengths into your sids.
 Place the sids you want into a dir with this tool.
@@ -148,15 +156,23 @@ Once all files are present, go to the dos shell and from the command line call:
 
 sp64injector.exe
 
-If you want to include sub dirs:
+If you want to include sub dirs you call:
 
-sp64injector.exe -r 
+sp64injector.exe -s
 
 This way you can inject songlengths into the whole hvsc collection.
 
-The injector will give error messages on sid files that is impossible to inject.
-Those sids are 2sids and 3sids,
+You can also add the -v flag (verbose mode) to see more details.
 
+sp64injector.exe -v -s
+
+The injector will give error messages on sid files that is impossible to modify.
+Those sids will be 2sids or 3sids files.
+
+Sidplay64 has a new option to make use of the data you have injected into these sids.
+And with it you can make a playlist of sids whith exact playing time for each sid.
+
+One warning though :  Only use modified sids with sidplay64.
 
 
 LOADING A SID FILE:

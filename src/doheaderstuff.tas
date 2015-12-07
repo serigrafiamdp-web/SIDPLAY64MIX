@@ -289,9 +289,9 @@ bankok      stx relocsize
 
 ;At this point there is no free memory for relocation pages,
 ;so we check if the song play adress is $0000, if so
-;we load the sid song anyway and hope for the best....
+;we load the sid using panic load -  and hope for the best....
  
-		lda playAddress	;high	;3
+		lda playAddress		;high	;3
 		ora playAddress+1	;low	;6
 		beq wepanic		;	;8 byte
 
@@ -314,8 +314,8 @@ getmsgm     lda msgmemory,y
             lda screenpos
             clc
             adc #>((memoryerror-1)-screen2)
-            pha
-            lda #<memoryerror-1
+            pha					;stack jump when not enough memory to load a normal sid
+            lda #<memoryerror-1			;normal in the sence that it has both a init and a play call.
             pha
             lda #noirq_keys
             sta numb
@@ -327,11 +327,11 @@ getmsgm     lda msgmemory,y
 
 wepanic
 .if def_1541u2cmd
-		dec panic_load_u2	;set value to 0
+		sta panic_load_u2	;set value to 0
 .else
-		dec panicload+1		;set value to 0
+		sta panicload+1		;set value to 0
 .fi
-		beq stackjump
+		beq stackjump		;jmp
 
 pageok     
 		ldx startpage 

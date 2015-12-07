@@ -15,7 +15,7 @@
 ; $D019 Not used in irq, but enabled when jumping into a song using own interrupt handler.
 ; $DC0D - The irq is a timer irq, so $dc0d must be read for each irq triggered.
 ;--------------------------------------------------------------
-DEF_REU		= 1	;1 = enable reu routines (for all versions)
+DEF_REU		= 0	;1 = enable reu routines (for all versions)
 def_currentdate	= 1	;1 = include current date and clock in setup
 def_illegal	= 1	;1 = use illegal opcodes
 def_colorselect	= 1	;use 1, 0 = for debugging new colors.
@@ -120,8 +120,6 @@ lastkey		= $d01d
 bakd011		= $d01b
 
 ;d015	;cant use
-;d01b	;free
-;d01c	;free
 
 ;--------------------------------------------------------------
 ;         SIDPLAY64 STACK JUMPS, TABLES, DATA
@@ -247,12 +245,14 @@ get_status	lda #<txterror1
 		bne -
 nostatus	rts
 
-panic_load_u2	.byte 1
+panic_load_u2	.byte $ff			;1541u2 panic load code is transfered here
 
 		
 .else
-panic_load				;zp $01 = 36
-				
+
+panic_load				
+;zp $01 = 36 when entering here:
+;dont change Y (loadardhi)
 		lda #$38
 		sta $01
 
@@ -264,9 +264,8 @@ copyp2		lda panic_0314,x	;0314,15,16,17,18,19
 		lda #$36
 		sta $01
            	ldx loadAdrLo
-panicload	lda #1			;For cases where ther is no memory and sid is a rsid (playaddress $0000):
+panicload	lda #$ff		;For cases where ther is no memory and sid is a rsid (playaddress $0000):
 					;We change panicload+1 to zero, load the file, run it and hope for the best.  No exit to sp64.
-
 		jsr ROM_load
 .if def_illegal
 		lax tune
@@ -275,12 +274,9 @@ panicload	lda #1			;For cases where ther is no memory and sid is a rsid (playadd
 		tax
 .fi		
 		tay
-		;sei
-		;ldy #$36
-		;sty $01
-;panicinit	jsr *
 		jsr initmus
 		jmp *
+
 .fi
 ;----------------------0123456789abcdef01234
 .if DEF_REU
@@ -413,15 +409,11 @@ keyPlus		= 11	;
 keyMinus	= 12	;
 keyManual	= 13	;
 KeyScreenoff	= 14	;
-keyNextRandom	= 15
+keyNextRandom	= 15	;
 
-;keyRandom	= 10	;
-;keyNext	= 11	;
 ;keyboard scan table
 
 dc00
-
-
 	.byte $be	;00|crsru	
 	.byte $be	;01|crsru+sh	
 	.byte $be	;02|crsrr+sh	(shift + crsr rt) (left)
@@ -444,7 +436,6 @@ dc00
 
 
 dc01
-
 	.byte $7f	;00|crsru  
 	.byte $6f	;01|crsru+sh  	
 	.byte $eb	;02|crsrr+sh 	(left)  Checks both shift + crsr rt
@@ -460,7 +451,6 @@ dc01
 	.byte $f7	;12|-
 	.byte $ef	;13|M
 	.byte $df	;14|S	
-
 	.byte $7f	;15|X
 	
 ;	.byte $fd	;10|R
@@ -505,12 +495,15 @@ dodir
 clrmsg2		sta (dzp),y
 		dey
 		bne clrmsg2
+
+
 ;x=$02
 ;a=$20
 ;y=$00
 
+.if !def_reu
 ;Clear whole zp area - see start of each dir routine:
-		sty offs_cursor
+		sty offs_cursor			;This is for NON reu version only
 -		sty $00,x
 		inx
 		bne -
@@ -518,6 +511,7 @@ clrmsg2		sta (dzp),y
 		sta dzp+1
 ;x+y=0		
 ;y must be zero here:
+.fi
 
 .if def_reu
 
@@ -820,30 +814,7 @@ two		ldx #2			;M
 		sty plt_letter		;NRM on screen
 endofkey_check	rts
 
-.comment
-chkb		lda #2
-		ldx #$4d		;"M"-anual selection
-		cpy #keyManual
-		beq skmanual
-		lda #0
-		ldx #$4e		;"N"-ext (loads next song in dir list)
-		cpy #keyNext
-		beq sknext
-		
-		cpy #keyRandom		;"R"-andom (loads random song in dir list)
-		bne plton
-		lda #$80
-		ldx #$52		
-
-sknext
-skmanual	sta plt_flag
-		stx plt_letter
-		rts
-.endc		
-
-
-plton
-		cpy #KeyScreenoff
+plton		cpy #KeyScreenoff
 		bne kso
 		lda $d011
 		eor #$10
@@ -967,8 +938,6 @@ waitk		;ldx #$7f		;saves 2 bytes -
 		lda #$35		;
 		sta $01
 		
-;		ldx #topstack
-;		txs
 		ldx #zpBuffSize-1
 bp5		lda zerop,x
 		sta playbuf,x
@@ -1230,8 +1199,8 @@ adjust2		lda screenpos
 
 
 		;ldy #0
-		iny	;0
-		lda panic_load_u2
+		iny				;0
+		lda panic_load_u2		;a=0 on panic
 		bne nextpacket2
 		sta $01				;all ram 0000-fffff
 		jmp u2_start_panic_load		
@@ -1265,15 +1234,14 @@ nomorechars2
 
 .else
 		lda #0
-		sta $90			;TESTING - Will this fix sd2iec loading problems ?
+		;sta $90		;status is set to zero by ROM_load routine at $f4a5
 		sta $b9			;IDE64 again
            	ldx loadAdrLo
 		ldy loadAdrHi
-		lda panicload+1		;A = 0 on panic
-		bne nopanic
+		bit panicload+1		;A turns to 0 on panic
+		bmi nopanic
 		jmp panic_load
-nopanic		lda #0
-		jsr ROM_load		;Returns X = endadr lo
+nopanic		jsr ROM_load		;Returns X = endadr lo
 					;Returns Y = endadr hi
 		;stx endAdrLo
 		;sty endAdrHi
@@ -1436,6 +1404,21 @@ hex2sa		ora #$30
 		adc #$06
 hex2sb		rts
 
+
+.if def_1541u2cmd
+u2_start_panic_load
+		ldx #getpanicend-getpanic
+-		lda getpanic,x
+		sta panic_load_u2,x
+		dex
+		bpl -
+		jmp panic_load_u2
+getpanic	
+.include src/reu_1541u2cmd_panic.tas
+getpanicend
+.fi
+
+	
 dotunenumbers
 .include src/dotunenumbers.tas
 convert_letter
@@ -1458,16 +1441,6 @@ u2_print_maxfile
 		lda maxfilehi		;display number of files hi
 		jmp printhexnum
 
-u2_start_panic_load
-		ldx #getpanicend-getpanic
--		lda getpanic,x
-		sta panic_load_u2,x
-		dex
-		bpl -
-		jmp panic_load_u2
-getpanic	
-.include src/reu_1541u2cmd_panic.tas
-getpanicend
 
 .else
 .include src/convertletter.tas	;convert pc letter, signs, underscore to c64

@@ -218,6 +218,7 @@ text
 .byte $83
 ;-----|123456789012345678901234567890123456789|
 .text "       S : Toggles screen on/off.      ",$80
+.text "      X : Skip to next/random sid.     ",$80
 .text "          ",$1f," : Fast Forward.           ",$80
 .text "     CBM : Exit Rsid's (if possible).  ",$80,$82
 .text "Both playlist modes",$81,"(Play Next and Play Random) can be selected by pressing 'M'.  ",$80

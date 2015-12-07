@@ -30,7 +30,9 @@ key4		cpy #keySpace		;"SPACE"
 ingenfil	pla
 		pla
 		jsr wjs_resetCia	;zp $01 = 36
+.if !def_1541u2cmd			;no kernal routine for U2
 		jsr ROM_clall           ;Close dirfile, and all other files..
+.fi
 		jmp (wjp_dirSelector)
          
 key5

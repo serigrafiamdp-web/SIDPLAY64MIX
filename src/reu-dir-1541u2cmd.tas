@@ -15,35 +15,35 @@
 ;--------------------------------------------------------------
 
 
-		ldx $01
-		lda #$38
+		
+		lda #$34
 		sta $01
 		jsr prepare_loading_new_reu_dir	;only touch A register
-		stx $01
+		inc $01				;35
 		
-		jsr wait_for_idle
+		jsr wait_for_idle		;X+Y untouched
 
-		lda #$01                             ; OPEN DIR
-		sta U2_Command_data_register
+		ldx #$01                        ;OPEN DIR
+		stx U2_Command_data_register
 		lda #$13
 		sta U2_Command_data_register
-		lda #_PUSH_CMD
-		sta U2_Control_register
+		;ldx #_PUSH_CMD			;=$01
+		stx U2_Control_register
 
-		jsr wjs_wait_while_busy              ; end command
+		jsr wjs_wait_while_busy         ;X+Y untouched - end command
 ;		jsr get_status
 
 		lda #_DATA_ACC
 		sta U2_Control_register
 
-		jsr wait_for_idle
+		jsr wait_for_idle		;X+Y untouched
 
-		lda #$01                             ; READ DIR
-		sta U2_Command_data_register
+		;ldx #$01                        ; READ DIR
+		stx U2_Command_data_register
 		lda #$14
 		sta U2_Command_data_register
-		lda #_PUSH_CMD
-		sta U2_Control_register
+		;ldx #_PUSH_CMD			;=$01
+		stx U2_Control_register
 
 nextdirentry
 		jsr wjs_wait_while_busy
@@ -59,18 +59,14 @@ nextchar
 		bpl nomorechars
 		lda U2_Response_data_register   ; yes - print it
 
-		ldx #$38
-		stx $01
+		dec $01				;34
 		sta (dzp),y			;store filename
-		ldx #$36
-		stx $01
+		inc $01				;35
 		iny
 		cpy #filename_entry_size-1
 		bne nextchar
 		
-nomorechars	lda #$38
-		sta $01
-		
+nomorechars	dec $01				;34
 		tya
 		tax
 -		cpy #filename_entry_size-1
@@ -111,8 +107,7 @@ notdir
 		
 bci
 skipfile
-		lda #$36
-		sta $01
+		inc $01				;35
 
 ;		jsr get_status                 ; here we need to get the status - after the packet is done, if we want to !
 		lda #_DATA_ACC                  ; Go to next packet, if any
@@ -124,8 +119,7 @@ skipfile
 
 		; no more dir entries - need to update reu dir again, in case more files has entered the filcounter buffer
 		
-		lda #$38
-		sta $01
+		dec $01				;34
 		jsr write_reu_dir_entry2
 		jsr zero_reu_datadr
 		lda #$36

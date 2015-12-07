@@ -18,29 +18,29 @@
 		;sty maxfile		;zp
 		;sty dzp		;zp
 
-		jsr wait_for_idle
+		jsr wait_for_idle		;X+Y untouched
 
-		lda #$01                             ; OPEN DIR
-		sta U2_Command_data_register
+		ldx #$01                        ; OPEN DIR
+		stx U2_Command_data_register
 		lda #$13
 		sta U2_Command_data_register
-		lda #_PUSH_CMD
-		sta U2_Control_register
+		;ldx #_PUSH_CMD			;=$01
+		stx U2_Control_register
 
-		jsr wjs_wait_while_busy              ; end command
+		jsr wjs_wait_while_busy          ;;X+Y untouched - end command
 ;		jsr get_status
 
 		lda #_DATA_ACC
 		sta U2_Control_register
 
-		jsr wait_for_idle
+		jsr wait_for_idle		;X+Y untouched
 
-		lda #$01                             ; READ DIR
-		sta U2_Command_data_register
+		;ldx #$01                       ; READ DIR
+		stx U2_Command_data_register
 		lda #$14
 		sta U2_Command_data_register
-		lda #_PUSH_CMD
-		sta U2_Control_register
+		;ldx #_PUSH_CMD			;=$01
+		stx U2_Control_register
 
 nextdirentry
 		jsr wjs_wait_while_busy
@@ -61,11 +61,10 @@ nextchar
 		bpl nomorechars
 		lda U2_Response_data_register   ; yes - print it
 
-		ldx #$38
+		ldx #$34
 		stx $01
 		sta (dzp),y
-		ldx #$36
-		stx $01
+		inc $01				;35
 		iny
 		cpy #16
 		bne nextchar

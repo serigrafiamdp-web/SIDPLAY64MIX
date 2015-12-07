@@ -10,14 +10,14 @@
 ;--------------------------------------------------------------
 		cpy #keyCrsrUp		;"Crsr up"
 		bne key1
-		lda offs_cursor
-		ora pos_cursor
+		lax pos_cursor		;zp
+		ora offs_cursor		;abs
 		beq td			;zero ? then do nothing
-		lda pos_cursor
+		txa			;lda pos_cursor
 		beq th
-		dec pos_cursor		
+		dec pos_cursor		;zp
 		rts
-th		dec offs_cursor
+th		dec offs_cursor		;abs
 		rts
 
 ;--------------------------------------------------------------
@@ -42,7 +42,7 @@ td		rts
 ;--------------------------------------------------------------
 key2		cpy #keyCrsrLeft
 		bne key3
-		ldx pos_cursor
+		ldx pos_cursor		;A=0
 		bne bd1
 		lda offs_cursor
 		sec
@@ -85,7 +85,9 @@ key4		cpy #keySpace		;"SPACE"
 ingenfil	pla
 		pla
 		jsr wjs_resetCia	;zp $01 = 36
+.if !def_1541u2cmd			;no kernal routine for U2
 		jsr ROM_clall           ;Close dirfile, and all other files..
+.fi
 		jmp (wjp_dirSelector)
 
 key5
