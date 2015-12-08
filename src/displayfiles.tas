@@ -92,10 +92,19 @@ tx		lda gzp			;Next line
 		inc gzp+1
 +		sta gzp
 
-tw		inc cmpzp
+tw		
+
+;.if def_illegal
+;		lda #maxDirY-1		;max files displayed
+;		sec			;this seem to work but need more testing.
+;		isc cmpzp		;saves only 1 byte though
+;		bcc tz
+;.else .fi
+		inc cmpzp
 		lda cmpzp
 		cmp #maxDirY		;max files displayed
 		bcs tz
+
 		cmp maxfile
 		bcc tt
 		ldy #$14		;Fill the remaining area of the box

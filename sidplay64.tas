@@ -15,7 +15,7 @@
 ; $D019 Not used in irq, but enabled when jumping into a song using own interrupt handler.
 ; $DC0D - The irq is a timer irq, so $dc0d must be read for each irq triggered.
 ;--------------------------------------------------------------
-DEF_REU		= 0	;1 = enable reu routines (for all versions)
+DEF_REU		= 1	;1 = enable reu routines (for all versions)
 def_currentdate	= 1	;1 = include current date and clock in setup
 def_illegal	= 1	;1 = use illegal opcodes
 def_colorselect	= 1	;use 1, 0 = for debugging new colors.
@@ -703,6 +703,8 @@ finner
 		;x= value from plt_flag above
 		;M+R = random
 		;N   = next
+		cpx #2			;skip on M (= $02)
+		beq wewait
 		jmp (wjp_pltadvance)
 +
 
@@ -1359,12 +1361,12 @@ getrandom
 .fi
 
 ;--------------------------------------------------------------
-;note: The 1541u2 have space for 188 files
+;note: The 1541u2 have space for 180 files
 ;note2: We dont compile this version for u2 anymore:
 .if def_1541u2cmd
-* = $dbc0	;dbc0-d000/16=188 files
+* = $db40	;db40-d000/16=180 files
 lastpos
-* = $dbc2 ;188 files table (dbc2-dc7e)
+* = $db42 ;180 files table (db42-dbf6)
 flengde
 
 .else

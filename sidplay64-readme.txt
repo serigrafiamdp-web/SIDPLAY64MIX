@@ -1,10 +1,13 @@
 SIDPLAY64 V1.0.0 (c) GRG/SHAPE 2015
 ---------------------------------------------------------------
-Doc is work in progress. need to have some info on
-the new injector tool. 
+Welcome to this last? version of Sidplay64 (SP64).
+This time it includes a new songlength injector tool, that will
+make your SP64 browsing a even better experience.
+With modified sids you can listen to your favourite sids
+from start till end before it loads the next or random sid file.
 
+Don't panic! - This program will handle both modified and normal sids.
 
-Welcome to this latest version of Sidplay64 (SP64).
 
 About the program:
 ---------------------------------------------------------------
@@ -149,7 +152,7 @@ TIMER DECREASE  ----*---- TIMER INCREASE (NEXT/RANDOM)
 SP64INJECTOR.EXE:
 ---------------------------------------------------------------
 With this tool you can inject default songlengths into your sids.
-Place the sids you want into a dir with this tool.
+Place the sids you want to modify into a dir together with this tool.
 You also need a copy of the file \HVSC\C64Music\DOCUMENTS\Songlengths.txt
 to be present in the dir.
 Once all files are present, go to the dos shell and from the command line call:
@@ -160,7 +163,9 @@ If you want to include sub dirs you call:
 
 sp64injector.exe -s
 
-This way you can inject songlengths into the whole hvsc collection.
+This way you can also inject songlengths into the whole hvsc collection.
+BUT I suggest you keep a untoched backup of your hvsc collection, we don't 
+know what your pc/mac based sidplayers will think about modified sids.
 
 You can also add the -v flag (verbose mode) to see more details.
 
@@ -169,10 +174,12 @@ sp64injector.exe -v -s
 The injector will give error messages on sid files that is impossible to modify.
 Those sids will be 2sids or 3sids files.
 
-Sidplay64 has a new option to make use of the data you have injected into these sids.
+SP64 has a new option to make use of the data you have injected into these sids.
 And with it you can make a playlist of sids whith exact playing time for each sid.
 
-One warning though :  Only use modified sids with sidplay64.
+Only use these modified sids with SP64.
+Modified sids will play fine on all older versions of SP64, but the 
+injected songlengths will only be used by v1.00 and upwards.
 
 
 LOADING A SID FILE:
@@ -229,7 +236,7 @@ It uses the Command Interface. You need to enable that as well.
 Currently there are two bugs in the latest 1541u2 firmware (v2.6k):
 
 1. When USB drive is connected you first need to enter the USB directory with 
-   the U2 Browser or it will show up as a File in SidPlay64 instead of directory.
+   the U2 Browser or it will show up as a File in SP64 instead of directory.
 2. You can only go up to the Root of the U2 drive once and choose the SD Card or 
    USB directory, after that you cannot go completely up to the Root again.
 
@@ -271,7 +278,7 @@ You can browse directories.
 
 UNO2IEC (The Arduino Project):
 ------------------------------
-Doesn't work with sidplay64 at the moment.
+Doesn't work with SP64 at the moment.
 Possibly a bug in the iec implementation on the device ?
 
 
@@ -296,11 +303,11 @@ Unsupported sid files:
 
 Bugs:
 -----
-Many sid files are badly ripped and will crash or cause strange bugs on sidplay64.
+Many sid files are badly ripped and will crash or cause strange bugs on SP64.
 Reasons are many:
 
-* The sid header has no free relocation pages set. (sidplay64 will print "no memory")
-* The free relocation pages offered by the sid header is wrong and crashes sidplay64.
+* The sid header has no free relocation pages set. (SP64 will print "no memory")
+* The free relocation pages offered by the sid header is wrong and crashes SP64.
 * The sid will overwite other music data when selecting subtunes. (sidplay on pc load the file back from a buffer.)
 * The sid load to area at d000-e000.  That wont work on a stock c64 without a fastload cartridge. Or a custom software loader.
 * The sid overwrite irq and nmi vectors (fffa-ffff)
@@ -320,20 +327,24 @@ I shared the sources with him on gitlab and within 2 days we had a working beta.
 So kudos to him for his work.
 (I should buy one of those myself someday. (Edit: And I did))
 
+The sp64injector.exe was programmed by Tom-Cat.
+
 Also thanks to these people for help, ideas, bug testing:
 
-iAN CooG, Tom-Cat, Erhan, Ready, Fredric, Lemming
-And to anyone I might have forgotten.
+iAN CooG, Tom-Cat, Erhan, Ready, Fredric, Lemming,
+Everyone in Nostalgia and Shape.
+And to everybody we know.
 
 Also a big thanks to Whiteflame for sharing his 'random' routines on codebase.
 
 
-SIDPLAY 64 v.1.00 (xx/12/2015):
+SIDPLAY 64 v1.00 (14/12/2015):
 -------------------------------
 * Added:     Panic load for 1541u2 - some of the larger sids can now be loaded
-             and executed. No return to sidplay64 possible.
+             and executed. No return to SP64 possible.
 * Added:     "X" key to skip to next or random sid.
-* Fixed:     Some shortening of code have happened along the way.
+* Fixed:     Optimized 1541u2 loading/dir routines. Gained atleast $10 bytes!
+* Fixed:     Optimized some routines using illegal opcodes.
 * Added:     Windows program for injecting sids with correct songlengths.
 * Added:     Code to handle songlengths for injected sids.
 * Added:     Option to disable songlength info from injected sids.
@@ -388,7 +399,7 @@ SIDPLAY 64 v.07 (25/08/2011):
              Fixed a bug where SP64 code was relocated when loading a file with not enough
              relocation pages.
 
-SIDPLAY64 v.06 beta (01/01/2010):
+SIDPLAY 64 v.06 beta (01/01/2010):
 ----------------------------------
 * Corrected all text output, when loading sid files from PC dir, and when loading files over netdrive.
   No strange signs on screen now. ( ? )
@@ -407,10 +418,10 @@ SIDPLAY64 v.06 beta (01/01/2010):
   You can select things faster now.
 * Added a display number for number of files in dir.
 
-SIDPLAY64 v.05 beta (20/11/2009):
+SIDPLAY 64 v.05 beta (20/11/2009):
 ----------------------------------
 Added a long overdue IDE64 fix - Thanks to iAN COOG and Soci.
 
-SIDPLAY64 v.04 beta (23/12/2005):
+SIDPLAY 64 v.04 beta (23/12/2005):
 ----------------------------------
 First version that was released.
