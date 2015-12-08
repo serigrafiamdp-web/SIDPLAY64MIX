@@ -86,20 +86,17 @@ zerop		= pos_cursor
 maxfile		= $03	;Keeps track of # of files in memory
 gzp		= $04	;word
 rzp		= $06	;word
-;tzp		= $08	;word
+speedbit	= $08	;byte	- note : this zp is updated by dotunenumbers.tas and should not be zerofilled by "ciareset"
 ;--------------------------------------------------------------
 firstzp		= pos_cursor
-lastzp		= rzp+1
+lastzp		= speedbit;rzp+1
 
 zpBuffSize	= ( lastzp - firstzp) +1 ;9 end of zeropage address 
 
-zpclear		= zpBuffsize + 3	;$0008-$00ff
+zpclear		= zpBuffsize + 2	;$0009-$00ff
 
-;stackClear	= zpBuffSize + 1	- unused?
 ;--------------------------------------------------------------
-;zps in void: 08,09,0a,0b
-speedbit	= $08;tzp	;byte	- note : this zp is updated by dotunenumbers.tas and should not be zerofilled by "ciareset"
-			;       make it point to $08 when tzp has been removed/changed
+;zps 09,0a,0b  is not used anylonger
 
 
 ;-------- Safe Zeropages when restarting a tune (000c-0100 is zero filled during init)
@@ -110,8 +107,13 @@ bincount	= bin+2 ;|byte  - dotuneumbers.tas
 
 ;--------------- static memory adressing:
 fname		= $0200
-playBuf		= $d000		;d000-d007
-editBuf		= $d008		;d008-d00f
+playBuf		= $d000		;d000-d006
+editBuf		= $d007		;d007-d00d
+
+;Free IO bytes to be used:
+;$d00e
+;$d00f
+
 offs_cursor	= $d017		;Offset for filenames
 
 keydelay	= $d010
@@ -861,7 +863,6 @@ restartTune
 		lda #%00010001
 		sta $dc0e
 
-
 ;It's possible a tune uses the default timer A for a system
 ;to playback a song. If not the tune init will set it's own $dc04/$dc05 timer.
 
@@ -879,39 +880,26 @@ restartTune
 		ldx #$95        ;NTSC - default timer
 		ldy #$42
 fixdef
-unknown
-		stx $dc04
+unknown		stx $dc04
 		sty $dc05
-		
 nospeed
-
-
-
-
-
 		lda #$0f		;force volume because of bad hvsc rips where volume is lost
 		sta $d418		;when choosing a sub-tune.
 
 		ldx #zpBuffSize-1	;Buffer
-bp1		lda zerop,x
-		sta editbuf,x
-		lda playbuf,x
+bp1		lda zerop,x		;0002
+		sta editbuf,x		;d008
+		lda playbuf,x		;d000
 		sta zerop,x
 		dex
 		bpl bp1
 					;RSID check:
 		lda playmus+1		;Check if playcallplay
-		ora playmus+2		;= $0000 ?
-		bne ownirq
-              				;yes
-              				;Does PC sidplay assume zp $01 to be 37 ?
-
-		;lda #$36		;Ram 0000-D000
-		;sta $01
-		;Maybe we should reset all io registers to default here		
-		;jsr wjs_resetCia
-		;LDA #$11
-		;STA $DC0E
+		ora playmus+2		;$0000 = no
+		bne ownirq		
+              				;this song is played using own interrupt handler
+;Does PC sidplay assume zp $01 to be 37 ?
+;Maybe we should reset all io registers to default here		
               				
 		lda #$1b		;Screen on
 		sta $d011
@@ -924,27 +912,23 @@ bp1		lda zerop,x
 .fi				
 		tay
 		jsr initmus		;This will normally set zeropage $01 to 35,36 or 37
-waitk		;ldx #$7f		;saves 2 bytes - 
-		ldx #0			;cbm keyscan also works with 0
+waitk		ldx #0			;ldx #$7f - cbm keyscan also works with 0
 		stx $dc00
 		lda $dc01
 		cmp #$df
 		bne waitk
-
 		sei	
-		;ldx #0
 		stx $dd0e		;Disable NMI timer A interrupt - These interrupts must be disabled here	
 		stx $dd0f		;Disable NMI timer B interrupt
 		stx $d020		;black screen
-		
 		lda #$35		;
 		sta $01
 		
 		ldx #zpBuffSize-1
-bp5		lda zerop,x
-		sta playbuf,x
-		lda editbuf,x
-		sta zerop,x
+bp5		lda zerop,x		;0002
+		sta playbuf,x		;d000
+		lda editbuf,x		;d008
+		sta zerop,x		;0002
 		dex
 		bpl bp5
 		jsr wjs_resetCia		;restores 0300-0332 and fffa-fffe
