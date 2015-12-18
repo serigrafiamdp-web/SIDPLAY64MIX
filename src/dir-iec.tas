@@ -136,9 +136,10 @@ adir		lda #$80		;dir
 .fi
 		
 fn_endloop2
-		asl zerofile		;set CLC - dont allow zerofiles.
+		lda zerofile
 		beq bci
 		lda dzp
+		clc
 		adc #$10
 		sta dzp
 		bcc +
