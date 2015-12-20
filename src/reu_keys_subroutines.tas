@@ -10,10 +10,11 @@
 ;	Line up:
 ;--------------------------------------------------------------
 reu_crsr_up	
-		lda fcountlo
+		lax fcountlo
 		ora fcounthi
 		beq torts			;zero ? then do nothing
-		lda fcountlo
+		;lda fcountlo
+		txa
 		bne +
 		dec fcounthi
 +		dec fcountlo
@@ -21,9 +22,7 @@ reu_crsr_up
 		beq +
 		dec pos_cursor
 torts		rts
-+		jsr sbc_reu_file_position
-		jmp get_reu_dir			;i/o
-
++		jmp sbc_reu_file_position		;jmp get_reu_dir
 
 ;--------------------------------------------------------------
 ;	Line down:
@@ -63,30 +62,30 @@ reu_crsr_left
 		dec fcounthi
 +		rts		
 
-ton		lda fcountlo
+ton		lax fcountlo
 		ora fcounthi
 		bne +
 		rts			;at top of directory
 		
 +		ldy fcounthi		;0 ? 
 		bne tdp			
-		lda fcountlo
-		cmp #maxDirY		;check fcountlo in 0-15
+		;lda fcountlo
+		;cmp #maxDirY		;check fcountlo in 0-15
+		cpx #maxDirY		;check fcountlo in 0-15
 		bcs tdp
 		sty fcountlo		;y=0
 		sty pos_cursor
 		jsr zero_reu_datadr 	;display reu dir from start
 		jmp get_reu_dir		;i/o
 
-tdp		lda fcountlo
+tdp		;lda fcountlo
+		txa
 		sec
 		sbc #maxDirY		;#maxDirY
 		sta fcountlo
 		bcs +
 		dec fcounthi
-+
-		jsr sbc_reu_page_position
-		jmp get_reu_dir		;i/o
++		jmp sbc_reu_page_position	;jmp get_reu_dir
 
 ;--------------------------------------------------------------
 ;	Page Down:
@@ -156,42 +155,44 @@ tq		lda maxfile
 ; Move reu position by one (1) file entry upwards
 ;--------------------------------------------------------------
 sbc_reu_file_position
-		sec
 		lda reu_datadr_lo
-		sbc #<filename_entry_size
+		sec
+		sbc #<filename_entry_size				
 		sta reu_datadr_lo
-		lda reu_datadr_hi
-		sbc #>filename_entry_size
-		sta reu_datadr_hi
+		lda reu_datadr_hi		
+		sbc #>filename_entry_size		
+sbrfp		sta reu_datadr_hi
 		bcs +
 		dec reu_datadr_bank
-+		rts
++		jmp get_reu_dir
 
 ;--------------------------------------------------------------
 ; Move reu position by one (1) dir page upwards (15 files)
 ;--------------------------------------------------------------
 sbc_reu_page_position
-		sec
 		lda reu_datadr_lo
+		sec		
 		sbc #<dirsize
 		sta reu_datadr_lo
-		lda reu_datadr_hi
-		sbc #>dirsize
-		sta reu_datadr_hi
-		bcs +
-		dec reu_datadr_bank
-+		rts
+		lda reu_datadr_hi		
+		sbc #>dirsize		
+		jmp sbrfp
+;		sta reu_datadr_hi
+;		bcs +
+;		dec reu_datadr_bank
+;+		rts
 
 ;--------------------------------------------------------------
 ; Move reu position by one (1) file entry downwards
 ;--------------------------------------------------------------
 adc_reu_file_position		
 		lda #<filename_entry_size
-		clc			;Adjust table to keep track of next available adrees in reu
+		ldx #>filename_entry_size		
+adcrpp		clc				;Adjust table to keep track of next available adress in reu
 		adc reu_datadr_lo
 		sta reu_datadr_lo
-		lda #>filename_entry_size
-		adc reu_datadr_hi
+		txa
+arfp		adc reu_datadr_hi
 		sta reu_datadr_hi
 		bcc +
 		inc reu_datadr_bank
@@ -201,16 +202,19 @@ adc_reu_file_position
 ; Move reu position by one (1) dir page downwards (15 files)
 ;--------------------------------------------------------------
 adc_reu_page_position
-		lda #<dirsize
-		clc			;Adjust table to keep track of next available adrees in reu
-		adc reu_datadr_lo
-		sta reu_datadr_lo
-		lda #>dirsize
-		adc reu_datadr_hi
-		sta reu_datadr_hi
-		bcc +
-		inc reu_datadr_bank
-+		rts
+		ldx #>dirsize		;high
+		lda #<dirsize		;low  a > 0
+		bne adcrpp
+		;clc			;Adjust table to keep track of next available adrees in reu
+		;adc reu_datadr_lo
+		;sta reu_datadr_lo
+		;lda #>dirsize
+		;jmp arfp
+;		adc reu_datadr_hi
+;		sta reu_datadr_hi
+;		bcc +
+;		inc reu_datadr_bank
+;+		rts
 
 
 ;--------------------------------------------------------------
@@ -220,7 +224,7 @@ prepare_loading_new_reu_dir
 		;lda #dir_keys		;only a few keys available while loading dir
 		lda #no_keys		;no keys when loading dir
 		sta numb
-		lda #>dir_main
+		lda #>dir_main		;$d000
 		sta dzp+1
 		sta c64memhi
 
@@ -256,46 +260,53 @@ zero_reu_datadr	lda #0
 		rts
 
 
-;--------------------------------------------------------------
-; Called by dir fetch routine:
-;--------------------------------------------------------------
+;-------------------------------------------------------------------
+; These two routines are called by kernal/u2 directory read routines:
+;-------------------------------------------------------------------
 write_reu_dir_entry
 		lda #maxDirY
 		sta filecounter
-		lda #<dir_temp
+		lda #<dir_temp			;$d3c0
 		sta dzp
 		lda #>dir_temp
 		sta dzp+1
 
 write_reu_dir_entry2
 		lda #%10000000|c642reu
-		sta reu_comm
-		jsr wjs_exe_reucomm		;first time we transfer from "dir_main"
-		lda #>dir_temp			;next dir page we transfer from "dir_temp"
+		;sta reu_comm
+		;jsr wjs_exe_reucomm		;first time we transfer from "dir_main"
+		jsr store_reu_dir
+		lda #>dir_temp			;$d3c0 - next dir page we transfer from "dir_temp"
 		sta c64memhi
 		lda #<dir_temp
 		sta c64memlo	
-		jmp adc_reu_page_position
+		jmp adc_reu_page_position	;Note: not followed by a jmp get_reu_dir 
 
 
 ;--------------------------------------------------------------
 ; Jumped to by routines above, updates main dir memory:
 ;--------------------------------------------------------------
 get_reu_dir
-		lda #%10000000|reu2c64
-		sta reu_comm
-		lda #>dir_main
+		lda #>dir_main			;$d000
 		sta c64memhi
 		lda #<dir_main
 		sta c64memlo
+		lda #%10000000|reu2c64
+store_reu_dir	sta reu_comm
+
+		ldy #10
+-		lda reu_comm-1,y
+		pha
+		dey
+		bne -
+		ldx $01				;zp $01 = 38/34
+		lda #$35			;zp $01 = 35
 		jmp wjs_exe_reucomm
 
 
 
-
-
 ;--------------------------------------------------------------
-; Variables: Remember Zp $01 must be $38 or $34
+; Variables: Remember Zp $01 must be $38 or $34 
 ;--------------------------------------------------------------
 
 fcountlo	.byte 0

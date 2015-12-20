@@ -60,7 +60,7 @@ dir_back		;A=80 for going back a dir on 1541u2
 		lda #'.'
 		sta U2_Command_data_register
 		sta U2_Command_data_register
-		bne endcd
+		bne endcd		;JMP
 
 gotodiru2
 ; go to selected dir here

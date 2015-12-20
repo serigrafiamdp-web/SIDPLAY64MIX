@@ -10,36 +10,31 @@
 ;
 ;zp $01 is always 38 or 34 when caling this :
 
-;execute_reu_command
+;wjs_exe_reucomm - execute_reu_command 
 
 
-		ldx $01			;38 (34)
+
 		
-		ldy #10
--		lda reu_comm-1,y
-		pha
-		dey
-		bne -
+;		ldy #10			;this part is now at d000-e000
+;-		lda reu_comm-1,y
+;		pha
+;		dey
+;		bne -
+;		ldx $01			;38/34 ?
+;		lda #$35		;35
 		
-		lda #$35
-		sta $01
-
+		sta $01			;35
 -		pla
 		sta REU_command,y
 		iny
 		cpy #10
 		bne -
-
-		dec $01			;34 all RAM available
-		;ldx #$38
-		;stx $01			;38	;all RAM available
-		lda $ff00			;Read and ...
-		sta $ff00			;.. write to execute DMA transfer
-		;lda #$36
-		;sta $01			;36
+		dec $01			;34 - all RAM available
+		lda $ff00		;Read and ...
+		sta $ff00		;.. write to execute DMA transfer
 		inc $01			;35
 		lda REU_status
-		stx $01			;38 (34)
+		stx $01			;38/34 ?
 		rts
 
 		
@@ -58,5 +53,3 @@
 +               
 .fi
 .endc
-
-

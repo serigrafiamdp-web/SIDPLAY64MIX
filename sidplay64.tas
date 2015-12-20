@@ -1308,16 +1308,16 @@ errormsg	sei			;sei only present in versions using kernal loader calls
 resetCia
 ;IMPORTANT Must not use Y register here:
 ;Y must fall through untouched
-.include src/cia_reset3.tas
+.include src/cia_reset3.tas		;called via stack jmp/jsr table
 
 .if def_1541u2cmd
 wait_while_busy
-.include src/wait_1541u2cmd.tas
+.include src/wait_1541u2cmd.tas		;called via stack jmp/jsr table
 .fi
 
 .if DEF_REU
 execute_reu_command
-.include src/reu_io.tas
+.include src/reu_io.tas			;called via stack jmp/jsr table
 .fi
 
 
@@ -1334,7 +1334,8 @@ dirpos
 
 ;--------------------------------------------------------------
 .if DEF_REU
-		* = $d800
+;in reu versions there are two dir pages at d000 and d3c0
+		* = $d780
 	.include "src/reu_keys_subroutines.tas"
 getreuadress	
 	.include "src/reu_numbers.tas"

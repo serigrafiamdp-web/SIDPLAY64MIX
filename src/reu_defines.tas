@@ -1,9 +1,9 @@
 ;--------------------------------------------------------------
 
-dirsize			= 15 * $40	;15 files  
-filename_entry_size	= $40		;
-dir_main			= $d000		;location for visible dir page in c64 mem
-dir_temp			= $d400		;new loaded filenames to be moved to reu
+filename_entry_size	= $40				;
+dirsize			= 15 * filename_entry_size	;15 files with $40 characters per filename
+dir_main		= $d000				;page location for visible dir page in c64 mem
+dir_temp		= dir_main+dirsize		;($d3c0) page location of new loaded filenames to be moved to reu
 
 ;------------------- REU REGISTERS ----------------------------
 
