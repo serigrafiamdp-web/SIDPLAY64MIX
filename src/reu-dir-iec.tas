@@ -46,7 +46,7 @@ skip2		bne skip_header
 					;Y=0
 		txa			;lsb 0 blocks ?
 goof		sta zerofile		;both 0 blocks ? then zero
-
+		
 -		JSR wjs_getbyte
 		cmp #$22		;" wait for start of filename
 		bne -
@@ -69,7 +69,7 @@ getfname	sta (dzp),y		;store letter
 		txa
 		bne +			;filename length unchanged and still zero ?
 		tya			;yes, then we have a long filename and force it to $11
-+		ldy #filename_entry_size-1
++		ldy #filename_entry_typelen
 		sta (dzp),y
 	
 
@@ -96,14 +96,14 @@ found_d64	dex
 		lda #$c0		;d64
 		.byte $2c
 adir		lda #$80		;dir
-		;ldy #filename_entry_size-1
+		;ldy #filename_entry_typelen
 		ora (dzp),y
 		sta (dzp),y
 		bne fn_endloop		;jmp
 
 
 .else		
-		;ldy #filename_entry_size-1
+		;ldy #filename_entry_typelen
 		lda (dzp),y		
 		ora #$80		;Change file length to + $80 for DIR
 		sta (dzp),y
@@ -111,25 +111,7 @@ adir		lda #$80		;dir
 .fi
 		
 fn_endloop2
-		lda zerofile		;dont allow zerofiles
-		beq bci
-		
-		inc maxfile
-		bne +
-		inc maxfilehi
-+
-		lda dzp
-		clc
-		adc #filename_entry_size
-		sta dzp
-		bcc +
-		inc dzp+1
-+
-		dec filecounter
-		bne bci
-		jsr write_reu_dir_entry
-		;jsr adc_reu_page_position
-bci
+		jsr check_addfile_entry	;static rom d000-e000
 ;		lda #$36
 ;		sta $01
 		jsr wjs_display		;displayFiles+read keyboard
@@ -164,8 +146,12 @@ getByte
 ;---------Finished reading directory--------
 endofdir	
 		jsr write_reu_dir_entry2
-		;jsr adc_reu_page_position
 		jsr zero_reu_datadr
+
+.if def_remember_dir
+		jsr get_dir_pos
+.fi
+
 		
 ;		lda maxfile		;we dont sort 1 file
 ;		cmp #2			;must be 2 or more

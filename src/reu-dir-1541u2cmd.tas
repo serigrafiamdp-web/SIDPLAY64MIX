@@ -52,7 +52,9 @@ nextdirentry
 ;		lda U2_Status_register          ; any data left to process int this packet ?
 ;		bpl skipfile
 		lda U2_Response_data_register   ; attribute byte
-		sta header
+		and #_DA_DIR			; $10
+		php				;zeroflag = 1 - means the entry is a file
+						;zeroflag = 0 - means the entry is a dir
 
 nextchar
 		lda U2_Status_register          ; any data left to process int this packet ?
@@ -63,13 +65,13 @@ nextchar
 		sta (dzp),y			;store filename
 		inc $01				;35
 		iny
-		cpy #filename_entry_size-1
+		cpy #filename_entry_typelen
 		bne nextchar
 		
 nomorechars	dec $01				;34
 		tya
-		tax
--		cpy #filename_entry_size-1
+		tax				;filename/dirname length
+-		cpy #filename_entry_typelen
 		beq dontfill
 		lda #$20			;spaceclear the remaining filename entry area
 		sta (dzp),y
@@ -77,17 +79,10 @@ nomorechars	dec $01				;34
 		bne -
 dontfill
 		txa
-		;ldy #filename_entry_size-1	;y is set above
-		sta (dzp),y			;store filename length
-
-		lda header
-		and #_DA_DIR
-		beq notdir
-		txa
-		ora #$80		
-		sta (dzp),y			;store dirname length
-notdir
-
+		plp
+		beq notdir			;branches when zflag = 1
+		ora #$80			;mark entry as a Directory
+notdir		sta (dzp),y			;store filename/dirname length
 
 		inc maxfile
 		bne +
@@ -122,6 +117,12 @@ skipfile
 		dec $01				;34
 		jsr write_reu_dir_entry2
 		jsr zero_reu_datadr
+		
+
+.if def_remember_dir
+		jsr get_dir_pos
+.fi
+		
 		lda #$36
 		sta $01
 

@@ -1,9 +1,11 @@
 Things to check for:
 
+* 22.12.2015:
+  on 1541u2 when entering a directory that has only 1 sid file, the screen says "no files present"
+  if you press enter, the program will load and run that file.
+  example: HVSC\Musicians\G\Gray_Matt\Worktunes\
+  
 * When loading dir on 1541u2 version it would be nice to see the file counter increase.
-
-* sid with song numbers 10 or highes doest not clear last numbers with space when going down to song number 1-9.
-  Check any sid that has 10 or more subsongs.
 
 * Scrolling down while reading REU dir messes up dir entries. disabled but possible to fix it someday.
 

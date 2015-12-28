@@ -1,5 +1,5 @@
 ;--------------------------------------------------------------
-;         SIDPLAY 64 V1.00
+;         SIDPLAY 64 V1.01
 ;--------------------------------------------------------------
 ;         Programmed by:
 ;         Glenn Rune Gallefoss / SHAPE / Nostalgia (2005-2015)
@@ -20,6 +20,8 @@ def_currentdate	= 1	;1 = include current date and clock in setup
 def_illegal	= 1	;1 = use illegal opcodes
 def_colorselect	= 1	;use 1, 0 = for debugging new colors.
 def_attractmode = 2	;0 = no attract mode, 1= basic attract mode, 2 = smooth attract mode
+;--------------------------------------------------------------
+def_remember_DIR = 1	; This option is only for the REU versions of 1541u2 and iec,cmd & ide64 drives
 ;--------------------------------------------------------------
 ;compile like this:
 ;64tass --m6502 -D defset=1 -a sidplay64.tas -o sidplay64-normal.o64
@@ -1336,6 +1338,7 @@ dirpos
 .if DEF_REU
 ;in reu versions there are two dir pages at d000 and d3c0
 		* = $d780
+
 	.include "src/reu_keys_subroutines.tas"
 getreuadress	
 	.include "src/reu_numbers.tas"
@@ -1343,6 +1346,27 @@ getpos
 	.include "src/reu_filename_address.tas"
 getrandom
 	.include "src/reu_random.tas"
+
+check_addfile_entry
+	.if def_1541u2cmd
+		;.include src/reu-dir-1541u2cmd-addfilentry.tas	;nothing yet - cmd interface doesnt return filesize
+	.fi
+	.if def_iec
+    		.include src/reu-dir-iec-addfileentry.tas	;iec, cmd, ide64 ++
+	.else		
+    		;.include 					;serial 1541 + clones - nothing here yet
+	.fi		
+
+
+	.if def_remember_DIR
+	.include "src/reu_remember_dir_position.tas"
+	;note: data is written,x here:
+	.fi	
+
+
+	
+
+	
 .fi
 
 ;--------------------------------------------------------------
@@ -1486,8 +1510,12 @@ my02a6		lda #0		;Restore pal/ntsc flag wiht its real value
   
   .if def_iec + def_1541u2cmd
 iec_fileinfo  
-  .include "src/reu_iec_fileinfo.tas"	;used by src/reu_displayfiles.tas
+  .include "src/reu_iec_fileinfo.tas"		;used by src/reu_displayfiles.tas
+  .else
+normal_fileinfo
+  .include "src/reu_normal_fileinfo.tas"	;used by src/reu_displayfiles.tas
   .fi
+  
 .else
 
 ;--------------------------------------------------------------

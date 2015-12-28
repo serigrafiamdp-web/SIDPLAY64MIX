@@ -1,7 +1,19 @@
+;--------------------------------------------------------------
+; 1541U2 REU - LOAD file / Change Dir
+;--------------------------------------------------------------
 
-		tya
+;zp $01 = 36 when we enter here:
+
+		jsr wait_for_idle		;X+Y free
+		lda #$01
+		sta U2_Command_data_register
+
+		lda #$34
+		sta $01
+
+		tya			;y=0 goes back a dir
 		bne u2notback
-		lda #$80
+		lda #$80		;a=80
 		bne dir_back
 u2notback
 				;89abcde
@@ -10,14 +22,11 @@ u2notback
 		lda screenpos
 		sta gzp+1
 
-		lda #$38
-		sta $01
-
 		jsr getpos		;location of filename 
 		sta rzp			;lo adress
 		stx rzp+1		;hi adress
 		
-		ldy #filename_entry_size-1	;filname length		
+		ldy #filename_entry_typelen	;filname length		
 		;ldy #$10
 		lda #$2a		;"*" wildcard
 		.byte $2c		;falls through
@@ -34,83 +43,95 @@ setwildc
 		dey
 		bpl plaz
 
-		ldy #filename_entry_size-1	;filname length
-		lda (rzp),y			;A - falls through to setfname below
+		ldy #filename_entry_typelen	;filname length
+		lda (rzp),y			;a = length of filename/dirname - falls through to setfname below
 		
-		ldx #$36
-		stx $01
 
 ;A = file length 1-$3e for files or 81-$be for dirs
+;A = 80 for going back a dir on 1541u2
+;---------------------------------------------------
+dir_back
 
-dir_back		;A=80 for going back a dir on 1541u2
-		tay	;sta header
+		ldx #$36
+.if !def_remember_DIR
+		stx $01
+.fi
+
+		;tay	;a = length of filename/dirname 
+		;tya	;a = length of filename/dirname 
 		
-		jsr wait_for_idle	;X+Y free
-		lda #$01
-		sta U2_Command_data_register
-
-		tya	;lda header
 		asl			;get rid of bit 7 & set CLC
 		bcc loadfile
 		lsr			;return bits 0-6 to original state
 		bne gotodiru2
-;go one dir up here
+		
+;go one dir level up here ("cd:..")
+.if def_remember_DIR
+		jsr check_upper_dir_limit	;AY=used
+		inc $01				;35
+.fi		
 		lda #$11
 		sta U2_Command_data_register
 		lda #'.'
 		sta U2_Command_data_register
 		sta U2_Command_data_register
-		bne endcd		;JMP
+		bne endcd			;JMP
 
 gotodiru2
 ; go to selected dir here
-		tax ;sta header
 	
-		lda plt_flag
-		cmp #2			;2=manual
+		ldy plt_flag
+		cpy #2				;2=manual
 		bne file_error2
+		
+		tax				;a = length of dirname
 
+.if def_remember_DIR
+		jsr remember_dir_pos		;A+Y used
+		inc $01				;35
+.fi		
 		lda #$11
 		sta U2_Command_data_register
 		ldy #$00
 -		lda fname,y
 		sta U2_Command_data_register
 		iny
-		dex	;cpy header
-		bne -	;bne -
-		
+		dex				;length of dirname=-1 
+		bne -
 		lda #'*'
 		sta U2_Command_data_register
-endcd        
+endcd						;jmp from above
 		lda #_PUSH_CMD
 		sta U2_Control_register
-
 		jsr wjs_wait_while_busy		
-
 		lda #_DATA_ACC
 		sta U2_Control_register
-
-		jmp (wjp_dirselector)
+		jmp (wjp_dirselector)		;calls ciaReset and zp$01=36
 
 file_error2
 		bne file_error
 
 
 loadfile
-		
 
+.if def_remember_DIR
+		stx $01				;36
+.fi
+		
 ;Load sid header
 
 		lsr
-		tax 	;sta header
+		tax 				;a = length of filename
 ;		jsr wait_for_idle		
 ;		lda #$01
 ;		sta U2_Command_data_register		; this is already done before
-		lda #_DOS_CMD_OPEN_FILE
-		sta U2_Command_data_register
-		lda #_FA_READ
-		sta U2_Command_data_register
-		ldy #$00
+		ldy #_DOS_CMD_OPEN_FILE			;_DOS_CMD_OPEN_FILE	= $02
+		sty U2_Command_data_register
+		;lda #_FA_READ				;_FA_READ		= $01
+		dey					;$01
+		sty U2_Command_data_register
+		dey					;$00
+		;ldy #$00
 		sty $d011				; turn off screen
 -		lda fname,y
 		sta U2_Command_data_register
@@ -119,26 +140,26 @@ loadfile
 		bne -	;bne -
 		lda #'*'
 		sta U2_Command_data_register
-		lda #_PUSH_CMD
+		lda #_PUSH_CMD				;_PUSH_CMD	= $01
 		sta U2_Control_register
 		jsr wjs_wait_while_busy		
 		
-		jsr get_status			;uses zp to display text
+		jsr get_status				;AY=used, X=unused, uses zp to display text
 		
-		lda #_DATA_ACC                  ; Go to next packet, if any
+		lda #_DATA_ACC                  	;_DATA_ACC	= $02  Go to next packet, if any
 		sta U2_Control_register
 
-		jsr wait_for_idle
+		jsr wait_for_idle			;A=used
 
 		ldy #$01
 		sty U2_Command_data_register
-		lda #_DOS_CMD_READ_DATA
+		lda #_DOS_CMD_READ_DATA			;_DOS_CMD_READ_DATA	= $04
 		sta U2_Command_data_register
 		lda #$7e
 		sta U2_Command_data_register	;7e read $007e bytes
 		dey
 		sty U2_Command_data_register	;00
-		lda #_PUSH_CMD
+		lda #_PUSH_CMD				;_PUSH_CMD = $01
 		sta U2_Control_register
 
 ;		ldy #0

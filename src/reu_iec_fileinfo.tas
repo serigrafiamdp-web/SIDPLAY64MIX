@@ -9,51 +9,74 @@
 
 ;dir entry number in hex
 
-		ldy #filename_entry_size-1
+		ldy #filename_entry_typelen
 		lda (rzp),y			;file length
 		bpl normalfiles
 .if def_1541u_long
 		asl
 		bmi dd64
 .fi		
-				
-		lda #"d"
-		sta setd+1
-		ldx #"i"
-		lda #"r"
+
+		lda #"i"		;idr = dir
+		ldx #"d"
+		ldy #"r"		;"dir"		
 		bne prnt
 
 .if def_1541u_long
 dd64
-		lda #"d"
-		sta setd+1
-		ldx #"6"
-		lda #"4"
+		lda #"6"		;6d4 = d64
+		ldx #"d"
+		ldy #"4"		;"d64"		
 		bne prnt
 .fi
-		
-normalfiles	
+	
+normalfiles
+		iny			;ldy #filename_entry_kbsize
+		lda (rzp),y
+		bne okfile
+;here when file is larger than 255 blocks
 		lda #$20		;space
 		tax			;space
-		sta setd+1		;space
+		tay			;space
+		bne prnt		;jmp
 		
-		;inx			;start with+1
-		;txa
-		;jsr gethexnum		;convert to A and X
-		;ldy #$3a
-		;sty setd+1
-		
-prnt		
+okfile
+;a should always be 0-63
+		sec			;|could be done in dir read routine.
+		sbc #100		;|
+		ldx #$3a
+-		dex
+		adc #10
+		bmi -
+		adc #$2f
+;a = ones
+;x = tens
+
+		cpx #$30
+		bne +
+		ldx #$20		;tens "0" to spacebar
++		
+		ldy #"k"		;k for kilobyte
+	
+prnt		sty setd+1
+
 .if def_1541u2cmd
-		ldy #$19
-.else
-		ldy #$14
-.fi
+;1541u2 got a bigger display window
+		ldy #$18		;18
 		sta (gzp),y		;print A
-		dey
+		dey			;17
 		txa
 		sta (gzp),y		;print X
-		dey
+		ldy #$19		;19
+.else
+		ldy #$13		;13
+		sta (gzp),y		;print A	- k
+		dey			;12
+		txa
+		sta (gzp),y		;print X
+		ldy #$14		;14
+.fi
+
 setd		lda #$3a		;":"
 		sta (gzp),y
 		rts		

@@ -1,3 +1,10 @@
+;--------------------------------------------------------------
+; REU - get reu adress
+;--------------------------------------------------------------
+;	* static subroutines
+;	* location: d000-e000
+;--------------------------------------------------------------
+;calculate reu address for 16 bit input number (a,x)
 ;--- a = high filenumber
 ;--- x = low filenumer
 

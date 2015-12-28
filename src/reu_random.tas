@@ -1,3 +1,10 @@
+;--------------------------------------------------------------
+; REU RANDOM routine
+;--------------------------------------------------------------
+;	* static subroutines
+;	* location: d000-e000
+;--------------------------------------------------------------
+
 
 ;plt_random
 
@@ -39,6 +46,7 @@ newrand2	jsr get_random_16bit
 		bcs newrand2
 		
 
+;this position is also called by the "remember dir" routine in "reu_remember_dir_position.tas"
 contt
 
 		
@@ -89,16 +97,6 @@ contt
 		bne -
 hh		sty pos_cursor
 
-;		lda maxfile
-;		sec
-;		sbc valuelo
-;		sta fcountlo	;temp store
-;		lda maxfile
-;		sec
-;		sbc fcountlo
-;		sta pos_cursor
-	
-
 		lda valuelo
 		sta fcountlo
 		lda valuehi
@@ -106,9 +104,8 @@ hh		sty pos_cursor
 		lda tmphi
 		ldx tmplo
 		jmp getlastpage
-+
-
 		
++
 		lda valuelo
 		sta fcountlo
 		sec
@@ -126,50 +123,12 @@ slsb
 		ldx valuelo
 
 getlastpage
-		jsr getreuadress
+		jsr getreuadress		;see reu_numbers.tas
 		sta reu_datadr_lo
 		stx reu_datadr_hi
 		sty reu_datadr_bank
-		jmp get_reu_dir		;i/o
+		jmp get_reu_dir			;i/o
 		
-	
-	
-
-.comment
-;--- a = high filenumber
-;--- x = low filenumer
-zlo	= $fa
-zhi	= $fb
-zbank	= $fc
-
-getreuadress
-
-loop
-		sta zhi
-		lsr		;When hi is 0,4,8,c,10...
-		lsr
-		sta zbank	;zbank change bank to 0,1,2,3,4...
-		txa		;fcountlo, seed, lo value
-		asl
-		rol zhi		;*2
-		asl
-		rol zhi		;*4
-		asl
-		rol zhi		;*8
-		asl
-		rol zhi		;*$10
-		asl
-		rol zhi		;*$20
-		asl
-		rol zhi		;*$40
-				;returns
-		sta zlo		;a = lo
-		ldx zhi		;x = hi
-		ldy zbank	;y = bank
-		rts
-.endc
-
-
 
 get_random_16bit
 ;16 bit random over 0000-ffff by Whiteflame

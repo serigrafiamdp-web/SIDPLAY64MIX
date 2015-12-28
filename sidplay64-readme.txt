@@ -1,4 +1,4 @@
-SIDPLAY64 V1.0.0
+SIDPLAY64 V1.0.1
 ---------------------------------------------------------------
 Welcome to this lastest version of Sidplay64 (SP64).
 This time it includes a new song length injector tool, that will
@@ -225,9 +225,14 @@ Commodore manufactured 3 reu versions, with memory sizes of 128kb, 256kb and 512
 Creative Micro Design (CMD) produced 512kb and 2mb versions, named 1750 XXL.
 Chip Level Designs' (CLD) Superclone 1750 has 512kb of memory.
 
-
 A 512kb re will give you access to 4096 filenames per directory. 
 The 256kb one will have space for 2048 filenames per directory.
+
+A little note about IEC builds:
+The REU versions does not support dir sorting to the top. 
+If you want your directories to appear at the top you have to 
+create directories first, and then you add the files last.
+(This should happen automatically if you copy and paste the HVSC dir?)
 
 
 1541 Ultimate II Command Interface:
@@ -273,7 +278,6 @@ SD2IEC:
 -------
 You can browse directories, and you can open
 the the following disk images : .d64, .d71, .d81 and .dnp
-
 
 IEC(UIEC/IEC-ATA/IEC2ATA)/CMD FD/CMD HD/CMD RAMLINK/IDE64(+PClink):
 -------------------------------------------------------------------
@@ -346,6 +350,13 @@ Credits:
 --------
 Programming by: Glenn R. Gallefoss
 Additional programming by: Tom-Cat
+
+
+SIDPLAY 64 v1.01 (xx/xx/2016):
+-------------------------------
+* Added:     REU: Remembers previous dir positions when you go back.
+* Added:     REU: File size are displayed in kilobytes. (Not for 1541u2)
+* Fixed:     1541U2: shortened dir read routine.
 
 
 SIDPLAY 64 v1.00 (13/12/2015):

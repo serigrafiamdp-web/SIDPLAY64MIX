@@ -7,39 +7,19 @@
 ;--------------------------------------------------------------
 		cmp #$a4		;1541 ultimate uses $a4 for underscore
 		beq underscore		;
-		
-;		and #$7f		;
 		cmp #$7f		;Underscore from browsing dirs with vice
 		beq underscore
-		
 		cmp #$5f		;PC underscore is "_" 5f
-;		bcc nope            
 		beq underscore
+    		cmp #$61
+		bcc notlower
+		cmp #$7b
+		bcs notlower
+		and #%00011111
+notlower	rts
 
-;        cmp #$41
-;        bcc notupper
-;        cmp #$5b
-;        bcs notupper
-
-;        and #%00111111
-;        rts
-        
-;notupper
-        cmp #$61
-        bcc notlower
-        cmp #$7b
-        bcs notlower
-
-        and #%00011111
-notlower
-        rts
-        
-
-;		eor #$20	;letter 60-7e converted to 40-5e
-;		.byte $2c
 underscore	lda #$64	;C64 version of the underscore sign
-nope            
-		rts                 
+nope            rts                 
 
 
 ;ASCII:

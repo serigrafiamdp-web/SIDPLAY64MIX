@@ -97,7 +97,7 @@ tt
 		ldx #$80
 tu		stx eorzp
 
-		dey	;ldy #$17
+		ldy #$16	;dey	;ldy #$17
 	
 tv 		lda (rzp),y		;Filename(s)
 		jsr convert_letter	;convert ascii to petscii

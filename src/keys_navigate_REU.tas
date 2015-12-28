@@ -27,6 +27,9 @@ key3		cpy #keyCrsrRight
 		
 key4		cpy #keySpace		;"SPACE"
 		bne key5
+.if def_remember_DIR
+		jsr zero_dir_pos
+.fi
 ingenfil	pla
 		pla
 		jsr wjs_resetCia	;zp $01 = 36

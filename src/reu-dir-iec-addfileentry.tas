@@ -1,0 +1,35 @@
+;--------------------------------------------------------------
+; REU IEC - Add file entry
+;--------------------------------------------------------------
+;	* static subroutines
+;	* location: d000-e000
+;--------------------------------------------------------------
+;only called from reu-dir-ie.tas
+
+;
+;check_addfile_entry
+;
+		lda zerofile		;dont allow zerofiles
+		beq bci
+		iny 			;ldy #filename_entry_kbsize
+		lsr
+		lsr			;size in hex kilobyte   (translation to decimal is done in displayfiles)
+		bne +
+		lda #1			;force 1 kb
++		sta (dzp),y		
+		
+		inc maxfile
+		bne +
+		inc maxfilehi
++
+		lda dzp
+		clc
+		adc #filename_entry_size
+		sta dzp
+		bcc +
+		inc dzp+1
++
+		dec filecounter
+		bne bci
+		jmp write_reu_dir_entry
+bci		rts

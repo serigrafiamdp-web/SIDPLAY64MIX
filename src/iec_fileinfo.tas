@@ -16,34 +16,25 @@
 		asl
 		bmi dd64
 .fi		
-				
-		lda #"d"
-		sta setd+1
-		ldx #"i"
+		ldy #"d"
+		ldx #"i"		;"DIR"
 		lda #"r"
 		bne prnt
 
 .if def_1541u_long
 dd64
-		lda #"d"
-		sta setd+1
-		ldx #"6"
+		ldy #"d"
+		ldx #"6"		;"D64"
 		lda #"4"
 		bne prnt
 .fi
 		
-normalfiles	
-		lda #$20		;space
+normalfiles	lda #$20		;space
 		tax			;space
-		sta setd+1		;space
+		tay			;space
 		
-		;inx			;start with+1
-		;txa
-		;jsr gethexnum		;convert to A and X
-		;ldy #$3a
-		;sty setd+1
-		
-prnt		ldy #$14
+prnt		sty setd+1
+		ldy #$14
 		sta (gzp),y		;print A
 		dey
 		txa

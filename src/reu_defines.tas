@@ -1,6 +1,9 @@
 ;--------------------------------------------------------------
 
-filename_entry_size	= $40				;
+filename_entry_size	= $40				;   |
+filename_entry_kbsize	= filename_entry_size-1		;$3f|kb in size is stored here	:1 kb up to 64 kb
+filename_entry_typelen	= filename_entry_size-2		;$3e|type is stored here	:0-7f = length filename, 80-ff = length dirname
+
 dirsize			= 15 * filename_entry_size	;15 files with $40 characters per filename
 dir_main		= $d000				;page location for visible dir page in c64 mem
 dir_temp		= dir_main+dirsize		;($d3c0) page location of new loaded filenames to be moved to reu

@@ -1,0 +1,51 @@
+;--------------------------------------------------------------
+; REU remember dir routines
+;--------------------------------------------------------------
+;	* static subroutines
+;	* location: d000-e000
+;--------------------------------------------------------------
+
+
+check_upper_dir_limit
+		jsr getdirlevel
+		beq +			;zero, then store first pair with zero		
+		dec dirlevel
+tozero		lda #0
++		sta dirposlo,y
+		sta dirposhi,y
+		rts
+
+remember_dir_pos
+		jsr getdirlevel
+		inc dirlevel		
+		lda fcountlo
+		sta dirposlo,y
+		lda fcounthi
+		sta dirposhi,y
+		rts
+
+get_dir_pos	jsr getdirlevel
+		lda dirposlo,y
+		sta valuelo
+		lda dirposhi,y
+		sta valuehi
+		jmp contt		;reu_random.tas
+
+zero_dir_pos	jsr getdirlevel
+		jmp tozero
+
+getdirlevel	lda dirlevel		;how many levels of dir c:../../../../..
+		asl			;*2
+		tay			
+		rts		
+		
+dirlevel	.byte 0
+
+;dir postions are stored in pairs here, lo+hi, lo+hi
+dirposlo
+dirposhi 	= *+1
+		.word $0000
+
+
+;no check for a max limit yet
+;--------------------------------------------------------------

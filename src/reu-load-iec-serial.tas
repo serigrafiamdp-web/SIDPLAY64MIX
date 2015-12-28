@@ -1,3 +1,5 @@
+		lda #$38
+		sta $01
 .if def_iec
 		tya		;1-ff = load sid or open dir or open image file
 		beq dir_back	;0    = go one dir up
@@ -8,15 +10,12 @@
 		lda screenpos
 		sta gzp+1
 
-		lda #$38
-		sta $01
-
 		jsr getpos		;location of filename 
 		sta rzp			;lo adress
 		stx rzp+1		;hi adress
 		
 
-		;ldy #filename_entry_size-1		- need to check closer on longer filenames
+		;ldy #filename_entry_typelen		- need to check closer on longer filenames
 		ldy #$10
 		lda #$2a		;Insert "*" wildcard
 		.byte $2c		;skip last letter
@@ -35,7 +34,7 @@ setwildc
 		dey
 		bpl plaz
 
-		ldy #filename_entry_size-1	;filname length
+		ldy #filename_entry_typelen	;filname length
 		lda (rzp),y
 		
 .if def_iec		
@@ -73,7 +72,7 @@ its_a_dir
 opendiskimage
 		ldx plt_flag
 		cpx #2			;2=manual
-		bne file_error
+		bne file_error2
 .if def_1541u_long
 		and #$3f
 .fi
@@ -82,6 +81,13 @@ opendiskimage
 		adc #3			;set length for dir name
 		bne gotodir
 dir_back
+
+.if def_remember_DIR
+		;$01 = 38 from above
+		jsr check_upper_dir_limit	;AY=used
+		lda #$36
+		sta $01				
+.fi		
 		
 	.if def_1541u
 		lda #$2e
@@ -93,8 +99,24 @@ dir_back
 		sta dircommand+2	;"cd<-" works for iec,CMD & IDE64 drives (jiffydos)
 		lda #3			;file length is 3
 	.fi		
+		bne uppadir		;jmp
 		
-gotodir		ldx #<dircommand
+file_error2	bne file_error		;jmp
+		
+gotodir		
+
+.if def_remember_DIR
+		pha
+		lda #$38
+		sta $01
+		jsr remember_dir_pos		;AY=used
+		lda #$36
+		sta $01
+		pla
+.fi
+
+uppadir
+		ldx #<dircommand
 		ldy #>dircommand
 		jsr Rom_SetNam
 		lda #1
@@ -107,7 +129,7 @@ gotodir		ldx #<dircommand
 		jsr ROM_close
 		jsr ROM_clrchn
 nodirnow	jmp (wjp_dirselector)
-.fi
+.fi ;def_iec
 ;-------------------------------------------
 
 

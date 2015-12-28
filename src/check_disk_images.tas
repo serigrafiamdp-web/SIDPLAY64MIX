@@ -15,7 +15,7 @@
 check_disk_images
 
 	.if DEF_REU
-		ldy #$0f	;ldy #filename_entry_size-1       - can be inserted for longer filenames.. need to check-
+		ldy #$0f	;ldy #filename_entry_typelen      - can be inserted for longer filenames.. need to check-
 	.else
 		ldy #$0f
 	.fi
@@ -44,7 +44,7 @@ sceloop		cmp imageext,x
 		rts
 
 found1		txa
-		and #$fc
+		and #%11111100		;$fc
 		clc
 		adc #$07
 		tax

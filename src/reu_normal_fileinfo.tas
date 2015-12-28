@@ -1,0 +1,37 @@
+;--------------------------------------------------------------
+;  REU "normal_fileinfo"  
+;
+;  adds kilobytes to the filenames
+;--------------------------------------------------------------
+;	* static subroutine 
+;	* location: d000-e000
+;--------------------------------------------------------------
+
+		ldy #filename_entry_kbsize
+		lda (rzp),y
+		
+;a should always be $00-$63
+		
+		sec			;|could be done in dir read routine.
+		sbc #100		;|
+		ldx #$3a
+-		dex
+		adc #10			;convert to decimal kilobytes
+		bmi -
+		adc #$2f
+;a = ones
+;x = tens
+
+		cpx #$30
+		bne +
+		ldx #$20		;"0" tens to spacebar
++
+		ldy #$13		;13
+		sta (gzp),y		;print A
+		dey			;12
+		txa
+		sta (gzp),y		;print X
+		ldy #$14		;14
+		lda #"k"
+		sta (gzp),y
+		rts

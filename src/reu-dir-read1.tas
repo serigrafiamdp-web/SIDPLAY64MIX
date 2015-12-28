@@ -33,7 +33,8 @@ gri		jsr wjs_getbyte		;01   01   00           ;( = jsr ROM_chrin)
 					;Y = 0
 		txa			
 		beq ta			;Skip zerolength files
-
+		
+		pha			;blocks lo
 
 		
 -		jsr wjs_getbyte
@@ -57,9 +58,19 @@ getfname	sta (dzp),y		;store letter
 		txa
 		bne +			;filename length unchanged and still zero ?
 		tya			;yes, then we have a long filename and force it to $11
-+		ldy #filename_entry_size-1		
++		ldy #filename_entry_typelen
 		sta (dzp),y
 		
+		pla	;blocks lo
+		iny	;ldy #filename_entry_kbsize
+		lsr	;convert filesize to
+		lsr	;kilobyte (not exact)
+		bne +
+		lda #1		;force 1 kilobyte
++		sta (dzp),y
+		
+		
+;this code is obsolete now when we use 1541u2cmd interface		
 .if def_1541u2siec
 ;THIS assumes that all files from the 1541u2 sw iec
 ;has the .prg extension.

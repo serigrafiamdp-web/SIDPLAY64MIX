@@ -101,17 +101,8 @@ tt
 		;X = dir entry number
 		jsr iec_fileinfo
 .else
-		;inx				;start with+1
-		;txa
-		;jsr gethexnum			;convert to A and X
-		;ldy #$14
-		;sta (gzp),y			;print A
-		;dey
-		;txa
-		;sta (gzp),y			;print X
-		;dey
-		;lda #$3a			;":"
-		;sta (gzp),y
+		jsr normal_fileinfo		;for 1541 drives and clones who dont support directories 
+		
 .fi
 
 		ldx #0
