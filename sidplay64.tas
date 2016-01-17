@@ -1,8 +1,8 @@
 ;--------------------------------------------------------------
-;         SIDPLAY 64 V1.01
+;         SIDPLAY 64 V1.02
 ;--------------------------------------------------------------
 ;         Programmed by:
-;         Glenn Rune Gallefoss / SHAPE / Nostalgia (2005-2015)
+;         Glenn Rune Gallefoss / SHAPE / Nostalgia (2005-2016)
 ;
 ;         Additional programming:
 ;         Tomaz Kac (Tom-Cat) / Nostalgia          (2015)
@@ -22,6 +22,8 @@ def_colorselect	= 1	;use 1, 0 = for debugging new colors.
 def_attractmode = 2	;0 = no attract mode, 1= basic attract mode, 2 = smooth attract mode
 ;--------------------------------------------------------------
 def_remember_DIR = 1	; This option is only for the REU versions of 1541u2 and iec,cmd & ide64 drives
+;--------------------------------------------------------------
+def_basic	= 1
 ;--------------------------------------------------------------
 ;compile like this:
 ;64tass --m6502 -D defset=1 -a sidplay64.tas -o sidplay64-normal.o64
@@ -162,15 +164,8 @@ wjs_getbyte	jmp getbyte         ;06-jmp $XX00
 .fi
 stack_irq	jmp irq             ;07-jmp $XX00	fffe/ffff
 stack_hwirq	jmp hwirq           ;08-jmp $XX00	0314/0315
-;\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\
-stack_nmi	sei					;0318+fffa
-		ldx #topstack
-		txs
-		inx
-		stx $d020             ;0
-		jmp (wjp_dirselector) ;nmi
+;\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\
 
-;\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\
 wjs_add		
 .if DEF_REU
 		.byte >(execute_reu_command-screen2);highbyte Offset from screen
@@ -187,11 +182,24 @@ wjs_add
 .fi
 		.byte >(irq-screen2)          ;highbyte Offset from screen
 		.byte >(hwirq-screen2)        ;highbyte Offset from screen
-;\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\
+;\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\
 initMus		jmp initMus        ;jmp $xxxx
 playMus		jmp playMus        ;jmp $xxxx
 stopMusic	.byte 0            ;byte 1-ff = music on... 0 = music off
 
+;\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\
+stack_nmi	;sei					;0318+fffa
+		ldx #zpBuffSize-1
+-		lda editbuf,x		;d00x
+		sta zerop,x		;0002
+		dex
+		bpl -
+		;ldx #topstack
+		txs
+		inx
+		stx $d020				;0
+		.byte $4c				;jmp (wjp_dirselector)
+		
 wjp_dirselector	.word dirselector  ;00-word - jmp direselector
 wjp_fileselect	.word fileselect   ;01-word - jmp fileselect
 wjp_load	.word load         ;02-word - jmp load
@@ -464,17 +472,19 @@ dc01
 ;-------------------------------------
 ;
 ;-------------------------------------
-memoryerror	.byte $2c		;stack jump here with Y <> 0
-dirSelector	ldy #0
+memoryerror	.byte $2c		;stack jump here with Y=ff
+dirSelector	ldy #0			;y=0
 		jsr wjs_resetCia	;SEI, zp01=$36, Y=not used
 		lda #$1b		;screen on
 		sta $d011
-		tya			;instead of cpy #0
-		beq dodir
-		jmp (wjp_fileselect)
+		tya
+		beq +
+-		jmp (wjp_fileselect)
+;--------------------------------------------------------------
++		lda $dc01
+		bpl -			;bpl +			;cmp #$7f RunStop - only key that generates 00-7f
 ;--------------------------------------------------------------
 ;LOAD NEW DIR:
-
 start                       		;JMP HERE FIRST TIME from SRC/INIT.TAS
 dodir
 
@@ -534,12 +544,15 @@ clrmsg2		sta (dzp),y
 
 
   .if def_1541u2cmd
-		.include src/dir-1541u2cmd.tas
+		.include src/dir-1541u2cmd.tas		
+		;ends with zp$01=36
   .else
       .if def_iec
 	    	.include src/dir-iec.tas		;iec, ide64 ++
+	    	;ends with zp$01=36
       .else		
 	    	.include src/dir-read1.tas		;serial 1541 ++
+	    	;ends with zp$01=36
       .fi		
   .fi
 .fi ;def_reu
@@ -555,10 +568,6 @@ fileSelect	jsr wjs_display		;DisplayFiles+keys
 		lda #$36
 		sta $01
 .fi
-		
-		;lda #$1b		;orignally we 
-		;sta $d011		;set d011 here all the time
-		;bne fileSelect		;JMP
 
 		sec			;SLC screen onoff
 		bcs fileselect		;SLC screen onoff (JMP)
@@ -899,6 +908,12 @@ bp1		lda zerop,x		;0002
 		lda playmus+1		;Check if playcallplay
 		ora playmus+2		;$0000 = no
 		bne ownirq		
+		
+		;A = always 0 (zero)
+.if def_basic
+		cmp initmus+2		;carry is set if initadress is $0000 (only checking high adress)
+.fi
+		
               				;this song is played using own interrupt handler
 ;Does PC sidplay assume zp $01 to be 37 ?
 ;Maybe we should reset all io registers to default here		
@@ -913,27 +928,53 @@ bp1		lda zerop,x		;0002
 		tax
 .fi				
 		tay
+
+.if def_basic	
+		bcc +			;carry check from above
+		inc $01		;37
+		inc $01		;38
+		sta $030c
+		ldx #copybas_end-copybas-1
+-		lda copybas,x
+		sta $0200,x
+		dex
+		bpl -
+		dec $01		;37
+		jmp $0200
+		
++
+.fi
+		
 		jsr initmus		;This will normally set zeropage $01 to 35,36 or 37
+
+.if def_basic		
+exit_basic				;when a basic sid has finshed (ready prompt) it will exit here
+					;via the 0300/0301 vectors.
+.fi
+		
 waitk		ldx #0			;ldx #$7f - cbm keyscan also works with 0
 		stx $dc00
 		lda $dc01
 		cmp #$df
 		bne waitk
-		sei	
-		stx $dd0e		;Disable NMI timer A interrupt - These interrupts must be disabled here	
-		stx $dd0f		;Disable NMI timer B interrupt
+		;sei	
+		;stx $dd0e		;Disable NMI timer A interrupt - These interrupts must be disabled here	
+		;stx $dd0f		;Disable NMI timer B interrupt
 		stx $d020		;black screen
-		lda #$35		;
-		sta $01
+		jsr wjs_resetCia	;SEI, clears cia+nmi, restores 0300-0332 and fffa-fffe, returns with zp $01=36 set
+		
+		
+		;lda #$35		;
+		;sta $01
 		
 		ldx #zpBuffSize-1
-bp5		lda zerop,x		;0002
-		sta playbuf,x		;d000
-		lda editbuf,x		;d008
+bp5		;lda zerop,x		;0002	- 	;|v1.1 we dont need to restore zp for musicplayers
+		;sta playbuf,x		;d00x		;|v1.1
+		lda editbuf,x		;d00x	- 	only for editor (sp64)
 		sta zerop,x		;0002
 		dex
 		bpl bp5
-		jsr wjs_resetCia		;restores 0300-0332 and fffa-fffe
+		;jsr wjs_resetCia	;restores 0300-0332 and fffa-fffe
 		txs			;topstack
 		jmp (wjp_fileselect)
 ownirq         
@@ -1273,9 +1314,16 @@ errormsg	sei			;sei only present in versions using kernal loader calls
 		jsr printhexnum		;tzp
         
 		ldy #9
-		lda endAdrLo
+		lda endAdrLo		;$ae
+.if def_basic
+		sta basicendlo+1
+.fi		
 		jsr printhexnum		;tzp
-		lda endAdrHi
+		lda endAdrHi		;$af
+.if def_basic
+		sta basicendhi+1
+.fi		
+		
 		jsr printhexnum		;tzp
 
 ;------> initialize loaded file <--------------
@@ -1380,9 +1428,9 @@ flengde
 
 .else
 ; normal versions (1541, sdiec ++) with no reu:
-* = $da80		;da80-d000/16 = 168 files
+* = $da60		;da60-d000/16 = 166 files
 lastpos
-* = lastpos+1		;da80+168 = DB28 		(dir routine overwrites last byte with $20 so we have to start at lastpos+1)
+* = lastpos+1		;da60+166 = D078 		(dir routine overwrites last byte with $20 so we have to start at lastpos+1)
 flengde
 .fi
 		* = vectors-(static_code_end-static_code_start)
@@ -1503,6 +1551,31 @@ my02a6		lda #0		;Restore pal/ntsc flag wiht its real value
 		bpl -
 		lda #$36	;sta $01
 		rts
+.if def_basic
+copybas		ldx #$fa	;| Have to change top of stack...
+		txs		;| ... because of basic stack area at 01fc,y
+		lda #$31
+		sta $0314
+		lda #$ea
+		sta $0315
+		jsr $fd5f	;fd50 - Initialise System Constants (some zeropages and $0288, $0284)
+basicendlo	lda #0
+		sta $ae
+		sta $2d
+basicendhi	lda #0
+		sta $af
+		sta $2e		
+		jsr $e453	; initialize vectors (0300-030b)
+		jsr $e3bf	; initialize basic ram
+		lda #<exit_basic
+		sta $0300
+		lda #>exit_basic
+		sta $0301
+    		jsr $a659	; (a68e: set program pointer to basic-start)
+    		jmp $a7b1	; basic warm start - without stop key check - originally we use $a7ae
+copybas_end    		
+.fi
+		
 ;--------------------------------------------------------------
 .if DEF_REU
 
@@ -1563,8 +1636,11 @@ msgmemory      .text "no memory!"
 .if def_1541u2cmd*DEF_REU
 nofile19        .text "no files present          "	;1541u2cmd reu version
 .else
+  .if DEF_REU
 nofile14        .text "no files present     "		;all other reu versions
+  .fi
 .fi
+
 ;----------------------0123456789abcdef0123456789-
 
 

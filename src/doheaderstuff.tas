@@ -319,7 +319,7 @@ getmsgm     lda msgmemory,y
             pha
             lda #noirq_keys
             sta numb
-            ;Y=FF
+            ;Y=FF				;y=ff disables reloading dir when stack jumping to "memoryerror"
             rts
             
 ;stack jump to memoryerror

@@ -35,7 +35,9 @@
 		inc $01			;35
 		lda REU_status
 		stx $01			;38/34 ?
-		rts
+		
+					;CARRY flag is set with cpy #10 above
+		rts			;note: the PLT function needs the carry flag to be set. 
 
 		
 .comment

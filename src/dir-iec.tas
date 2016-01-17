@@ -40,9 +40,8 @@ DIRCMD	= $e808
 ;now we have 01 01 followed by lsb, msb
 ;		
 ;-----
-		ldy #2
-		;ldy #$10+2
-		
+loop2		ldy #2
+	
 skip_header	jsr wjs_getbyte
 		tax			;file entry block lo (lsb)
 		jsr wjs_getbyte
@@ -147,13 +146,10 @@ fn_endloop2
 +		inc maxfile
 
 bci
-
-;		lda #$36
-;		sta $01
-		jsr wjs_display		;displayFiles+read keyboard
-;		jsr wjs_ffe4		;read keyboard
-		ldy #2
-		bne skip_header
+;zp $01 = 38 at this point
+		jsr wjs_display		;Displayfiles + Clock/PLT + Read keyboard
+		sec
+		bcs loop2		;JMP
 
 
 ;--------- Getbyte from Device --------------
@@ -162,26 +158,29 @@ bci
 getByte
 		lda #$36
 		sta $01
-		lda maxfile		;zeropage
-		cmp #maxentries		;Reached the file limit ?
-		beq endofdir		;yes
+		;lda maxfile		;zeropage
+		;cmp #maxentries		;Reached the file limit ?
+		;beq endofdir		;yes
 		lda #0			;no
 		sta $90
 		stx netdrivex		;TFR - Netdrive bug - zp
 		jsr ROM_chrin
 		ldx #$38
 		stx $01
-		ldx $90			;If status is zero then continue
+		ldx maxfile
+		cpx #maxentries
+		beq endofdir
+		bit $90			;If status is zero then continue
 		bne endofdir
 		ldx netdrivex		;TFR - Netdrive bug - zp
 		cmp #0
 		rts
 ;---------Finished reading directory--------
-endofdir	lda maxfile		;we dont sort 1 file
-		cmp #2			;must be 2 or more
+endofdir	;ldx maxfile		;we dont sort 1 file - must be 2 or more
+		cpx #2
 		bcc nofiles
-		lda #$38
-		sta $01
+		;lda #$38
+		;sta $01
 		jsr iec_dir_sort
 nofiles		lda #$36
 		sta $01

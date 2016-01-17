@@ -1,4 +1,4 @@
-SIDPLAY64 V1.0.1
+SIDPLAY64 V1.0.2 WITH BASIC support
 ---------------------------------------------------------------
 Welcome to this lastest version of Sidplay64 (SP64).
 This time it includes a new song length injector tool, that will

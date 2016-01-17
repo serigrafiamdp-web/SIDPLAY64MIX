@@ -121,10 +121,9 @@ getByte
 		
 ;falls through here         
 ;---------Finished reading directory--------
-endofdir	;lda #$36		;saves 4 bytes
-		;sta $01
-		pla
+endofdir	pla
 		pla
 		lda #$01
 		jsr ROM_close
+;zp $01 = $36
 ;falls through to code

@@ -1,0 +1,34 @@
+HVSC Basic sids information:
+-----------------------------------------------------------------
+$030c (780) controls song number. Where 00 = tune 1.
+
+
+How to load and start BASIC sids with Action Replay/Retro Replay:
+-----------------------------------------------------------------
+Load the sid to $0785.
+Then press reset. Then F7 to return to basic.
+Then type "old" followed by return.
+
+Now you can run or list the basic listing without any errors.
+
+
+How to start a BASIC sids from machine (after loading to $0785):
+-----------------------------------------------------------------
+
+;When used with sidplay64:
+;zeropages 0002-0100 and memory 0200-0300 should be cleared
+;sidplay64 restores 0314-0330
+
+		LDA #<PRGEND
+    		STA $2D
+    		STA $AE
+    		LDA #>PRGEND
+    		STA $2E
+    		STA $AF
+
+		JSR $E453	; Initialize Vectors (0300-030b)
+		JSR $E3BF	; Initialize BASIC RAM
+    		JSR $A659	; (a68e: Set program pointer to BASIC-start)
+    		JSR $A533	; Rechain Lines
+    		JMP $A7B1	; Basic Warm start - without Stop key check - Originally we use $A7AE
+

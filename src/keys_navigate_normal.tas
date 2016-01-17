@@ -25,7 +25,8 @@ th		dec offs_cursor		;abs
 ;--------------------------------------------------------------
 key1		cpy #keyCrsrDown	;"Crsr down"
 		bne key2
-plt_inc		lda offs_cursor		;! also called from stack jumpb table
+;"plt_inc" is also called from stack jump table		
+plt_inc		lda offs_cursor		;abs
 		sec
 		adc pos_cursor
 		cmp maxfile
@@ -48,10 +49,10 @@ key2		cpy #keyCrsrLeft
 		sec
 		sbc #maxDirY
 		bcs bd2
-		lda #0
+		txa			;x=0 lda #0
 bd2		sta offs_cursor
 		rts
-bd1		sta pos_cursor		;cursor pos to top of screen
+bd1		sta pos_cursor		;A=0 - cursor pos to top of screen
 		rts		
 
 ;--------------------------------------------------------------

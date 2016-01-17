@@ -12,8 +12,7 @@
 
 		txa			;untouched from plt_flag
 		tay
-		;sei			;i think i must set sei
-		jsr wjs_resetCia	;sei & zp $01=36 
+		jsr wjs_resetCia	;sei & returns zp $01=36, X=FF
 
 		lda #$38
 		sta $01
@@ -44,13 +43,11 @@ last_plt	jsr plt_inc		;reu: plt_inc is located in ram d000-e000
 doload		lda #$36
 		sta $01
 		ldy #1			;Set y = 1 for loading files
-		jmp (wjp_load)
-	
-plt_random
-					;reu: random routine is located in ram d000-e000
-		;lda #$38
-		;sta $01
-		jsr getrandom
-		lda #$36		;|not needed ?
-		sta $01			;|
-		bne doload		;;jmp
+		jmp (wjp_load)		;must have zp$01 set correctly to work
+plt_random	jsr getrandom		;reu: random routine is located in ram d000-e000
+					;random routine calls reu-io.tas and ends with carry set.
+		bcs doload		;JMP
+		
+		;lda #$36		;|not needed ?
+		;sta $01			;|
+		;bne doload		;;jmp
