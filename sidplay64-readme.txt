@@ -354,9 +354,14 @@ Additional programming by: Tom-Cat
 
 SIDPLAY 64 v1.01 (xx/xx/2016):
 -------------------------------
+* Added:     BASIC support.
 * Added:     REU: Remembers previous dir positions when you go back.
 * Added:     REU: File size are displayed in kilobytes. (Not for 1541u2)
+* Behaviour: Restore : resets variables and reloads dir.
+* Behaviour: RunStop+Restore : exit BASIC sid's or sid's using $0000 as play call.
+* Behaviour: BASIC sid's that stops on its own can be exited by pressing CBM.
 * Fixed:     1541U2: shortened dir read routine.
+* Fixed:     One of the color skins used grey for border.
 
 
 SIDPLAY 64 v1.00 (13/12/2015):

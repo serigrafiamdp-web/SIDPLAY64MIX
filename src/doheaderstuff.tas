@@ -416,4 +416,5 @@ stackjump
 		pha
 		lda #<returnHere-1
 		pha
+		lda #$36			;zp$01
 		rts   ;Stack jump to "returnHere"

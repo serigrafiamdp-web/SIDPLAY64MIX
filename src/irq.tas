@@ -17,7 +17,6 @@ hwirq		lda $01
 		pha
 		lda #$35
 		sta $01
-		;inc $d019
 		lda stopmusic
 		beq end_irq
 		lda $dc08		;Må lese tenths registeret for at tod skal fortsette
@@ -34,19 +33,14 @@ goplay
 color_playmusic2
 		lda #$a9
 		sta $d020
-		php		;play call might change sei/cli
-		jsr playmus     ;play call might change $01 too...
-		plp
-		lda #$35        ;So we force it...
+		jsr playmus     ;play call might change $01
+		sei		;play call might change sei/cli - BUT I'm unsure if it ever reach here if cli is set in playcall.
+		lda #$35        ;Force $01
 		sta $01
-
 color_d020	lda #0
 		sta $d020
-
-		ldx #$7f	;|saves 1 byte
-		stx $dc00	;|
-		;inx		;|$80
-		;stx $d020	;|$00=black
+		ldx #$7f
+		stx $dc00
 		lda $dc01
 joymode1	cmp #$fd	;change to cbm for joystick mode
 		beq goplay

@@ -15,7 +15,7 @@
 ; $D019 Not used in irq, but enabled when jumping into a song using own interrupt handler.
 ; $DC0D - The irq is a timer irq, so $dc0d must be read for each irq triggered.
 ;--------------------------------------------------------------
-DEF_REU		= 1	;1 = enable reu routines (for all versions)
+DEF_REU		= 0	;1 = enable reu routines (for all versions)
 def_currentdate	= 1	;1 = include current date and clock in setup
 def_illegal	= 1	;1 = use illegal opcodes
 def_colorselect	= 1	;use 1, 0 = for debugging new colors.
@@ -194,10 +194,7 @@ stack_nmi	;sei					;0318+fffa
 		sta zerop,x		;0002
 		dex
 		bpl -
-		;ldx #topstack
 		txs
-		inx
-		stx $d020				;0
 		.byte $4c				;jmp (wjp_dirselector)
 		
 wjp_dirselector	.word dirselector  ;00-word - jmp direselector
@@ -957,10 +954,11 @@ waitk		ldx #0			;ldx #$7f - cbm keyscan also works with 0
 		lda $dc01
 		cmp #$df
 		bne waitk
-		;sei	
-		;stx $dd0e		;Disable NMI timer A interrupt - These interrupts must be disabled here	
-		;stx $dd0f		;Disable NMI timer B interrupt
-		stx $d020		;black screen
+		;sei			;no need, NMI overrides SEI.
+		stx $dd0e		;Disable NMI timer A interrupt - These interrupts must be disabled here	
+		stx $dd0f		;Disable NMI timer B interrupt
+					;We must disable NMI first. Because NMI might contain code that changes zp$01 (Navy moves.sid).
+		;stx $d020		;black screen
 		jsr wjs_resetCia	;SEI, clears cia+nmi, restores 0300-0332 and fffa-fffe, returns with zp $01=36 set
 		
 		
@@ -1083,13 +1081,14 @@ idook
 		ora playAddress		;hi part of play call (checking for $0000 which is typical for RSID.. and only a few PSID)
 skiprsid	beq file_error		;$24;siderro	;wrong sid type
 		
-		sei			;! Must set SEI here, because we do a stack jump to "returnhere"
-		lda #$38		;! or we do a stack jump to
+		sei			;! Must set SEI here, because doheaderstuff does a stack jump to "returnhere" if eveything is ok,
+		lda #$38		;! if not we do a stack jump to "memoryerror"
 		sta $01
 		jmp doheaderstuff	;src/doheaderstuff.tas
 
 returnHere                      ;returns with stackjump here from doheaderstuff
-		lda #$36
+				;A=$36
+		;lda #$36
 		sta $01
 
 ;Find correct $dd00

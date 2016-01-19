@@ -159,5 +159,6 @@ numfiles = screen2+$014d
 
 		pla
 		sta color_d020+1
+		sta color2_d020+1
 		sta $d020
 		rts

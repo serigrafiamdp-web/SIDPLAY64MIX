@@ -477,7 +477,7 @@ cbm
 allgreen
 .byte cblack,cgreen,clgreen,cwhite,cgrey,cwhite,clgreen,cwhite,cwhite,cgrey,clgreen,cgrey,clgreen	,cblack
 lightgrey
-.byte cmgrey,clgrey,cmgrey,cwhite,cblack,cblack,cgrey,cblack,cgrey,cgrey,cblack,cgrey,cblack		,cgrey
+.byte cmgrey,clgrey,cmgrey,cwhite,cblack,cblack,cgrey,cblack,cgrey,cgrey,cblack,cgrey,cblack		,clgrey
 brown
 .byte cblack,cbrown,cgrey,cblack,cblack,cmgrey,cmgrey,clgrey,cmgrey,cmgrey,clgrey,cmgrey,cblack		,cblack
 
