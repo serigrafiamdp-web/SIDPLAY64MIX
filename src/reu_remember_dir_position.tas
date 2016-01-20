@@ -25,10 +25,9 @@ remember_dir_pos
 		rts
 
 get_dir_pos	jsr getdirlevel
+		ldx dirposhi,y		;valuehi
 		lda dirposlo,y
-		sta valuelo
-		lda dirposhi,y
-		sta valuehi
+		tay			;valuelo
 		jmp contt		;reu_random.tas
 
 zero_dir_pos	jsr getdirlevel

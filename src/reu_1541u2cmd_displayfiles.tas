@@ -38,56 +38,27 @@
 		ldy #(40*5)-2
 		lda maxfile		;display number of files lo
 		jsr printhexnum
-		;jsr gethexnum
-		;sta (gzp),y 
-		;txa
-		;dey
-		;sta (gzp),y
-
 		lda maxfilehi		;display number of files hi
 		jsr printhexnum
-		;jsr gethexnum
-		;dey
-		;sta (gzp),y
-		;txa
-		;dey
-		;sta (gzp),y
-
 		inc gzp+1
 		ldy #40-18		
 		lda fcountlo		;display current file number 
 		jsr printhexnum		
-		;jsr gethexnum
-		;sta (gzp),y 
-		;txa
-		;dey
-		;sta (gzp),y
-
 		lda fcounthi		;display current file number
-		jsr printhexnum
-		;jsr gethexnum
-		;dey
-		;sta (gzp),y
-		;txa
-		;dey
-		;sta (gzp),y
-		
+		jsr printhexnum		
 		dec gzp+1		;back to "dirscreen" adress again
-             
+
 		lda maxfile		;No files in dir-buffer ?
 		bne tt
 		lda maxfilehi
 		bne tt
 		ldy #$19
-grh		lda nofile19,y		;nofile found
+-		lda nofile19,y		;nofile found
 		sta (gzp),y
 		dey
-		bpl grh
+		bpl -
 		bmi tx
-
 tt
-
-
 		jsr iec_fileinfo
 
 		ldx #0

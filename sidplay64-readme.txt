@@ -1,8 +1,9 @@
-SIDPLAY64 V1.0.2 WITH BASIC support
+SIDPLAY64 V1.10
 ---------------------------------------------------------------
 Welcome to this lastest version of Sidplay64 (SP64).
-This time it includes a new song length injector tool, that will
-make your SP64 browsing a even better experience.
+Finally we have also found space for BASIC sid files support.
+Read more about that in its own section below.
+This program alsom comes with our new length injector tool.
 With modified sids you can listen to your favourite sids
 from start till end before it loads the next or random sid file.
 
@@ -82,22 +83,23 @@ When a fresh directory is loaded you can only use some of these keys:
 
 KEYBOARD COMMANDS:
 ---------------------------------------------------------------
-CRSR UP/DOWN  :Select sid tune
-RETURN        :Load a sid tune / open directory / open disk image file
-INSTDEL       :Go back a directory level (Only for the versions that supports directory browsing)
-SPACE         :Load/Reload directory
-F1            :Restart song
-F7            :Pause/Continue song
-+ / -         :Select songs  (if any)
-, / .         :Set timer for when NEXT or RANDOM tune is going to be loaded.
-M             :Mode select: Manual, Next or Random
-CRSR LEFT     :jump 15 lines upwards.
-CRSR RIGHT    :jump 15 lines downwards.  (In the non REU version this jumps all the way down.)
-RESTORE       :Restart program (init values and variables and loads directory.)
-<-(LEFT ARROW):Fast forward (when song is playing)
-CBM KEY       :Exit an RSID or PSID with $0000 as play address.
-S             :Screen on/off. (Reduce video chip noise).
-X             :Load Next or Random sid
+CRSR UP/DOWN   :Select sid tune
+RETURN         :Load a sid tune / open directory / open disk image file
+INSTDEL        :Go back a directory level (Only for the versions that supports directory browsing)
+SPACE          :Load/Reload directory
+F1             :Restart song
+F7             :Pause/Continue song
++ / -          :Select songs  (if any)
+, / .          :Set timer for when NEXT or RANDOM tune is going to be loaded.
+M              :Mode select: Manual, Next or Random
+CRSR LEFT      :jump 15 lines upwards.
+CRSR RIGHT     :jump 15 lines downwards.  (In the non REU version this jumps all the way down.)
+RESTORE        :Restart (init values and variables and loads directory.)
+RUNSTOP+RESTORE:Restart. But returns back to fileselector without reloading directory.
+<-(LEFT ARROW) :Fast forward (when song is playing)
+CBM KEY        :Exit an RSID or PSID with $0000 as play address.
+S              :Screen on/off. (Reduce video chip noise).
+X              :Load Next or Random sid
 
 When the sid is playing/present in memory you can use all keys.
 
@@ -189,7 +191,7 @@ extension in the filename doesn't need to be present on the disk.
 If the file is a wrong format it will exit with a red border (and reload dir in case the disk was swapped).
 If the file is a RSID you will see the border changes to Grey when the music starts playing, and you 
 will also notice that none of the keys works. Pressing CBM will exit back to SP64.
-If the file is a PSID you will see a black border and you can use all keys to control the program.
+If the file is a PSID you will see your skin default border color and you can use all keys to control the program.
 There's One exception though, some PSIDs also has $0000 as play address and will behave like a RSID.
 
 Panic Load:
@@ -211,6 +213,16 @@ If that doesn't work. You have to reset and reload the program.
 
 If you successfully exited and RSID the normal way (CBM key) you can select sub tunes with +/- and
 you can start and stop the song with F1 and F7.
+
+
+Loading a BASIC sid file:
+---------------------------------------------------------------
+Loading and running a BASIC sid file will turn your border to grey (unless the sid itself changes colours).
+It is possible to return back to SP64 by pressing CBM key, but only after the song has stopped and finished.
+If the song loops forever you have to hold the RunStop button and tap RESTORE, the music should stop and 
+the border color should return to default, and you can use F1, + and - to restart or select subtunes for this sid.
+
+Many BASIC sids will write text and colors to screen, so don't worry if you see weird colors on the screen.
 
 
 REU - The Ram Expansion Unit.
@@ -305,7 +317,6 @@ complete HVSC directory.
 Unsupported sid files:
 ----------------------
 * Sid files with PSID in the filename.
-* Sid files with BASIC in the filneame.
 * Sid files using the old v1 sid headers will not work.
 
 
@@ -352,7 +363,7 @@ Programming by: Glenn R. Gallefoss
 Additional programming by: Tom-Cat
 
 
-SIDPLAY 64 v1.01 (xx/xx/2016):
+SIDPLAY 64 v1.10 (xx/xx/2016):
 -------------------------------
 * Added:     BASIC support.
 * Added:     REU: Remembers previous dir positions when you go back.

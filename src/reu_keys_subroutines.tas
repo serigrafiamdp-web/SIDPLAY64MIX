@@ -7,13 +7,12 @@
 
 
 ;--------------------------------------------------------------
-;	Line up:
+;	LINE UP: (CRSR UP)
 ;--------------------------------------------------------------
 reu_crsr_up	
 		lax fcountlo
 		ora fcounthi
 		beq torts			;zero ? then do nothing
-		;lda fcountlo
 		txa
 		bne +
 		dec fcounthi
@@ -22,10 +21,25 @@ reu_crsr_up
 		beq +
 		dec pos_cursor
 torts		rts
-+		jmp sbc_reu_file_position		;jmp get_reu_dir
++		;jmp sbc_reu_file_position		;jmp get_reu_dir
+;--------------------------------------------------------------
+; Move reu position by one (1) file entry upwards
+;--------------------------------------------------------------
+sbc_reu_file_position
+		lda reu_datadr_lo
+		sec
+		sbc #<filename_entry_size				
+		sta reu_datadr_lo
+		lda reu_datadr_hi		
+		sbc #>filename_entry_size		
+sbrfp		sta reu_datadr_hi
+		bcs +
+		dec reu_datadr_bank
++		jmp get_reu_dir
+
 
 ;--------------------------------------------------------------
-;	Line down:
+;	LINE DOWN: (CRSR DOWN)
 ;--------------------------------------------------------------
 plt_inc					;called from play next function
 reu_crsr_down
@@ -46,7 +60,7 @@ reu_crsr_down
 		jmp get_reu_dir			;i/o
 
 ;--------------------------------------------------------------
-;	Page UP:
+;	PAGE UP: (CRSR LEFT)
 ;--------------------------------------------------------------
 reu_crsr_left
 		ldx pos_cursor		;x = 0 is cursor at top of screen?
@@ -69,26 +83,38 @@ ton		lax fcountlo
 		
 +		ldy fcounthi		;0 ? 
 		bne tdp			
-		;lda fcountlo
-		;cmp #maxDirY		;check fcountlo in 0-15
 		cpx #maxDirY		;check fcountlo in 0-15
 		bcs tdp
 		sty fcountlo		;y=0
 		sty pos_cursor
 		jsr zero_reu_datadr 	;display reu dir from start
+					;returns A=0
 		jmp get_reu_dir		;i/o
 
-tdp		;lda fcountlo
-		txa
+tdp		txa			;fcountlo
 		sec
 		sbc #maxDirY		;#maxDirY
 		sta fcountlo
 		bcs +
 		dec fcounthi
-+		jmp sbc_reu_page_position	;jmp get_reu_dir
++		;jmp sbc_reu_page_position	;jmp get_reu_dir
+
+
 
 ;--------------------------------------------------------------
-;	Page Down:
+; Move reu position by one (1) dir page upwards (15 files)
+;--------------------------------------------------------------
+sbc_reu_page_position
+		lda reu_datadr_lo
+		sec		
+		sbc #<dirsize
+		sta reu_datadr_lo
+		lda reu_datadr_hi		
+		sbc #>dirsize		
+		jmp sbrfp
+
+;--------------------------------------------------------------
+;	PAGE DOWN: (CRSR RIGHT)
 ;--------------------------------------------------------------
 reu_crsr_right
 		lda maxfilehi		;zero ?
@@ -121,8 +147,8 @@ tq		lda maxfile
 		sbc #0
 		sta tmphi
 
-		lda fcountlo
-		cmp tmplo
+		ldx fcountlo
+		cpx tmplo
 		lda fcounthi
 		sbc tmphi
 		bcc +
@@ -130,57 +156,41 @@ tq		lda maxfile
 		stx fcountlo
 		lda maxfilehi
 		sta fcounthi
-		ldx tmplo
+		ldy tmplo
 		lda tmphi
-		jsr getreuadress	;returns in a,x,y
+		jsr getreuadress	;inpuy A+Y - returns in a,x,y
 		sta reu_datadr_lo
 		stx reu_datadr_hi
 		sty reu_datadr_bank
 		jmp get_reu_dir		;i/o
 
-
-+		lda fcountlo
++		txa			;ldx fcountlo
 		clc
 		adc #maxDirY
 		bcc +
 		inc fcounthi
 +		sta fcountlo
-
 		jsr adc_reu_page_position
-		jmp get_reu_dir		;i/o
-
-
-
+;		jmp get_reu_dir		;i/o
 ;--------------------------------------------------------------
-; Move reu position by one (1) file entry upwards
+; Jumped to by routines above, updates main dir memory:
 ;--------------------------------------------------------------
-sbc_reu_file_position
-		lda reu_datadr_lo
-		sec
-		sbc #<filename_entry_size				
-		sta reu_datadr_lo
-		lda reu_datadr_hi		
-		sbc #>filename_entry_size		
-sbrfp		sta reu_datadr_hi
-		bcs +
-		dec reu_datadr_bank
-+		jmp get_reu_dir
+get_reu_dir
+		lda #>dir_main			;$d000
+		sta c64memhi
+		lda #<dir_main
+		sta c64memlo
+		lda #%10000000|reu2c64
+store_reu_dir	sta reu_comm
 
-;--------------------------------------------------------------
-; Move reu position by one (1) dir page upwards (15 files)
-;--------------------------------------------------------------
-sbc_reu_page_position
-		lda reu_datadr_lo
-		sec		
-		sbc #<dirsize
-		sta reu_datadr_lo
-		lda reu_datadr_hi		
-		sbc #>dirsize		
-		jmp sbrfp
-;		sta reu_datadr_hi
-;		bcs +
-;		dec reu_datadr_bank
-;+		rts
+		ldy #10
+-		lda reu_comm-1,y
+		pha
+		dey
+		bne -
+		ldx $01				;zp $01 = 38/34
+		lda #$35			;zp $01 = 35
+		jmp wjs_exe_reucomm
 
 ;--------------------------------------------------------------
 ; Move reu position by one (1) file entry downwards
@@ -205,21 +215,11 @@ adc_reu_page_position
 		ldx #>dirsize		;high
 		lda #<dirsize		;low  a > 0
 		bne adcrpp
-		;clc			;Adjust table to keep track of next available adrees in reu
-		;adc reu_datadr_lo
-		;sta reu_datadr_lo
-		;lda #>dirsize
-		;jmp arfp
-;		adc reu_datadr_hi
-;		sta reu_datadr_hi
-;		bcc +
-;		inc reu_datadr_bank
-;+		rts
-
 
 ;--------------------------------------------------------------
 ; Call this routine when loading in a new directory:
 ;--------------------------------------------------------------
+;Some routines using this needs X to be untouched:
 prepare_loading_new_reu_dir
 		;lda #dir_keys		;only a few keys available while loading dir
 		lda #no_keys		;no keys when loading dir
@@ -233,10 +233,7 @@ prepare_loading_new_reu_dir
 		lda #0
 		sta fcountlo
 		sta fcounthi
-
-
 		sta pos_cursor		;zp
-
 		;lda #<dir_main		;zero
 		sta dzp			;zp
 		sta c64memlo
@@ -247,7 +244,7 @@ prepare_loading_new_reu_dir
 
 
 .if def_1541u2cmd
-		jsr u2_prepare_dirscreen_zp	;This will set up gzp to be used for displaying number of files.
+		jsr u2_prepare_dirscreen_zp	;This will set up gzp to be used for displaying number of files. (see sidplay64.tas)
 .fi
 
 ;--------------------------------------------------------------
@@ -272,9 +269,7 @@ write_reu_dir_entry
 		sta dzp+1
 
 write_reu_dir_entry2
-		lda #%10000000|c642reu
-		;sta reu_comm
-		;jsr wjs_exe_reucomm		;first time we transfer from "dir_main"
+		lda #%10000000|c642reu		;sta reu_comm
 		jsr store_reu_dir
 		lda #>dir_temp			;$d3c0 - next dir page we transfer from "dir_temp"
 		sta c64memhi
@@ -282,26 +277,6 @@ write_reu_dir_entry2
 		sta c64memlo	
 		jmp adc_reu_page_position	;Note: not followed by a jmp get_reu_dir 
 
-
-;--------------------------------------------------------------
-; Jumped to by routines above, updates main dir memory:
-;--------------------------------------------------------------
-get_reu_dir
-		lda #>dir_main			;$d000
-		sta c64memhi
-		lda #<dir_main
-		sta c64memlo
-		lda #%10000000|reu2c64
-store_reu_dir	sta reu_comm
-
-		ldy #10
--		lda reu_comm-1,y
-		pha
-		dey
-		bne -
-		ldx $01				;zp $01 = 38/34
-		lda #$35			;zp $01 = 35
-		jmp wjs_exe_reucomm
 
 
 

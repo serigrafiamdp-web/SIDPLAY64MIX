@@ -38,43 +38,14 @@
 		ldy #40-2
 		lda maxfile		;display number of files lo
 		jsr printhexnum
-		;jsr gethexnum
-		;ldy #40-2
-		;sta (gzp),y 
-		;txa
-		;dey
-		;sta (gzp),y
-
 		lda maxfilehi		;display number of files hi
 		jsr printhexnum
-		;jsr gethexnum
-		;dey
-		;sta (gzp),y
-		;txa
-		;dey
-		;sta (gzp),y
-
 		ldy #120-2
 		lda fcountlo		;display current file number 
 		jsr printhexnum
-		
-		;jsr gethexnum
-		;ldy #120-2
-		;sta (gzp),y 
-		;txa
-		;dey
-		;sta (gzp),y
-
 		lda fcounthi		;display current file number
-		jsr printhexnum		
-		;jsr gethexnum
-		;dey
-		;sta (gzp),y
-		;txa
-		;dey
-		;sta (gzp),y
-		
-             
+		jsr printhexnum
+
 		lda maxfile		;No files in dir-buffer ?
 		bne tt
 		lda maxfilehi
@@ -86,23 +57,13 @@ grh		lda nofile14,y		;nofile found
 		bpl grh
 		bmi tx
 
-tt
-		;lda cmpzp
-		;clc
-		;adc tempcursor;cite		;copy of cite ;!! d017 sprite register
-		;tax
-            
-		;jsr getpos			;get dir pos
-		;sty rzp
-		;sta rzp+1
-		
+tt		
 
 .if def_iec + def_1541u2cmd           
 		;X = dir entry number
 		jsr iec_fileinfo
 .else
-		jsr normal_fileinfo		;for 1541 drives and clones who dont support directories 
-		
+		jsr normal_fileinfo		;for 1541 drives and clones who dont support directories 	
 .fi
 
 		ldx #0

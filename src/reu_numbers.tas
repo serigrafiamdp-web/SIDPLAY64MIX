@@ -6,14 +6,14 @@
 ;--------------------------------------------------------------
 ;calculate reu address for 16 bit input number (a,x)
 ;--- a = high filenumber
-;--- x = low filenumer
+;--- y = low filenumer
 
 ;getreuadress
 		sta zhi
 		lsr		;When hi is 0,4,8,c,10...
 		lsr
 		sta zbank	;zbank change bank to 0,1,2,3,4...
-		txa		;fcountlo, seed, lo value
+		tya		;fcountlo, seed, lo value
 		asl
 		rol zhi		;*2
 		asl

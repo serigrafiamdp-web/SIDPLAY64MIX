@@ -1,5 +1,5 @@
 ;--------------------------------------------------------------
-;         SIDPLAY 64 V1.02
+;         SIDPLAY 64 V1.10
 ;--------------------------------------------------------------
 ;         Programmed by:
 ;         Glenn Rune Gallefoss / SHAPE / Nostalgia (2005-2016)
@@ -15,7 +15,7 @@
 ; $D019 Not used in irq, but enabled when jumping into a song using own interrupt handler.
 ; $DC0D - The irq is a timer irq, so $dc0d must be read for each irq triggered.
 ;--------------------------------------------------------------
-DEF_REU		= 0	;1 = enable reu routines (for all versions)
+DEF_REU		= 1	;1 = enable reu routines (for all versions)
 def_currentdate	= 1	;1 = include current date and clock in setup
 def_illegal	= 1	;1 = use illegal opcodes
 def_colorselect	= 1	;use 1, 0 = for debugging new colors.
@@ -559,15 +559,10 @@ clrmsg2		sta (dzp),y
 
 		lda #noirq_keys  ;*9
 		sta numb
-            
-fileSelect	jsr wjs_display		;DisplayFiles+keys
-.if DEF_REU
-		lda #$36
-		sta $01
-.fi
 
-		sec			;SLC screen onoff
-		bcs fileselect		;SLC screen onoff (JMP)
+fileSelect	jsr wjs_display		;DisplayFiles+keys
+		sec			;
+		bcs fileselect		;JMP
 		
 
 ; Dir-buffer is located at $d000 ->
@@ -583,14 +578,13 @@ displayFiles
 .else
 .include "src/displayfiles.tas"				;all versions without reu.
 .fi
+
 ;zp $01 = 36 and code continues here:
 
 ;---------------------------------------
 ;  Keyboard scan routine with delay
 ;  Inserted clock routine + random+next load here to free up cpu time for irq speed calls
 ;---------------------------------------
-
-;zp $01 = 36 here
 
 ffe4key
 
@@ -857,8 +851,8 @@ restartTune
 
 ;zp $01 is always 35 when entering here
 		
-		php
-		sei
+		;php
+		;sei
 		lda #$38
 		sta $01
 		jsr dotunenumbers
@@ -1032,7 +1026,8 @@ fixdc0e		lda #%01010001
                         ;50 hz = pal
                         ;60 hz = ntsc
 		sta $dc0e
-		plp
+		;plp
+		cli
 		rts
             
 

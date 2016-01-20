@@ -8,11 +8,15 @@
 
 ;plt_random
 
-		lda maxfilehi
+;valuelo = seed
+;valuehi = seed+1
+
+		lax maxfilehi
 		bne +
 		;A=0
-		sta valuehi		
-		sta rseed+1
+		;x=0
+		;sta svaluehi
+		sta rseed+1		
 		
 newrand		lda rseed		;| random routine from WhiteFlame
 		beq ldoeor
@@ -24,51 +28,49 @@ lnoeor		sta rseed
 
 		cmp maxfile
 		bcs newrand
-;		cmp samefile		;check if it tries to load the same file
-;		beq newrand
-;		sta samefile
-		sta valuelo
-		jmp contt
-		
+		tay		;sta valuelo
+		;x=0 valuehi
+		jmp contt		;bcc for JMP ?
 		
 +
 
 newrand2	jsr get_random_16bit
-		lda rseed
-		sta valuelo
-		lda rseed+1
-		sta valuehi
-		
-		lda valuelo
-		cmp maxfile
-		lda valuehi
+		ldy rseed		;valuelo
+		lax rseed+1		;valuehi
+		cpy maxfile
 		sbc maxfilehi
 		bcs newrand2
 		
 
 ;this position is also called by the "remember dir" routine in "reu_remember_dir_position.tas"
 contt
+		;sty valuelo
+		;stx valuehi
 
+;x= valuehi
+;y= valuelo
 		
 ; check if the seed value is within the visible dir area: 
 ; if so we transfer the seed value (0-0f) to pos_cursor
 ; and zero the seed value so we can transfer the very first page of dir from reu:
-		lda valuehi
+		txa			;lda valuehi
 		bne +
-		lda valuelo
-		tay
+		;x=0
+		tya			;lda valuelo
+		;tay
 		sec
 		sbc #maxDirY
 		bcs +			;check if we are at upper visible area (0000-000f)
-		lda #0
-		sta fcounthi
+		;lda #0
+		;x=0
+		stx fcounthi
 		;sta valuehi		;already 0
-		sta valuelo
-		
+		;stx valuelo
 		sty pos_cursor		;y=00 to 0e
 		sty fcountlo
-		
-		jmp slsb
+		txa			;A+X=0
+		tay			;y=0
+		jmp slsb_AX		;input: A,Y
 +		
 
 ; seed value is greater than #maxDirY :
@@ -81,49 +83,51 @@ contt
 		sbc #0
 		sta tmphi
 
-		lda valuelo
-		cmp tmplo
-		lda valuehi
+		sty fcountlo		;=valuelo
+		stx fcounthi		;=valuehi
+
+					;ldy valuelo
+		cpy tmplo
+		txa			;ldx valuehi
 		sbc tmphi
 		bcc +
-
 		
 		ldy #maxDirY-1
 		ldx maxfile
--		cpx valuelo
+-
+		cpx fcountlo		;valuelo
 		beq hh
 		dex
 		dey
 		bne -
 hh		sty pos_cursor
 
-		lda valuelo
-		sta fcountlo
-		lda valuehi
-		sta fcounthi
+		;lda valuelo
+		;sta fcountlo
+		;lda valuehi
+		;sta fcounthi
 		lda tmphi
-		ldx tmplo
+		ldy tmplo
 		jmp getlastpage
 		
 +
-		lda valuelo
-		sta fcountlo
-		sec
-		sbc #maxDirY-1
-		sta valuelo
-		lda valuehi
-		sta fcounthi
-		sbc #0
-		sta valuehi
+
 		lda #maxDirY-1
 		sta pos_cursor
+		tya
+		sec
+		sbc #maxDirY-1
+		tay			;y=valuelo
+		txa
+		sbc #0
+					;a=valuehi
 		
-slsb
-		lda valuehi
-		ldx valuelo
+slsb_AX
+		;lda valuehi
+		;ldy valuelo
 
 getlastpage
-		jsr getreuadress		;see reu_numbers.tas
+		jsr getreuadress		;see reu_numbers.tas - input A+X
 		sta reu_datadr_lo
 		stx reu_datadr_hi
 		sty reu_datadr_bank
@@ -165,7 +169,6 @@ lowZero
 noEor
 		sta rseed+1
  		rts
-
 rseed		.byte 0,0
-valuelo		.byte 0
-valuehi		.byte 0
+;valuelo		.byte 0
+;valuehi		.byte 0

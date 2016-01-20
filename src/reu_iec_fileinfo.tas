@@ -12,20 +12,21 @@
 		ldy #filename_entry_typelen
 		lda (rzp),y			;file length
 		bpl normalfiles
+		ldx #"d"		
 .if def_1541u_long
 		asl
 		bmi dd64
 .fi		
 
 		lda #"i"		;idr = dir
-		ldx #"d"
+		;ldx #"d"
 		ldy #"r"		;"dir"		
 		bne prnt
 
 .if def_1541u_long
 dd64
 		lda #"6"		;6d4 = d64
-		ldx #"d"
+		;ldx #"d"
 		ldy #"4"		;"d64"		
 		bne prnt
 .fi
