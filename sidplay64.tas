@@ -15,7 +15,7 @@
 ; $D019 Not used in irq, but enabled when jumping into a song using own interrupt handler.
 ; $DC0D - The irq is a timer irq, so $dc0d must be read for each irq triggered.
 ;--------------------------------------------------------------
-DEF_REU		= 1	;1 = enable reu routines (for all versions)
+DEF_REU		= 0	;1 = enable reu routines (for all versions)
 def_currentdate	= 1	;1 = include current date and clock in setup
 def_illegal	= 1	;1 = use illegal opcodes
 def_colorselect	= 1	;use 1, 0 = for debugging new colors.
@@ -290,7 +290,7 @@ panicload	lda #$ff		;For cases where ther is no memory and sid is a rsid (playad
 ;----------------------0123456789abcdef01234
 .if DEF_REU
 .else
-nofile		.text "no files present!    "	;present here in the normal non-reu version
+nofile		.text "no files present     "	;present here in the normal non-reu version
 .fi
 ;----------------------0123456789abcdef012
               
@@ -1422,7 +1422,7 @@ flengde
 
 .else
 ; normal versions (1541, sdiec ++) with no reu:
-* = $da60		;da60-d000/16 = 166 files
+* = $da40		;da60-d000/16 = 166 files		;0a40/16 = 164 files
 lastpos
 * = lastpos+1		;da60+166 = D078 		(dir routine overwrites last byte with $20 so we have to start at lastpos+1)
 flengde
@@ -1583,10 +1583,11 @@ normal_fileinfo
   .include "src/reu_normal_fileinfo.tas"	;used by src/reu_displayfiles.tas
   .fi
   
-.else
-
-;--------------------------------------------------------------
+.else ;DEF_REU
+;--------- without REU :---------------------------------------
   .if def_iec
+check_addfile_entry
+  .include src/dir-iec-addfileentry.tas
 iec_dir_sort
   .include src/iec_dir_sort.tas
   .fi

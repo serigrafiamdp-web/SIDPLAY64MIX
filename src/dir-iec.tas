@@ -102,7 +102,7 @@ aye
 ;wait for filentry to finish / scan for DIR entry
 retry_dir	ldy #3			;reset dir search
 scandir
-fn_endloop	JSR wjs_getbyte		;Scan filetype
+fn_endloop	JSR wjs_getbyte		;Scan filetype (x+y unused)
 		beq fn_endloop2		;exit
 
 .if def_1541u_long
@@ -135,6 +135,17 @@ adir		lda #$80		;dir
 .fi
 		
 fn_endloop2
+;a=00
+;x=maxfile
+		ldy #$35
+		sty $01
+		ldy $dc01
+		dec $01			;34
+		jsr check_addfile_entry
+		cpx #maxentries
+		beq endofdir
+		
+.comment
 		lda zerofile
 		beq bci
 		lda dzp
@@ -146,6 +157,8 @@ fn_endloop2
 +		inc maxfile
 
 bci
+.endc
+
 ;zp $01 = 38 at this point
 		jsr wjs_display		;Displayfiles + Clock/PLT + Read keyboard
 		sec
@@ -158,25 +171,24 @@ bci
 getByte
 		lda #$36
 		sta $01
-		;lda maxfile		;zeropage
-		;cmp #maxentries		;Reached the file limit ?
-		;beq endofdir		;yes
 		lda #0			;no
 		sta $90
 		stx netdrivex		;TFR - Netdrive bug - zp
 		jsr ROM_chrin
 		ldx #$38
 		stx $01
+.comment		
 		ldx maxfile
 		cpx #maxentries
 		beq endofdir
+.endc		
 		bit $90			;If status is zero then continue
 		bne endofdir
 		ldx netdrivex		;TFR - Netdrive bug - zp
 		cmp #0
 		rts
 ;---------Finished reading directory--------
-endofdir	;ldx maxfile		;we dont sort 1 file - must be 2 or more
+endofdir	ldx maxfile		;we dont sort 1 file - must be 2 or more
 		cpx #2
 		bcc nofiles
 		;lda #$38

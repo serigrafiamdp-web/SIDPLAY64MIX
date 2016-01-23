@@ -1,0 +1,42 @@
+;--------------------------------------------------------------
+; IEC - Add file entry
+;--------------------------------------------------------------
+;	* static subroutines
+;	* location: d000-e000
+;--------------------------------------------------------------
+;only called from dir-iec.tas
+;
+;When we reach the maxfile limit, we can hold the CTRL key
+;to load more filenames from disk.
+;
+;This will ofcourse overwrite the firs filenames, but you will have
+;access to more than 1xx files
+;
+;check_addfile_entry
+
+;input:
+;x=maxfile
+;a=00
+;y=$dc01
+		lda zerofile
+		beq jz
+		lda dzp
+		clc
+		adc #$10
+		sta dzp
+		bcc +
+		inc dzp+1
++		
+		inx
+		stx maxfile
+		cpx #maxentries
+		bne +
+		cpy #$f7		;check ldy $dc01 for "ClrHome" key.
+		bne +
+		lda #0
+		sta maxfile
+		sta dzp
+		ldx #>dirpos		;$d000
+		stx dzp+1		;this X is not the same as #maxentries (and should be different)
++
+jz		rts

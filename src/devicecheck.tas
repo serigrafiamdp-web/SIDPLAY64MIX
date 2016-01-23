@@ -297,7 +297,7 @@ devmsg		.byte $1e,$08,$93,$99
         .if def_1541u2cmd
 		.text "-1541u2-cmd"
         .fi
-		.text " v1.01",$0d
+		.text " v1.10",$0d
 		.text "beta "	;enable beta when in develop mode
 		;.text "build "
 		.if def_currentdate

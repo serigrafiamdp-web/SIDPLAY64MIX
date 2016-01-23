@@ -100,16 +100,9 @@ RUNSTOP+RESTORE:Restart. But returns back to fileselector without reloading dire
 CBM KEY        :Exit an RSID or PSID with $0000 as play address.
 S              :Screen on/off. (Reduce video chip noise).
 X              :Load Next or Random sid
+CLRHOME        :Keep pressed to load more filenames when reading directory.
 
 When the sid is playing/present in memory you can use all keys.
-
-MODE SELECT:
----------------------------------------------------------------
-Next to the Timer on screen you will see the letters M N R appear when you press
-the M key. This sets the Mode for the timer.
-M = Manual selection - The timer is not used.
-N = Play Next - The next song in the list is played when the Clock reach the Timer value.
-R = Random Play - A random song is played when the Clock reach the Timer value.
 
 
 JOYSTICK CONTROLS:
@@ -151,6 +144,81 @@ TIMER DECREASE  ----*---- TIMER INCREASE (NEXT/RANDOM)
                 JUMP DOWNWARDS
 
 
+
+LOADING DIRECTORY:
+---------------------------------------------------------------
+When you press SPACEBAR the current directory will be loaded from your
+SD card, Hard Drive or Diskette. 
+Pressing RETURN on ".." allows you to go back a directory level.
+Pressing the INSTDEL key will do the same thing.
+When you switch a directory level, the new directory will be loaded automatically.
+Directory names will have a "DIR" extension on the right side of the directory name.
+
+In the non-REU version you can move the cursor up and down while loading directory,
+for instance holdign the CRSR right key allows you to see the new filenames enter c64 memory.
+
+In the non-REU version for iec,cmd and ide64 devices you have the option to hold 
+the CLR HOME key to load more filenames.  The limit is 164 filenames in this program, 
+so loading the complete DRAX dir was not possible earlier. 
+But with this new key feature it is possible.
+
+In the REU versions you have the possibilty to have 65535 filenames in memory.
+In the REU versions you will also see the filesize of each sid on the right side,
+all numbers are displayed in kb (Unfortunately this is not possible for 1541uII yet).
+
+
+LOADING A SID FILE:
+---------------------------------------------------------------
+SP64 determines if the file is a sid by scanning the sid header of the file. That means the .sid
+extension in the filename doesn't need to be present on the disk.
+If the file is a wrong format it will exit back to limited cursor control with a red border.
+If the file is a RSID you will see the border changes to Grey when the music starts playing, and you 
+will also notice that none of the keys works. Pressing/Holding the CBM key should exit back to SP64 in most cases.
+If the file is a PSID you will see your skin default border color and you can use all keys to control the program.
+There's One exception though, some PSIDs also has $0000 as play address and will behave like a RSID.
+
+Panic Load:
+Some sids will use more memory than SP64 can handle. And in those cases, if the sid header has 
+information to do so, the sid will be loaded and started with no possible return.
+In many cases loading such files need a cartridge or device that can load under IO memory d000-e000.
+Action Replay/Retro Replay can do this. The 1541UII version also allows to load under IO memory.
+
+
+About RSIDs:
+---------------------------------------------------------------
+RSIDs run using its own interrupt handler. The play call address is always set to $0000.
+And you will see the letters "RSID" in the the top left corner.
+The border turns grey when an RSID is playing. (Unless the rsid itself changes the border colours)
+
+To exit an RSID:
+Press the CBM key.
+If that doesn't work try pressing Sacebar, Run/Stop, Ctrl, Shift, then the CBM key.
+If that still doesn't work, try hitting Restore or Run/Stop + Restore to trigger a reset of the program.
+If that doesn't work. You have to reset and reload the program.
+
+If you successfully exited and RSID the normal way (CBM key) you can select sub tunes with +/- and
+you can start and stop the song with F1 and F7.
+
+
+Loading a BASIC sid file:
+---------------------------------------------------------------
+Loading and running a BASIC sid file will turn your border to grey (unless the sid itself changes colours).
+It is possible to return back to SP64 by pressing CBM key, but only after the song has stopped and finished.
+If the song loops forever you have to hold the RunStop button and tap RESTORE, the music should stop and 
+the border color should return to default, and you can use F1, + and - to restart or select subtunes for this sid.
+
+Many BASIC sids will write text and colors to screen, so don't worry if you see weird colors on the screen.
+
+
+MODE SELECT:
+---------------------------------------------------------------
+Next to the Timer on screen you will see the letters M N R appear when you press
+the M key. This sets the Mode for the timer.
+M = Manual selection - The timer is not used.
+N = Play Next - The next song in the list is played when the Clock reach the Timer value.
+R = Random Play - A random song is played when the Clock reach the Timer value.
+
+
 SP64INJECTOR.EXE:
 ---------------------------------------------------------------
 With this tool you can inject default song lengths into your sids.
@@ -182,47 +250,6 @@ And with it you can make a playlist of sids with exact playing time for each sid
 Only use these modified sids with SP64.
 Modified sids will play fine on all older versions of SP64, but the 
 injected song lengths will only be used by v1.00 and upwards.
-
-
-LOADING A SID FILE:
----------------------------------------------------------------
-SP64 determines if the file is a sid by scanning the sid header of the file. That means the .sid
-extension in the filename doesn't need to be present on the disk.
-If the file is a wrong format it will exit with a red border (and reload dir in case the disk was swapped).
-If the file is a RSID you will see the border changes to Grey when the music starts playing, and you 
-will also notice that none of the keys works. Pressing CBM will exit back to SP64.
-If the file is a PSID you will see your skin default border color and you can use all keys to control the program.
-There's One exception though, some PSIDs also has $0000 as play address and will behave like a RSID.
-
-Panic Load:
-Some sids will use more memory than SP64 can handle. And in those cases, if the sid header has 
-information to do so, the sid will be loaded and started with no possible return.
-
-
-About RSIDs:
----------------------------------------------------------------
-RSIDs run using its own interrupt handler. The play call address is always set to $0000.
-And you will see the letters "RSID" in the the top left corner.
-The border turns grey when an RSID is playing. (Unless the rsid itself changes the border colours)
-
-To exit an RSID:
-Press the CBM key.
-If that doesn't work try pressing Sacebar, Run/Stop, Ctrl, Shift, then the CBM key.
-If that still doesn't work, try hitting Restore or Run/Stop + Restore to trigger a reset of the program.
-If that doesn't work. You have to reset and reload the program.
-
-If you successfully exited and RSID the normal way (CBM key) you can select sub tunes with +/- and
-you can start and stop the song with F1 and F7.
-
-
-Loading a BASIC sid file:
----------------------------------------------------------------
-Loading and running a BASIC sid file will turn your border to grey (unless the sid itself changes colours).
-It is possible to return back to SP64 by pressing CBM key, but only after the song has stopped and finished.
-If the song loops forever you have to hold the RunStop button and tap RESTORE, the music should stop and 
-the border color should return to default, and you can use F1, + and - to restart or select subtunes for this sid.
-
-Many BASIC sids will write text and colors to screen, so don't worry if you see weird colors on the screen.
 
 
 REU - The Ram Expansion Unit.
@@ -365,6 +392,7 @@ Additional programming by: Tom-Cat
 
 SIDPLAY 64 v1.10 (xx/xx/2016):
 -------------------------------
+* Added:     ClrHome key loads more filenames while reading directory.
 * Added:     BASIC support.
 * Added:     REU: Remembers previous dir positions when you go back.
 * Added:     REU: File size are displayed in kilobytes. (Not for 1541u2)
