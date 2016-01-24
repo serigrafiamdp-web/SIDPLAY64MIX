@@ -1,6 +1,6 @@
 SIDPLAY64 V1.10
 ---------------------------------------------------------------
-Welcome to this lastest version of Sidplay64 (SP64).
+Welcome to the last version of Sidplay64 (SP64).
 Finally we have also found space for BASIC sid files support.
 Read more about that in its own section below.
 This program alsom comes with our new length injector tool.
@@ -79,10 +79,11 @@ with the keys 0-9. Or press any other key to make SP64 load the directory.
 If you don't like to answer these questions next time, simply press
 return 6 times to get the default values.
 
-When a fresh directory is loaded you can only use some of these keys:
 
 KEYBOARD COMMANDS:
 ---------------------------------------------------------------
+When a fresh directory is loaded you can only use some of these keys.
+
 CRSR UP/DOWN   :Select sid tune
 RETURN         :Load a sid tune / open directory / open disk image file
 INSTDEL        :Go back a directory level (Only for the versions that supports directory browsing)
@@ -93,14 +94,15 @@ F7             :Pause/Continue song
 , / .          :Set timer for when NEXT or RANDOM tune is going to be loaded.
 M              :Mode select: Manual, Next or Random
 CRSR LEFT      :jump 15 lines upwards.
-CRSR RIGHT     :jump 15 lines downwards.  (In the non REU version this jumps all the way down.)
-RESTORE        :Restart (init values and variables and loads directory.)
-RUNSTOP+RESTORE:Restart. But returns back to fileselector without reloading directory.
+CRSR RIGHT     :jump 15 lines downwards.  (In the non-REU version this jumps all the way down.)
+RESTORE        :Force exit from the sid playing - reloads directory.
+RUNSTOP+RESTORE:Force exit from the sid playing - returns to fileselector with all keys available.
 <-(LEFT ARROW) :Fast forward (when song is playing)
 CBM KEY        :Exit an RSID or PSID with $0000 as play address.
 S              :Screen on/off. (Reduce video chip noise).
 X              :Load Next or Random sid
-CLRHOME        :Keep pressed to load more filenames when reading directory.
+CLRHOME        :Keep pressed to load more filenames when reading directory holding more than 164 files.
+                This only works for the NON-REU version of sd2iec, *iec, cmd drives, IDE64, Netdrive and 1541Ultimate.
 
 When the sid is playing/present in memory you can use all keys.
 
@@ -113,7 +115,11 @@ FIRE BUTTON   :Load SID
 SPACEBAR:     :Load Directory
 COMMODORE KEY :Fast Forwards
 
-Joystick control without firebutton pressed:
+(While loading in a directory you can hold joystick to the RIGHT to load more filenames 
+from a directory with more than 164 files.) 
+
+
+JOYSTICK CONTROL WITHOUT FIREBUTTON PRESSED:
 
 
                  CURSOR UP
@@ -125,7 +131,7 @@ PREVIOUS SONG   ---- ---- NEXT SONG
                 CURSOR DOWN
 
 
-Joystick control with firebutton pressed:
+JOYSTICK CONTROL WITH FIREBUTTON PRESSED:
 
 Important: First move and hold the stick in the desired direction, 
            then press fire, then release fire button.
@@ -144,7 +150,6 @@ TIMER DECREASE  ----*---- TIMER INCREASE (NEXT/RANDOM)
                 JUMP DOWNWARDS
 
 
-
 LOADING DIRECTORY:
 ---------------------------------------------------------------
 When you press SPACEBAR the current directory will be loaded from your
@@ -159,12 +164,13 @@ for instance holdign the CRSR right key allows you to see the new filenames ente
 
 In the non-REU version for iec,cmd and ide64 devices you have the option to hold 
 the CLR HOME key to load more filenames.  The limit is 164 filenames in this program, 
-so loading the complete DRAX dir was not possible earlier. 
+so loading the complete DRAX dir is now possible. 
 But with this new key feature it is possible.
+(In joystick mode you can hold joystick to the right to load more filesnames.)
 
-In the REU versions you have the possibilty to have 65535 filenames in memory.
-In the REU versions you will also see the filesize of each sid on the right side,
-all numbers are displayed in kb (Unfortunately this is not possible for 1541uII yet).
+In the REU versions you have the possibilty to have up to 65535 filenames in memory.
+In the REU versions you will also see the filesize in kb for each sid on the right side of
+the screen (Unfortunately this is not possible for 1541uII yet).
 
 
 LOADING A SID FILE:
@@ -193,7 +199,7 @@ The border turns grey when an RSID is playing. (Unless the rsid itself changes t
 To exit an RSID:
 Press the CBM key.
 If that doesn't work try pressing Sacebar, Run/Stop, Ctrl, Shift, then the CBM key.
-If that still doesn't work, try hitting Restore or Run/Stop + Restore to trigger a reset of the program.
+If that still doesn't work, try hitting RunStop + Restore to trigger a reset of the program.
 If that doesn't work. You have to reset and reload the program.
 
 If you successfully exited and RSID the normal way (CBM key) you can select sub tunes with +/- and
@@ -217,6 +223,18 @@ the M key. This sets the Mode for the timer.
 M = Manual selection - The timer is not used.
 N = Play Next - The next song in the list is played when the Clock reach the Timer value.
 R = Random Play - A random song is played when the Clock reach the Timer value.
+
+
+RUNSTOP+RESTORE and RESTORE:
+---------------------------------------------------------------
+Should only be used on Rsid's or Psid's that has it's own interrupt handler (play call is $0000)
+or a sid that is made with a BASIC start (init call is $0000). 
+These sids normally turn the border to dark grey.
+
+Normally you can exit these sids by pressing the CBM key, but if that doesnt work you can try
+holding RUN STOP and tapping RESTORE.
+
+RESTORE alone does the same thing as pressing SPACEBAR (loads directory and turn off most keys).
 
 
 SP64INJECTOR.EXE:
@@ -377,8 +395,9 @@ The sp64injector.exe was programmed by Tom-Cat.
 
 Also thanks to these people for help, ideas, bug testing:
 
-Tom-Cat, Erhan, Ready, Lemming, Hurminator, iAN CooG, Fredric, 
+Tom-Cat, Erhan, Ready, Lemming, Hurminator, iAN CooG, Fredric, Wilfred,
 and everyone in Nostalgia and Shape.
+
 And ofcourse to everybody we know.
 
 Also a big thanks to Whiteflame for sharing his 'random' routines on codebase.
@@ -392,15 +411,16 @@ Additional programming by: Tom-Cat
 
 SIDPLAY 64 v1.10 (xx/xx/2016):
 -------------------------------
-* Added:     ClrHome key loads more filenames while reading directory.
-* Added:     BASIC support.
+* Added:     IEC/CMD/IDE64: ClrHome key loads more filenames while reading directory.
+* Added:     IEC/CMD/IDE64: Joystick RIGHT loads more filenames while reading directory.
+* Behaviour: BASIC sid's that stops on its own can be exited by pressing CBM.
+* Added:     Songs with BASIC start support.
 * Added:     REU: Remembers previous dir positions when you go back.
 * Added:     REU: File size are displayed in kilobytes. (Not for 1541u2)
 * Behaviour: Restore : resets variables and reloads dir.
 * Behaviour: RunStop+Restore : exit BASIC sid's or sid's using $0000 as play call.
-* Behaviour: BASIC sid's that stops on its own can be exited by pressing CBM.
 * Fixed:     1541U2: shortened dir read routine.
-* Fixed:     One of the color skins used grey for border.
+* Fixed:     One of the color skins used dark grey for border.
 
 
 SIDPLAY 64 v1.00 (13/12/2015):
