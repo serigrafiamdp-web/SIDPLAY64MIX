@@ -15,7 +15,7 @@
 ; $D019 Not used in irq, but enabled when jumping into a song using own interrupt handler.
 ; $DC0D - The irq is a timer irq, so $dc0d must be read for each irq triggered.
 ;--------------------------------------------------------------
-DEF_REU		= 0	;1 = enable reu routines (for all versions)
+DEF_REU		= 1	;1 = enable reu routines (for all versions)
 def_currentdate	= 1	;1 = include current date and clock in setup
 def_illegal	= 1	;1 = use illegal opcodes
 def_colorselect	= 1	;use 1, 0 = for debugging new colors.
@@ -852,10 +852,10 @@ restartTune
 ;zp $01 is always 35 when entering here
 		
 		;php
-		;sei
+		sei
 		lda #$38
 		sta $01
-		jsr dotunenumbers
+		jsr dotunenumbers	;uses some zeropages in the 0c-ff area, must set SEI in advance.
 
 		jsr wjs_resetCia	;SEI, zp01=$36 (clears zp 000c-0100 and 020c-0300)
 
