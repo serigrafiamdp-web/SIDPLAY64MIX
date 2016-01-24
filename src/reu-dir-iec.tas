@@ -59,9 +59,10 @@ getfname_loop	jsr wjs_getbyte		;filename letters here
 		bne getfname
 		tya
 		tax			;filename length 1-16 is now in X register
-		
+
 		lda #$20		;"space" sign
 getfname	sta (dzp),y		;store letter
+
 		iny
 		cpy #$11		;max length
 		bne getfname_loop
@@ -112,8 +113,7 @@ adir		lda #$80		;dir
 		
 fn_endloop2
 		jsr check_addfile_entry	;static rom d000-e000
-;		lda #$36
-;		sta $01
+
 		jsr wjs_display		;displayFiles+read keyboard
 		ldy #2
 .if def_1541u_long		
@@ -129,9 +129,6 @@ fn_endloop2
 getByte
 		lda #$36
 		sta $01
-		;lda maxfile
-		;cmp #maxentries	;no limit check when using REU.
-		;beq endofdir		
 		lda #0
 		sta $90
 		stx netdrivex		;TFR - Netdrive bug - zp
@@ -151,14 +148,6 @@ endofdir
 .if def_remember_dir
 		jsr get_dir_pos
 .fi
-
-		
-;		lda maxfile		;we dont sort 1 file
-;		cmp #2			;must be 2 or more
-;		bcc nofiles
-;		lda #$38
-;		sta $01
-;		jsr iec_dir_sort
 
 nofiles		lda #$36
 		sta $01
