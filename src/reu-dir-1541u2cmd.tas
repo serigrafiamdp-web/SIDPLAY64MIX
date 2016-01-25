@@ -25,8 +25,8 @@
 
 		ldx #$01                        ;OPEN DIR
 		stx U2_Command_data_register
-		lda #$13
-		sta U2_Command_data_register
+		ldy #$13
+		sty U2_Command_data_register
 		;ldx #_PUSH_CMD			;=$01
 		stx U2_Control_register
 
@@ -40,8 +40,8 @@
 
 		;ldx #$01                        ; READ DIR
 		stx U2_Command_data_register
-		lda #$14
-		sta U2_Command_data_register
+		iny	;ldy #$14
+		sty U2_Command_data_register
 		;ldx #_PUSH_CMD			;=$01
 		stx U2_Control_register
 
@@ -123,8 +123,8 @@ skipfile
 		jsr get_dir_pos
 .fi
 		
-		lda #$36
-		sta $01
+		;lda #$36
+		;sta $01
 
 			
 ;---------------------------------------

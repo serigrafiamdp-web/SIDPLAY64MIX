@@ -1,10 +1,10 @@
 DIRCMD	= $e808
 
-		ldx $01
+		ldx $01			;36
 		lda #$38
 		sta $01
 		jsr prepare_loading_new_reu_dir	;only touch A register
-		stx $01
+		stx $01			;36
 		
 		lda #$01
 		ldx device

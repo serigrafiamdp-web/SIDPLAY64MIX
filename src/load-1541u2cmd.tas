@@ -119,6 +119,7 @@ loadfile
 		lda #_FA_READ
 		sta U2_Command_data_register
 		ldy #$00
+		sty $d011
 -		lda fname,y
 		sta U2_Command_data_register
 		iny

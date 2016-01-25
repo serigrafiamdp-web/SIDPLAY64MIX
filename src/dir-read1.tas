@@ -82,15 +82,10 @@ getfname	sta (dzp),y		;store letter
 		clc
 		adc #$10
 		sta dzp
-		bcc dirSdi
+		bcc +
 		inc dzp+1
-dirSdi
-
-;		lda #$36
-;		sta $01
++
 		jsr wjs_display		;displayFiles+keyboard
-;		jsr wjs_ffe4		;read keyboard
-		
 ta		jsr wjs_getbyte		;wait for zero
 		bne ta
 		ldy #$02

@@ -8,6 +8,8 @@
 ; * this routine is not a subroutine. no rts.
 ;--------------------------------------------------------------
 
+		lda #dir_keys		;only a few keys available while loading dir
+		sta numb		;00-0e - abs
 
 ;x+y=0
 		;lda #>dirpos
@@ -17,13 +19,15 @@
 		;sty offs_cursor	;abs
 		;sty maxfile		;zp
 		;sty dzp		;zp
+;ZP=$01 = 36
+		dec $01			;35
 
 		jsr wait_for_idle		;X+Y untouched
 
 		ldx #$01                        ; OPEN DIR
 		stx U2_Command_data_register
-		lda #$13
-		sta U2_Command_data_register
+		ldy #$13
+		sty U2_Command_data_register
 		;ldx #_PUSH_CMD			;=$01
 		stx U2_Control_register
 
@@ -37,75 +41,79 @@
 
 		;ldx #$01                       ; READ DIR
 		stx U2_Command_data_register
-		lda #$14
-		sta U2_Command_data_register
+		iny	;ldy #$14
+		sty U2_Command_data_register
 		;ldx #_PUSH_CMD			;=$01
 		stx U2_Control_register
 
 nextdirentry
+;zp $01 = 35
 		jsr wjs_wait_while_busy
-		ldy #$00
+		ldy #0
 
-		lda maxfile
-		cmp #maxentries			;Reached the file limit ?
-		beq skipfile			;yes
-		
-;		lda U2_Status_register          ; any data left to process int this packet ?
-;		bpl skipfile
+		ldx maxfile
+		;cpx #maxentries			;Reached the file limit ?
+		;beq skipfile			;yes
 
 		lda U2_Response_data_register   ; attribute byte
-		sta header
-
-nextchar
-		lda U2_Status_register          ; any data left to process int this packet ?
+		and #_DA_DIR			; $10
+		php				; zeroflag = 1 - means the entry is a file
+						; zeroflag = 0 - means the entry is a dir
+						
+nextchar	lda U2_Status_register          ; any data left to process int this packet ?
 		bpl nomorechars
 		lda U2_Response_data_register   ; yes - print it
-
-		ldx #$34
-		stx $01
-		sta (dzp),y
-		inc $01				;35
+		dec $01				; 34
+		sta (dzp),y			; store filename,y
+		inc $01				; 35
 		iny
 		cpy #16
 		bne nextchar
-nomorechars
+nomorechars	dec $01				; 34
 
-		lda #$38
-		sta $01
-		
-		ldx maxfile
-		tya
-		sta flengde,x			; store filelen
+		tya				; y = filename length
+		plp
+		beq notdir			; branches when zflag = 1
+		ora #$80			; mark entry as a Directory
+notdir		sta flengde,x			; store filename/dirname length
 
-		lda header
-		and #_DA_DIR
-		beq notdir
-		lda flengde,x
-		ora #$80			; set dir flag (bit 7)
-		sta flengde,x
-
-notdir
 -		cpy #16
-		beq dontfill
-		lda #$20
-		sta (dzp),y
+		beq +
+		lda #$20			;fill the letters on the right of filename with spacebar
+		sta (dzp),y			
 		iny
 		bne -
-dontfill
-		lda #$36
-		sta $01
++
+		
+		inc $01				;35
+		
+		ldy $dc01
+		dec $01				;34
+		jsr check_addfile_entry
+		inc $01				;35
+		cpx #maxentries
+		bne endof
+		lda #_ABORT
+		sta U2_Control_register
+		bne plop
+		
+endof		
 
+.COMMENT
 		inc maxfile
-
-		lda dzp		; go to next file in list
+		lda dzp				; go to next file in list
 		clc
 		adc #$10
 		sta dzp
-		bcc bci
+		bcc +
 		inc dzp+1
-bci
++
+.ENDC
 
-skipfile		
+		jsr wjs_display		;Displayfiles + Clock/PLT + Read keyboard
+		lda #$35		;35
+		sta $01
+;skipfile		
 ;            jsr get_status                 ; here we need to get the status - after the packet is done, if we want to !
 
 		lda #_DATA_ACC                  ; Go to next packet, if any
@@ -114,6 +122,7 @@ skipfile
 		and #_STATE
 		cmp #_STATE_COMMAND_BUSY	; check if there is any more packets to process
 		beq nextdirentry
+plop
 
 		; no more dir entries
 			

@@ -483,7 +483,6 @@ dirSelector	ldy #0			;y=0
 ;--------------------------------------------------------------
 ;LOAD NEW DIR:
 start                       		;JMP HERE FIRST TIME from SRC/INIT.TAS
-dodir
 
 ;000c-0100 is zerofilled
 ;020c-0300 is zerofilled
@@ -524,15 +523,19 @@ clrmsg2		sta (dzp),y
 ;y must be zero here:
 .fi
 
+;---------------------------------------------------------------
 .if def_reu
 
   .if def_1541u2cmd
 		.include src/reu-dir-1541u2cmd.tas
+		;ends with zp$01=34
   .else
       .if def_iec
 	    	.include src/reu-dir-iec.tas		;iec, ide64 ++
+	    	;ends with zp$01=36
       .else		
 	    	.include src/reu-dir-read1.tas		;serial 1541 ++
+	    	;ends with zp$01=36
       .fi		
   .fi
 
@@ -542,7 +545,7 @@ clrmsg2		sta (dzp),y
 
   .if def_1541u2cmd
 		.include src/dir-1541u2cmd.tas		
-		;ends with zp$01=36
+		;ends with zp$01=35
   .else
       .if def_iec
 	    	.include src/dir-iec.tas		;iec, ide64 ++
@@ -554,41 +557,46 @@ clrmsg2		sta (dzp),y
   .fi
 .fi ;def_reu
 
-;Set Help, Dir, Load keys:
-;and wait for user
+;---------------------------------------------------------------
+;At this position the dir loading has finished.
+;And zp$01 from above routines can be anything (34,35,36 or 38), as 
+;jsr wjs_display below will set it back to $36.
 
-		lda #noirq_keys  ;*9
+		lda #noirq_keys		;crsrs keys + return key now possible
 		sta numb
 
-fileSelect	jsr wjs_display		;DisplayFiles+keys
+;Notice that the background code is constantly looping here when playing music and selecting files:
+
+fileSelect	jsr wjs_display		;zp$01=36, then displayFiles, then scankeys
 		sec			;
 		bcs fileselect		;JMP
-		
-
-; Dir-buffer is located at $d000 ->
-
+;---------------------------------------------------------------
 
 displayFiles
 .if DEF_REU
 	.if DEF_1541u2cmd
 	.include "src/reu_1541u2cmd_displayfiles.tas"	;custom 1541u2 code
+	;zp $01 = 36 on exit
 	.else
 	.include "src/reu_displayfiles.tas"		;all other versions that use REU.
+	;zp $01 = 36 on exit
 	.fi
 .else
 .include "src/displayfiles.tas"				;all versions without reu.
+	;zp $01 = 36 on exit
 .fi
 
 ;zp $01 = 36 and code continues here:
 
-;---------------------------------------
-;  Keyboard scan routine with delay
-;  Inserted clock routine + random+next load here to free up cpu time for irq speed calls
-;---------------------------------------
-
-ffe4key
-
+;---------------------------------------------------------------
+;  Clock routine
+;  Playlist timer with Random or Next load
+;  Keyboard scan routine
+;  Key checks
+;---------------------------------------------------------------
+;ffe4key
 ;TOD Clock is printed to screen:
+
 		lda #<timestr1
 		sta gzp
 		lda screenpos
@@ -952,12 +960,7 @@ waitk		ldx #0			;ldx #$7f - cbm keyscan also works with 0
 		stx $dd0e		;Disable NMI timer A interrupt - These interrupts must be disabled here	
 		stx $dd0f		;Disable NMI timer B interrupt
 					;We must disable NMI first. Because NMI might contain code that changes zp$01 (Navy moves.sid).
-		;stx $d020		;black screen
 		jsr wjs_resetCia	;SEI, clears cia+nmi, restores 0300-0332 and fffa-fffe, returns with zp $01=36 set
-		
-		
-		;lda #$35		;
-		;sta $01
 		
 		ldx #zpBuffSize-1
 bp5		;lda zerop,x		;0002	- 	;|v1.1 we dont need to restore zp for musicplayers
@@ -966,7 +969,6 @@ bp5		;lda zerop,x		;0002	- 	;|v1.1 we dont need to restore zp for musicplayers
 		sta zerop,x		;0002
 		dex
 		bpl bp5
-		;jsr wjs_resetCia	;restores 0300-0332 and fffa-fffe
 		txs			;topstack
 		jmp (wjp_fileselect)
 ownirq         
@@ -1415,9 +1417,9 @@ check_addfile_entry
 ;note: The 1541u2 have space for 180 files
 ;note2: We dont compile this version for u2 anymore:
 .if def_1541u2cmd
-* = $db40	;db40-d000/16=180 files
+* = $db00	;db40-d000/16=180 files
 lastpos
-* = $db42 ;180 files table (db42-dbf6)
+* = $db02 ;180 files table (db42-dbf6)
 flengde
 
 .else
@@ -1585,6 +1587,10 @@ normal_fileinfo
   
 .else ;DEF_REU
 ;--------- without REU :---------------------------------------
+  .if def_1541u2cmd
+check_addfile_entry
+  .include src/dir-1541u2cmd-addfileentry.tas  
+  .fi
   .if def_iec
 check_addfile_entry
   .include src/dir-iec-addfileentry.tas

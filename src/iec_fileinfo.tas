@@ -12,18 +12,19 @@
 
 		lda flengde,x
 		bpl normalfiles
+		ldy #"d"		
 .if def_1541u_long
 		asl
 		bmi dd64
 .fi		
-		ldy #"d"
+		;ldy #"d"
 		ldx #"i"		;"DIR"
 		lda #"r"
 		bne prnt
 
 .if def_1541u_long
 dd64
-		ldy #"d"
+		;ldy #"d"
 		ldx #"6"		;"D64"
 		lda #"4"
 		bne prnt
