@@ -31,6 +31,7 @@ sidplay64-reu-1541u-netdrive.prg - 1541 Ultimate & Netdrive with REU.
 sidplay64-reu-iec-cmd-ide64.prg  - CMD drives, IDE64 devices & other IEC devices, with REU.
 sidplay64-reu-normal.prg         - REU version for 1541, 1571, 1581 and clones of these.
 
+sidplay64-1541u2cmd              - 1541 Ultimate II version.
 sidplay64-normal.prg             - Standard version for 1541, 1571, 1581 and clones.
 sidplay64-1541u-netdrive.prg     - 1541 Ultimate & Netdrive.
 sidplay64-iec-cmd-ide64.prg      - CMD drives, IDE64 devices & other IEC devices.

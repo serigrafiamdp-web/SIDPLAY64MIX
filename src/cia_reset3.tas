@@ -5,7 +5,6 @@ len_fda3	= (($fdcb-$fda3) -1)
 		sei
 		lda #$36
 		sta $01
-		
 		ldx #len_fda3+1
 		lda #$60			;rts
 		bne uoo
@@ -39,6 +38,14 @@ clrtod3		dex
 ;dont touch x, dont touch y
 color2_d020	lda #$a9
 		sta $d020		
+
+.if def_1541u2cmd
+	.if !def_reu
+		;lda #_ABORT			;only for non-REU version of 1541u2cmd
+		;sta U2_Control_register
+	.fi
+.fi		
+
 		
 		;stx $0291	;>80 = disable cbm+shift		
 

@@ -396,7 +396,8 @@ maxDirY		= 15
 ;variables 
 
 no_keys		= $ff	;REU only - avoid keyboard while loading dir to reu
-dir_keys	= 5	;crsr-up/crsr-down/clrhome/sh+clrhome/space/delete
+crsr_keys	= 3	;crsr-up/down, crsr-left/right
+dir_keys	= 5	;crsr-up/down, crsr-left/right, space, delete
 noirq_keys	= 6	;return (load file possible)
 irq_keys	= 15	;select tune, restart, shuffle
 
