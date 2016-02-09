@@ -61,6 +61,7 @@ Default is $d420. Press return to continue.
 Next up is to select if you wish to ignore loading sids using $0000 as play address.
 Both RSIDs and PSIDs can have this play address and they will stop
 the random Shuffle play and the play next routine in your playlist.
+The same thing goes for sids using the BASIC environment of your c64.
 Selecting Y here will avoid loading these "troublesome" sids.
 
 Then you have a new option to disable song lengths for modded/injected sids.
@@ -163,15 +164,16 @@ Directory names will have a "DIR" extension on the right side of the directory n
 In the non-REU version you can move the cursor up and down while loading directory,
 for instance holdign the CRSR right key allows you to see the new filenames enter c64 memory.
 
-In the non-REU version for iec,cmd and ide64 devices you have the option to hold 
-the CLR HOME key to load more filenames.  The limit is 164 filenames in this program, 
-so loading the complete DRAX dir is now possible. 
-But with this new key feature it is possible.
+In the non-REU version for iec,cmd and ide64 devices you now have the option to hold 
+the CLR HOME key to load more filenames when reacing the 164 filename limit.
 (In joystick mode you can hold joystick to the right to load more filesnames.)
+The dir routine will then read in the next 164 filenames. And if you keep the key
+pressed you can go on like this until the end of the directory.
+The acutal key check is done when reaching the limit.
 
 In the REU versions you have the possibilty to have up to 65535 filenames in memory.
 In the REU versions you will also see the filesize in kb for each sid on the right side of
-the screen (Unfortunately this is not possible for 1541uII yet).
+the screen (Unfortunately this is not possible for 1541U-II yet).
 
 
 LOADING A SID FILE:
@@ -375,13 +377,40 @@ Reasons are many:
 * The free relocation pages offered by the sid header is wrong and crashes SP64.
 * The sid will overwrite other music data when selecting sub tunes. (sidplay on pc load the file back from a buffer.)
 * The sid load to area at d000-e000.  That wont work on a stock c64 without a fastload cartridge. Or a custom software loader.
+* The sid load address is below $0334.
 * The sid overwrite NMI and IRQ vectors (fffa-ffff)
 * The sid use wrong zeropage $01 and they might set CLI or SEI in the play call.
 * The sid contains routines that change graphic mode, memory banks, colour ram etc.
 
-Especially RSIDs and PSIDs using $0000 as play address seems to be problematic.
+Especially BASIC, RSIDs and PSIDs using $0000 as play address seems to be problematic.
 Be sure to help the HVSC crew by identifying those sids so that they
 can be fixed to work with this program.
+
+
+NMI Digis with Sidplay64 in shuffle random/next mode:
+-----------------------------------------------------
+Many NMI digi songs will work fine with SP64 in normal mode if the
+NMI routine pushes and pulls zeropage $01.
+The init routine needs to set up the nmi vectors for both $0318/$0319 and $fffa/$fffb.
+
+nmi:    pha
+        txa
+        pha
+        tya
+        pha
+        lda $01
+        pha
+        lda #$35
+        sta $01
+        jsr yournmi
+        pla
+        sta $01
+        pla
+        tay
+        pla
+        tax
+        pla
+        rti
 
 
 Thanks for help & support:
