@@ -182,7 +182,7 @@ getByte
 		cpx #maxentries
 		beq endofdir
 .endc		
-		bit $90			;If status is zero then continue
+		ldx $90			;If status is zero then continue
 		bne endofdir
 		ldx netdrivex		;TFR - Netdrive bug - zp
 		cmp #0
