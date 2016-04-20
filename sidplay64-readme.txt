@@ -298,20 +298,25 @@ create directories first, and then you add the files last.
 1541 Ultimate II Command Interface:
 ---------------------------------------------------------------
 This version only works with 1541u2 firmware update 2.6d or higher.
-Recommended version is 2.6k
+Recommended version is 3.0 beta 7.
 It comes with REU support. You need to enable the REU support.
 It uses the Command Interface. You need to enable that as well.
 
-Currently there are two bugs in the latest 1541u2 firmware (v2.6k):
+Currently there are two bugs in the v2.6k firmware:
 
 1. When USB drive is connected you first need to enter the USB directory with 
    the U2 Browser or it will show up as a File in SP64 instead of directory.
 2. You can only go up to the Root of the U2 drive once and choose the SD Card or 
    USB directory, after that you cannot go completely up to the Root again.
-
 3. This is perhaps not a bug, but worth a note:
    When you have a huge 1541u2 directory each file will take longer to load.
+   
 
+The v3.0 beta 7 firmware is just out and all the issues mentioned above seem to be
+fixed in that firmware. Highly recommended for longer play lists.
+Just note that if you dont have a usb attached you will get a "no files present" 
+message if you go all the way up in the directory hierarchy. 
+When that happens, tap Return to get back to root directory of your SD card.
 
 
 1541U (In IEC mode/Standalone mode):
@@ -439,7 +444,7 @@ Programming by: Glenn R. Gallefoss
 Additional programming by: Tom-Cat
 
 
-SIDPLAY 64 v1.10 (xx/xx/2016):
+SIDPLAY 64 v1.10 (17/04/2016):
 -------------------------------
 * Added:     IEC/CMD/IDE64: ClrHome key loads more filenames while reading directory.
 * Added:     IEC/CMD/IDE64: Joystick RIGHT loads more filenames while reading directory.

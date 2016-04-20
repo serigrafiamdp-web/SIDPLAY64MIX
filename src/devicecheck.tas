@@ -298,8 +298,8 @@ devmsg		.byte $1e,$08,$93,$99
 		.text "-1541u2-cmd"
         .fi
 		.text " v1.10",$0d
-		.text "beta "	;enable beta when in develop mode
-		;.text "build "
+		;.text "beta "	;enable beta when in develop mode
+		.text "build "
 		.if def_currentdate
 		.binary timedate.log	;created by batch echo in root dir
 		.else
