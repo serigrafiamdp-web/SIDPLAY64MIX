@@ -72,7 +72,20 @@ getsr        lda sidreleased,x	;year, copyright
                              ;bit 5 = 8580
              lsr
              lsr
-             tax
+             tax		;x=0,4,8,c
+.if DEF_SIDFX
+		lsr
+		lsr
+		sta sidfxtype+1	;a=0,1,2,3 ; unknown,6581,8580,both
+.fi             
+
+.if DEF_CHAMELEON
+		lsr
+		lsr
+		sta chamelonsidtype+1
+
+.fi
+
              ldy #160
 getchip      lda chiptype,x
              sta (gzp),y

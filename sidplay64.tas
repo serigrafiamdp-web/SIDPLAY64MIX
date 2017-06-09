@@ -15,7 +15,12 @@
 ; $D019 Not used in irq, but enabled when jumping into a song using own interrupt handler.
 ; $DC0D - The irq is a timer irq, so $dc0d must be read for each irq triggered.
 ;--------------------------------------------------------------
-DEF_REU		= 1	;1 = enable reu routines (for all versions)
+DEF_CHAMELEON	= 0	;1 = enable Chameleon specific code to switch 6581/850 sid - Perhaps move this to sidplay64.cfg as a seperate defset
+;--------------------------------------------------------------
+DEF_SIDFX	= 1	;1 = enable SIDFX routines (for all versions) - Don't combine SIDFX and Chameleon
+;--------------------------------------------------------------
+DEF_REU		= 0	;1 = enable reu routines (for all versions) - Can chameleon be comibed with REU ?
+;--------------------------------------------------------------
 def_currentdate	= 1	;1 = include current date and clock in setup
 def_illegal	= 1	;1 = use illegal opcodes
 def_colorselect	= 1	;use 1, 0 = for debugging new colors.
@@ -308,6 +313,10 @@ endstacker
               .offs 0
 
 
+.if DEF_CHAMELEON*DEF_SIDFX
+
+.error "You can't compile sidfx+chameleon together!"
+.fi
 		
 		* = $9000
 ;--------------------------------------------------------------
@@ -865,8 +874,19 @@ restartTune
 		lda #$38
 		sta $01
 		jsr dotunenumbers	;uses some zeropages in the 0c-ff area, must set SEI in advance.
+	;Returns y = sidslot# for SIDFX
+	;Returns Y = sid# for Chameleon
 
 		jsr wjs_resetCia	;SEI, zp01=$36 (clears zp 000c-0100 and 020c-0300)
+
+.if DEF_SIDFX
+		sty $d41d		;set SIDFX sidslot#
+.fi
+
+.if DEF_CHAMELEON
+		sty $d0f4		;set Chameleon sidtype (y:00=old/Y:C0=new)
+.fi
+
 
 ;   | Bit 4 |   Force Load Timer A: 1 = Yes
 ;   | Bit 0 |   Start/Stop Timer A: 1 = Start, 0 = Stop
@@ -1425,9 +1445,9 @@ flengde
 
 .else
 ; normal versions (1541, sdiec ++) with no reu:
-* = $da40		;da60-d000/16 = 166 files		;0a40/16 = 164 files
+* = $da30		;da30-d000/16 = 163 files
 lastpos
-* = lastpos+1		;da60+166 = D078 		(dir routine overwrites last byte with $20 so we have to start at lastpos+1)
+* = lastpos+1		;da30+163 = D078 		(dir routine overwrites last byte with $20 so we have to start at lastpos+1)
 flengde
 .fi
 		* = vectors-(static_code_end-static_code_start)

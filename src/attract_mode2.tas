@@ -63,6 +63,9 @@ nscrl
 text
 .enc screen
 
+.if DEF_SIDFX
+.text " SIDFX beta version.  debug colors white=6581, red=8580.  "
+.fi
 ;-----|123456789012345678901234567890123456789|
 .if defset=1					;normal
 .text " This version works best on serial disk "

@@ -1,0 +1,182 @@
+;--------------------------------------------------------------
+;	SIDFX init, setup and detection.
+;	Only runned once in the init process.
+;	This only detects 6581+8580 - it ignores errors
+;       like "none" or "unknown" because of swinsid.
+;--------------------------------------------------------------
+;	Original routines by Lotus.
+;	Modified and optimized for Sidplay64 by 6R6.
+;--------------------------------------------------------------
+
+detectsidfx
+		sei
+		ldy #$0f
+-		jsr SCISYN		;bring SIDFX SCI state machine into a known state
+		dey
+		bpl -
+
+		ldy #3			;Send ($80) PNP Hardware detection
+-		lda sfxPNP_login,y	;and "PNP" letters to login to sidfx card
+		jsr SCIPUT
+		dey
+		bpl -
+
+		ldy #3			;Read vendor id lsb+msb and product id lsb+msb (45,4c,12,58)
+vendloop	jsr SCIGET
+		cmp sfx_id,y
+		beq sidfxok
+;--------------------------------------------------------------
+; NO SIDFX card found -  warn user that the SIDFX car was not detected
+;--------------------------------------------------------------
+nosidfx		lda #<msgerror_nosidfx
+		ldy #>msgerror_nosidfx
+		jsr $ab1e
+		cli
+-		jsr $ffe4
+		beq  -
+		bne detectsidfx		;jmp
+
+		
+sidfxok		dey
+		bpl vendloop
+
+		lda #<msg_sidfxok
+		ldy #>msg_sidfxok
+		jsr $ab1e
+
+;--------------------------------------------------------------
+;	Unhide SIDFX control registers
+;--------------------------------------------------------------
+		lda #$c0		;unhide register map
+		jsr SCIPUT
+		lda #$45
+		jsr SCIPUT
+		jsr SCISYN		;wait for registers to become ready
+
+;--------------------------------------------------------------
+;	Get SID models
+;--------------------------------------------------------------
+		lax $d41e		;Get SID1 model
+		and #%00000011		;1 = old sid, 2=newsid
+		sta sidslot1		;temp
+				
+		txa			;Get SID2 model		
+		lsr
+		lsr
+		and #%00000011		;1 = old sid, 2=newsid
+		sta sidslot2
+
+;--------------------------------------------------------------
+;	Check SW1 for center position
+;		- this to make sidfx operate in my intended operation
+;		  to switch between old and new sid with software.
+;--------------------------------------------------------------
+		lax $d41d		;Get SW1 position
+		lsr
+		lsr
+		lsr
+		lsr
+		and #%00000011
+		beq +
+		lda #<msg_center
+		ldy #>msg_center
+		jsr $ab1e
+		cli
+-		jsr $ffe4
+		beq  -
+		
++		sei
+		lda #$38
+		sta $01
+		
+		lax sidslot2
+		lda #$f2		;F2 = to select Slot#2
+		cpx #$01		;does slot#2 contain a old sid ?
+		bne +
+		sta sidfx_old		;F2: selects slot 2 as your 6581
++		cpx #$02		;or is it a new sid ?
+		bne +
+		sta sidfx_new		;F2: selects slot 2 as your 8580 
++
+
+		lax sidslot1
+		lda #$f1		;F1 = to select Slot#1
+		cpx #$01		;does slot#1 contain a old sid ?
+		bne +
+		sta sidfx_old		;F1: selects slot1 as your 6581
++		cpx #$02		;or is it a new sid ?
+		bne +
+		sta sidfx_new		;F1: selects slot 1 as your 8580
++
+
+;-- lastly we treate "error" codes 00 as Swinsid nano and 03 as Swinsid ultimate
+		lda sidslot1		;if sid1 is 0 or 3 (could be a swinsid)
+		beq zro1
+		cmp #$03
+		bne +
+zro1		lda #$f1		;we force old sid to be located at slot#1
+		sta sidfx_old
++
+
+		lda sidslot2		;same for sid2 (could be a swinsid version)
+		beq zro2
+		cmp #$03
+		bne +
+zro2		lda #$f2		;we force new sid to be located at slot#2
+		sta sidfx_new
++		
+
+		dec $01			;37
+		cli
+		rts
+
+sidslot1	.byte 0		;f1 selects sid#1
+sidslot2	.byte 0		;f2 selects sid#2
+
+msg_sidfxok
+.byte $0d,$0d,$1e
+.text "sidfx card found.",$0d,0
+
+msgerror_nosidfx
+.byte $0d,$0d,$1e
+.text "no sidfx card detected!",0
+
+msg_center
+.byte $0d,$0d,$1e
+.text "flip sw1 switch to center position",$0d
+.text "then press any key to continue.",0
+
+
+sfxPNP_login
+.byte $50,$4e,$50,$80	;"PNP" + PNP hardware detection ($80) (read backwards)
+
+sfx_id		
+.byte $58,$12,$4c,$45	;XrLE (vendor id + product id)
+
+;--------------------------------------------------------------
+;	Exchange SCI byte
+;
+;	A	must contain the byte to send
+;	A	will contain the byte received
+;
+;	X	modified
+;--------------------------------------------------------------
+SCIGET
+-		lda $d41f		;read SCI ready flag
+		bpl -			;wait until data ready
+SCISYN
+		lda #$00		;"nop" SCI command
+SCIPUT
+		ldx #$07		;transfer 8 bits (MSB first)
+		stx $d41e		;bring SCI sync signal low
+-		pha			;save data byte
+		sta $d41f		;transmit bit 7
+		lda $d41f		;receive bit 0
+		ror			;push bit 0 to carry flag
+		pla			;restore data byte
+		rol			;shift transmitted bit out and received bit in
+		dex			;next bit
+		bpl -			;done?
+		stx $d41e		;bring SCI sync signal high
+		rts
+;--------------------------------------------------------------

@@ -1,0 +1,128 @@
+CHAMELEON:
+----------
+Configuration registers:		$D0F0-$D0FF
+
+Activate Configuration registers:	Write $2a to $d0fe
+Deactivate Configuration registers:	Write $ff to $d0fe
+
+                                                                
+Detecting Chameleon with adress $D0FE:
+--------------------------------------                                              
+Reading at address 53502 (D0FEh) on a stock machine always results in 255 (FFh).  
+On the Chameleon the value can be unequal to 255 (FFh) if the configuration mode is active.  
+Use the following sequence to reliably detect the presence of the Chameleon:  
+
+Read and backup the current value at 53502 (D0FEh).  
+Write 42 (2Ah) at 53502 (D0FEh) and read at the same location.  
+The value represents the FPGA core version.  
+If the backuped value was 255 (FFh) store it into 53502(D0FEh) to restore previous mode."
+
+
+$D0FE will give these values on read:
+--------------------------------------------------------------------------------
+FGPA Core version:                                              Version Number:
+--------------------------------------------------------------------------------
+C64 with Chameleon cartridge present:                           $01	   
+Chameleon running in standalone mode (C64 emulation):           $A1	   
+Chameleon core for the C-One recon:                             $C1	   
+Chameleon with docing station (C64 emulation with joysticks):   $D1 	   
+C64 without Chameleon:                                          $FF	   
+
+
+
+
+
+
+        lda #$2a
+        sta $d0fe       ; enable config mode
+        lda #$02        ; MMU
+        sta $d0fa       ; enable config registers
+
+        lda #$00
+        cpx #$00
+        beq oldsid
+        lda #$c0
+oldsid:
+        sta $d0f4       ; set SID type
+
+
+... so combining this, we get sth like:
+
+; x = 0 for oldsid, != 0 for newsid	
+        lda #$2a
+        sta $d0fe       ; enable config mode
+	lda $d0fe
+	cmp #$ff
+	bne chameleon
+	sta $d0fe	; restore old value
+	rts
+chameleon:
+        cpx #$00
+        beq oldsid
+        ldx #$c0
+ oldsid:
+        stx $d0f4       ; set SID type
+	rts
+
+
+
+
+
+
+D0F4			SID Configuration register
+-----------------------------------------------------------------------------------------
+Bit  Settings           Description
+7    Second SID type    0 = Emulate 6581 SID-Chip
+                        1 = Emulate 8580 SID-Chip
+                        Selects the type of SID emulated for the second SID in stereo mode.
+6    First SID type     0 = Emulate 6581 SID-Chip
+                        1 = Emulate 8580 SID-Chip
+                        Selects the type of SID emulated for the first SID at $D400
+5-3  Stereo SID in C64  Specify where the second SID chip is located inside the C64 memory space.
+                        000b = Single SID in C64
+                        001b = Second SID in C64 at D420h
+                        010b = reserved
+                        011b = reserved
+                        100b = Second SID in C64 at D500h
+                        101b = Second SID in C64 at D700h
+                        110b = Second SID in C64 at DE00h
+                        111b = Second SID in C64 at DF00h
+                        For C-One use "000" when zero or one SID-Chip is placed and "001" when
+                        both SID-Chips are present.
+                        For stereo SID chip to properly work you also need to turn Chameleon SID
+                        emulation in stereo mode.
+2-0 Stereo SID          Specify if and where the second SID must be placed in chameleon memory
+    (emulation)         space. This doesn't have to be the same address as a second SID chip inside
+                        the C64 as Chameleon can translate the address automatically.
+                        000b = Emulate single SID
+                        001b = Emulate stereo SID use A5 for selection (D420h, D460h, D4A0h ...)
+                        010b = reserved
+                        011b = reserved
+                        100b = Emulate stereo SID use A8 for selection (D5xxh, D7xxh)
+                        101b = Same as setting 100b (D5xxh, D7xxh)
+                        110b = Emulate stereo SID use IO1 for second SID (DE00h)
+                        111b = Emulate stereo SID use IO2 for second SID (DF00h)
+                        others = reserved for future use
+                        When only a single SID chip is emulated (setting "000") it is played through
+                        both audio output channels in mono.
+                        For any of the stereo settings, the first SID-Chip emulation is played through
+                        the left audio output channel and is always located in memory at D400h. The
+                        second SID-Chip emulation is played through the right audio output channel.
+
+
+
+
+D0FA			
+---------------------------------------------------------------------
+bit  settings 		  		description
+7-6  reserved, must be 0  
+5    Chameleon RAM or ROM at D700h 	0 = D700h-D7FFh has SID mirrors
+					1 = RAM or ROM with banking and trampoline-code for the
+					menu is mapped at D700h{D7FFh
+4    reserved, must be 0
+3    reserved, must be 0
+2    reserved, must be 0 
+1    Enable MMU/Timer registers 	0 = VIC-II chip mirrors at D0A0h{D0AFh
+					1 = Chameleon MMU/Timer registers at D0A0h{D0AFh
+0 Enable VGA Controller Registers 	0 = VIC-II chip mirrors at D040h{D07Fh
+					1 = VGA registers at D040h-D07Fh

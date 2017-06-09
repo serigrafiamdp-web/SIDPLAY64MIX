@@ -15,8 +15,9 @@ devicecheck
 
 msgpos		= $0400+4+(40*6)
 
+
 .if def_1541u2cmd
-		
+
 		lda #1		;disable cursor
 		sta $cc
 		lda #<devmsg
@@ -24,6 +25,7 @@ msgpos		= $0400+4+(40*6)
 		jsr $ab1e
 		lda #$15
 		sta $d018
+		
 
 .if DEF_REU		
 		jsr reu_detection
@@ -113,7 +115,6 @@ deviceok
 		lda #<devmsg
 		ldy #>devmsg
 		jsr $ab1e
-		
 		lda #$15
 		sta $d018
 
@@ -276,6 +277,12 @@ msgnotpresent	.text "error, device not present...          "
 ;--------------------------------------------------------------
 devmsg		.byte $1e,$08,$93,$99
 		.text "sidplay64"
+		.if DEF_CHAMELEON
+		.text "-chameleon"
+		.fi
+		.if DEF_SIDFX
+		.text "-sidfx"
+		.fi
 		.if DEF_REU
 		.text "-reu"
 		.fi

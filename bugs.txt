@@ -1,12 +1,20 @@
 Things to check for:
 
+* 08.05.2017:
+  The sidfx detection routine is not accurate enough. It will fail sometimes.
+  Pressing a key will normally detect it on the 2nd try.
+
+* 01.05.2017:
+  Had some problems with sidfx card and 1541u2. Might be a bad connection, it looks to work ok now.
+  The bug was that the sidfx would start dropping to silence now and then...
+  then a loong beep.. 
+  then silence for a long time... and then it would get back in action again for a short time.
+
 * 22.12.2015:
   on 1541u2 when entering a directory that has only 1 sid file, the screen says "no files present"
   if you press enter, the program will load and run that file.
   example: HVSC\Musicians\G\Gray_Matt\Worktunes\
   
-* When loading dir on 1541u2 version it would be nice to see the file counter increase.
-
 * Scrolling down while reading REU dir messes up dir entries. disabled but possible to fix it someday.
 
 * ! invest_intro.sid /jt loads to $0f7c - 

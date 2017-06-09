@@ -1,11 +1,13 @@
 temp		= $ff
 
+reset
 ;-------------- SP64 INITIAL SETUP ROUTINE:
 
 		sei
 		cld
 		lda #$37
 		sta $01
+		
 ;-------------------------------------------
 		lda #$80
 		sta $028a		;Keys repeat
@@ -34,8 +36,19 @@ pal		sty $02a6
 
 
 		jsr devicecheck		;Select correct device here (f1/f2/return) - needs acess to rom routines at a000-c000 and e000-fffff
-	
 
+
+
+.if DEF_CHAMELEON
+-		jsr chameleon_detect
+		bne -
+
+.fi
+
+.if DEF_SIDFX
+		jsr detectsidfx
+		jmp no2sid		;skip 2nd sid options for sidfx
+.fi
 
 
 		lda #<secondsidmsg	;Do you have a 2nd sid chip ?
@@ -745,3 +758,11 @@ entersidadr
 cmpnumb	.text "0123456789"
 	.byte $41,$42,$43,$44,$45,$46
 
+
+.if DEF_SIDFX
+.include "src/sidfx_detect_init.tas"
+.fi
+
+.if DEF_CHAMELEON
+.include "src/chameleon_detect.tas"
+.fi

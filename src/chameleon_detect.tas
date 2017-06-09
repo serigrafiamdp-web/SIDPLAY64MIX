@@ -1,0 +1,37 @@
+;--------------------------------------------------------------
+;	Chameleon init and detection.
+;	Only runned once in the init process.
+;--------------------------------------------------------------
+
+chameleon_detect
+		lda #$2a
+		sta $d0fe       ; enable config mode
+		lda #$02        ; MMU
+		sta $d0fa       ; enable config registers
+
+		lda $d0fe
+		cmp #$ff
+		bne chameleon_ok
+		sta $d0fe	; restore old value
+		lda #<msgerror_nochameleon
+		ldy #>msgerror_nochameleon
+		jsr $ab1e
+-		jsr $ffe4
+		beq -
+		lda #1
+		rts
+
+chameleon_ok	lda #<msg_okchameleon
+		ldy #>msg_okchameleon
+		jsr $ab1e
+		lda #0
+		rts
+
+
+msgerror_nochameleon
+.byte $0d,$0d,$1e
+.text "chameleon not detected!",0
+
+msg_okchameleon
+.byte $0d,$0d,$1e
+.text "chameleon ok.",$0d,0

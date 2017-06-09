@@ -118,4 +118,31 @@ bit0          sta speedbit	;zeropage
               dey
               bpl nextbyte
 endbit                          ;For tunes #32-255 the speedbit in bit 32 is used
-              rts
+
+
+;return sidtype to sidfx register
+.if DEF_SIDFX
+sidfxtype	ldx #0		;0,1,2,3 - unknown,6581,8580,both - value here from sid header of current song
+		ldy sidfxtypes,x
+		rts
+sidfxtypes	.byte $f1	;unknown selects sid#1
+sidfx_old	.byte $f1	;f1 - 6581 is on sid#1 / f2 - 6581 is on sid #2 - detected in setup
+sidfx_new	.byte $f2	;f1 - 8580 is on sid#1 / f2 - 8580 is on sid #2 - detected in setup
+		.byte $f1	;both selects sid#1
+	
+.fi
+
+;return sidtype to chameleon register
+.if DEF_CHAMELEON
+chamelonsidtype	ldx #0
+		ldy chamelonsidtypes,x
+		rts
+chamelonsidtypes
+		.byte $00	;unknown selects old sid
+		.byte $00	;6581 selects old sid
+		.byte $c0	;8580 selects new sid
+		.byte $00	;both selects old sid		
+.else
+		rts
+.fi
+

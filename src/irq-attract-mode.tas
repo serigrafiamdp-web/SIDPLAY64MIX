@@ -158,6 +158,9 @@ vic
 text
 .enc screen
 
+.if DEF_SIDFX
+.text " SIDFX beta version.  debug colors white=slot#1 , red=slot#2.  "
+.fi
 ;-----|123456789012345678901234567890123456789|
 .if defset=1					;normal
 .text " This version works best on serial disk "
@@ -166,7 +169,7 @@ text
 .text "  A 512 kb REU allows you to have 4096 "
 .text "filenames present in REU memory.",$80
  .else
-.text " You can have 168 filenames in memory.",$80
+.text " You can have 163 filenames in memory.",$80		;168
  .fi
 .text "Using a fastload cartridge such as the Action Replay, Retro Replay, TFC, Epyx Fastload etc. is  highly recommended. "
 .fi ;defset1
@@ -187,7 +190,7 @@ text
 .text "  A 512 kb REU allows you to have 4096 "
 .text "filenames present in REU memory.",$80
  .else
-.text " You can have 168 filenames in memory.",$80
+.text " You can have 163 filenames in memory.",$80
  .fi
 .fi;defset3
 
@@ -198,7 +201,7 @@ text
 .text "  A 512 kb REU allows you to have 4096 "
 .text "filenames present in REU memory.",$80
  .else
-.text " You can have 168 filenames in memory.",$80
+.text " You can have 163 filenames in memory.",$80
  .fi
 .fi;defset4
 
@@ -210,7 +213,7 @@ text
 .text "  A 512 kb REU allows you to have 4096 "
 .text "filenames present in REU memory.",$80
  .else
-.text "   You can have 168 filenames in memory.",$80
+.text "   You can have 163 filenames in memory.",$80
  .fi
 .fi;defset5
 
