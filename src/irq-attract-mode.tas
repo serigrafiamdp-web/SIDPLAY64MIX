@@ -218,6 +218,32 @@ text
 .fi;defset5
 
 
+;-----|123456789012345678901234567890123456789|
+.if defset=6					;chameleon normal
+.text " This is the Chameleon version for 1541 drive mode.  ",$80
+ .if def_REU
+.text "  A 512 kb REU allows you to have 4096 "
+.text "filenames present in REU memory.",$80
+ .else
+.text " You can have 163 filenames in memory.",$80
+ .fi
+.text "Using a fastload cartridge such as the Action Replay, Retro Replay, TFC, Epyx Fastload etc. is  highly recommended. "
+.fi ;defset6
+
+;-----|123456789012345678901234567890123456789|
+.if defset=7
+.text " Welcome to the Chameleon version with SD2IEC controls, it allows you to mount disk images like .D64 .D71 .D81 and .DNP ",$80
+.if def_REU
+.text "  A 512 kb REU allows you to have 4096 "
+.text "filenames present in REU memory.",$80
+ .else
+.text " You can have 163 filenames in memory.",$80
+ .fi
+.fi;defset7
+
+
+
+
 .byte $83
 ;-----|123456789012345678901234567890123456789|
 .text "       S : Toggles screen on/off.      ",$80

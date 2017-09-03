@@ -2,7 +2,7 @@
 ;         SIDPLAY 64 V1.10
 ;--------------------------------------------------------------
 ;         Programmed by:
-;         Glenn Rune Gallefoss / SHAPE / Nostalgia (2005-2016)
+;         Glenn Rune Gallefoss / SHAPE / Nostalgia (2005-2017)
 ;
 ;         Additional programming:
 ;         Tomaz Kac (Tom-Cat) / Nostalgia          (2015)
@@ -15,11 +15,9 @@
 ; $D019 Not used in irq, but enabled when jumping into a song using own interrupt handler.
 ; $DC0D - The irq is a timer irq, so $dc0d must be read for each irq triggered.
 ;--------------------------------------------------------------
-DEF_CHAMELEON	= 0	;1 = enable Chameleon specific code to switch 6581/850 sid - Perhaps move this to sidplay64.cfg as a seperate defset
+DEF_SIDFX	= 0	;1 = enable SIDFX routines (for all versions) - Don't combine with Chameleon
 ;--------------------------------------------------------------
-DEF_SIDFX	= 1	;1 = enable SIDFX routines (for all versions) - Don't combine SIDFX and Chameleon
-;--------------------------------------------------------------
-DEF_REU		= 0	;1 = enable reu routines (for all versions) - Can chameleon be comibed with REU ?
+DEF_REU		= 1	;1 = enable reu routines (for all versions) - Can chameleon be comibed with REU ?
 ;--------------------------------------------------------------
 def_currentdate	= 1	;1 = include current date and clock in setup
 def_illegal	= 1	;1 = use illegal opcodes
@@ -315,7 +313,7 @@ endstacker
 
 .if DEF_CHAMELEON*DEF_SIDFX
 
-.error "You can't compile sidfx+chameleon together!"
+.error "You can't compile SIDFX together with CHAMELEON!!"
 .fi
 		
 		* = $9000
