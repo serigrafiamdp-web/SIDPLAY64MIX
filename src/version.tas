@@ -1,0 +1,12 @@
+;--------------------------------------------------------------
+; The version number below 
+; is used in other source files:
+;
+;src/devicecheck.tas
+;sidplay64.tas
+
+
+;----- 1.00 (12.05.2015)
+;----- 1.10 (17.04.2016)
+;----- 1.20 (29.09.2017)
+.text "1.21" 

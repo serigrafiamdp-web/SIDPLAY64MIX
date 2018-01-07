@@ -304,11 +304,13 @@ devmsg		.byte $1e,$08,$93,$99
         .if def_1541u2cmd
 		.text "-1541u2-cmd"
         .fi
-		.text " v1.10",$0d
+		.text " v"
+		.include "src/version.tas"
+		.byte $0d
 		;.text "beta "	;enable beta when in develop mode
 		.text "build "
 		.if def_currentdate
-		.binary timedate.log	;created by batch echo in root dir
+		.binary timedate.clk	;created by batch echo in root dir
 		.else
 		.text"15.01.2015 22:14"
 		.fi

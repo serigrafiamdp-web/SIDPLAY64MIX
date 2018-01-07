@@ -109,7 +109,7 @@ sidfxok		dey
 		sta sidfx_new		;F1: selects slot 1 as your 8580
 +
 
-;-- lastly we treate "error" codes 00 as Swinsid nano and 03 as Swinsid ultimate
+;-- lastly we treat "error" codes 00 as Swinsid nano and 03 as Swinsid ultimate
 		lda sidslot1		;if sid1 is 0 or 3 (could be a swinsid)
 		beq zro1
 		cmp #$03
@@ -165,6 +165,10 @@ SCIGET
 -		lda $d41f		;read SCI ready flag
 		bpl -			;wait until data ready
 SCISYN
+		ldx #$0f		;safe delay
+-		dex
+		bpl -
+
 		lda #$00		;"nop" SCI command
 SCIPUT
 		ldx #$07		;transfer 8 bits (MSB first)

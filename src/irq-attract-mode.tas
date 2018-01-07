@@ -158,9 +158,10 @@ vic
 text
 .enc screen
 
-.if DEF_SIDFX
-.text " SIDFX beta version.  debug colors white=slot#1 , red=slot#2.  "
-.fi
+;.if DEF_SIDFX
+;.text " SIDFX beta version.  debug colors white=slot#1 , red=slot#2.  "
+;.fi
+
 ;-----|123456789012345678901234567890123456789|
 .if defset=1					;normal
 .text " This version works best on serial disk "
@@ -177,8 +178,14 @@ text
 ;-----|123456789012345678901234567890123456789|
 .if defset=2
 .text " Welcome to SIDPLAY64 for the 1541 Ultimate II. ",$80,$82
-.text " This version utilizes the REU capabilties together with the Command Interface of the 1541U-II.    Almost no limits on how many files you can have in a directory.   "
-.text "Instant directory and file loading.     You need the latest firmware, although all version from v2.6d and upwards should work.   ",$81
+.if def_REU
+.text " This version utilizes the REU capabilties together with the Command Interface of the 1541U-II.    "
+.text "Almost no limits on how many files you can have in a directory.   "
+.else
+.text " This version use the Command Interface of the 1541U-II. The amount of files present "
+.text "in the playlist is limited.  Remember to hold the CLR-HOME button when loading dir to advance further down in dir. "
+.fi
+.text "It has instant directory and file loading.     You need the latest firmware, although all version from v2.6d and upwards should work.   ",$81
 .text "   This special edition was programmed by:   GRG/SHAPE/[N0] and Tom-Cat/[N0].  ",$80,$82
 
 .fi;defset2

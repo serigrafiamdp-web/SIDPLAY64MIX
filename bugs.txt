@@ -1,5 +1,8 @@
 Things to check for:
 
+* 01.01.2018: 
+  Possible source of sidfx bug found -- Bad solder joints.
+
 * 08.05.2017:
   The sidfx detection routine is not accurate enough. It will fail sometimes.
   Pressing a key will normally detect it on the 2nd try.

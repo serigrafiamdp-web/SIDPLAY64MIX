@@ -1,11 +1,15 @@
-SIDPLAY64 V1.10
+SIDPLAY64 V1.21
 ---------------------------------------------------------------
-Welcome to the last version of Sidplay64 (SP64).
-Finally we have also found space for BASIC sid files support.
-Read more about that in its own section below.
-This program alsom comes with our new length injector tool.
+Welcome to the final version of Sidplay64.
+If you already have v1.10 but do not have a Chameleon or
+a Sidfx card, then don't panic! - This version is simply a update
+to support the sidfx card and the Chameleon. 
+You can safely continue to use v1.10 it is stable, and has no
+known problems. 
+
+This program also comes with our tune length injector tool.
 With modified sids you can listen to your favourite sids
-from start till end before it loads the next or random sid file.
+from start till the very end before it loads the next or random sid file.
 
 Don't panic! - This program will handle both modified and normal sids.
 
@@ -23,22 +27,30 @@ Versions of the program:
 ---------------------------------------------------------------
 You will find different versions of SP64 in this package, most of them
 will work on all devices.  But I suggest you use the correct version for 
-for your device, since they might contain special commands:
+for your device, since they might contain special commands.
 
+When you unzip this version you will find 4 directories.:
+
+/Normal/ dir contains versions without REU and SIDFX support.
+/Normal REU/ dir contains versions with REU.
+/SIDFX/ dir contains versions with SIDFX support.
+/SIDFX REU/ dir contains versions with REU and SIDFX support.
+
+Filenames for some versions might have "-sidfx-" or "-reu-" in them,
+that means they will only work on a system that has SIDFX and/or a REU unit.
+
+Example filenames:
+
+sidplay64-normal.prg             - Standard version for 1541, 1571, 1581 and clones.
+sidplay64-sd2iec.prg             - SD2IEC version.
 sidplay64-reu-1541u2cmd.prg      - 1541 Ultimate II version with REU.
 sidplay64-reu-sd2iec.prg         - SD2IEC version with REU. 
 sidplay64-reu-1541u-netdrive.prg - 1541 Ultimate & Netdrive with REU.
 sidplay64-reu-iec-cmd-ide64.prg  - CMD drives, IDE64 devices & other IEC devices, with REU.
-sidplay64-reu-normal.prg         - REU version for 1541, 1571, 1581 and clones of these.
+sidplay64-sidfx-reu-normal.prg   - Sidfx and REU version for 1541, 1571, 1581 and clones of these.
 
-sidplay64-1541u2cmd              - 1541 Ultimate II version.
-sidplay64-normal.prg             - Standard version for 1541, 1571, 1581 and clones.
-sidplay64-1541u-netdrive.prg     - 1541 Ultimate & Netdrive.
-sidplay64-iec-cmd-ide64.prg      - CMD drives, IDE64 devices & other IEC devices.
-sidplay64-sd2iec.prg             - SD2IEC.
 
-(The 1541U2 software iec mode has been disabled for this build.)
-
+(Again : The 1541U2 software iec mode has been disabled for this build.)
 
 How to use:
 ---------------------------------------------------------------
@@ -295,6 +307,41 @@ create directories first, and then you add the files last.
 (This should happen automatically if you copy and paste the HVSC dir?)
 
 
+SIDFX (The ultimate dual SID solution - http://www.sidfx.dk/)
+---------------------------------------------------------------
+The sidfx card is support in all device versions, 
+except for the Chameleon. 
+
+To get the best experience with this card and Sidplay64 you need a
+6581 sid chip and a 8580 sid chip installed on the card.
+You need to center switch 1 to allow for software control of the sid.
+And from there sidplay64 will play the sids using the correct sid type.
+
+If the detection of the sidfx card fails on the setup, then you can
+press the spacebar as many times as you like to retry. 
+If it still doesn't work, then try the
+sidfx config tool available from sidfx.dk homepage.
+
+There might be some problems with the C64Reloaded and the sidfx card,
+the problem will result in some beeping noises and then no sound. 
+It's like it gradually looses connection to the sidfx card.
+This happens randomly. Other users with the 1541Reloaded
+board has the same problem. It migth be a power issue. And it might not be.
+You can wait for a long time, and the sid will come back again.
+Or turn off your machine for a long time.
+
+I hope someone can get to the bottom of this someday.
+
+
+Chameleon or Turbo Chameleon
+---------------------------------------------------------------
+Sidplay64 can activate the sid emulation features of this card.
+This makes it possible for sidplay64 to switch to the correct 
+emulated sid when playing sids.
+
+Note that the sidplay64 only support Chameleon in normal and sd2iec version.
+
+
 1541 Ultimate II Command Interface:
 ---------------------------------------------------------------
 This version only works with 1541u2 firmware update 2.6d or higher.
@@ -353,6 +400,8 @@ UNO2IEC (The Arduino Project):
 ------------------------------
 Doesn't work with SP64 at the moment.
 Possibly a bug in the IEC implementation on the device ?
+I have contacted the author of the c64 port. But get no response as how to 
+bugfix this.
 
 
 DTV:
