@@ -31,18 +31,29 @@ testing on real hardware.
 Dir/file overview:
 
 sidplay64.tas main source file.
+
 sidplay64.cfg configurations for various devices. Dont touch!
+
 c1541.mak used in combination with c1541.exe to create a test.d64 file.
+
 /bin/ screen files.
+
 /src/ all source files.
+
 /docs/ various documentation.
+
 /pics/ just temporary screenshots.
+
 /sids/ contains various sids for sidplay64 to test.
+
 
 Generated dirs/files:
 
 timedate.clk time and clock
+
 /build/ contains all release files
+
+
 
 
 Credits:
