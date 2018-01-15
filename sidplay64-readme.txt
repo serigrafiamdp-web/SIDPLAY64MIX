@@ -322,16 +322,6 @@ press the spacebar as many times as you like to retry.
 If it still doesn't work, then try the
 sidfx config tool available from sidfx.dk homepage.
 
-There might be some problems with the C64Reloaded and the sidfx card,
-the problem will result in some beeping noises and then no sound. 
-It's like it gradually looses connection to the sidfx card.
-This happens randomly. Other users with the 1541Reloaded
-board has the same problem. It migth be a power issue. And it might not be.
-You can wait for a long time, and the sid will come back again.
-Or turn off your machine for a long time.
-
-I hope someone can get to the bottom of this someday.
-
 
 Chameleon or Turbo Chameleon
 ---------------------------------------------------------------
