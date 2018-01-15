@@ -4,13 +4,16 @@ The source files.
 
 This is a native sidplayer for the commodore 64.
 It will play songs at correct ntsc or pal speed.
+
 It will work many different devices such as:
 REU, 1541u1, 1541u2, sd2iec, iec2ata, 1541/1571/1581, 
+
 cmd fd/hd/ramlink/ramdrive,
 IDE64(+ pclink), SIDFX, Chameleon and more +++
 
 
 You need 64tass, exomizer 2.x, pucrunch in your path.
+
 You possibly want to have codenet and c1541 in your path.
 
 The *.bat files here uses ms-dos batch 
@@ -48,6 +51,8 @@ c1541.mak used in combination with c1541.exe to create a test.d64 file.
 \pics\ just temporary screenshots.
 
 \sids\ contains various sids for sidplay64 to test.
+
+
 
 
 Generated dirs/files:
