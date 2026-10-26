@@ -25,6 +25,16 @@ def normalize(root: Path) -> tuple[int, int]:
             total += 1
             return match.group(1) + '"' + match.group(2).replace("\\", "/") + '"'
         changed = PATTERN.sub(fix, raw)
+        if file.parent == root / "src":
+            # Old 64tass resolved unquoted paths from the project root.
+            # Modern quoted paths are relative to the including source.
+            changed = changed.replace('.include "src/', '.include "')
+            changed = changed.replace('.binary "timedate.clk"', '.binary "../timedate.clk"')
+        if file.name == "irq-attract-mode.tas":
+            changed = changed.replace(".enc screen", '.enc "screen"')
+            changed = changed.replace(".enc none", '.enc "none"')
+        if file.name == "devicecheck.tas":
+            changed = changed.replace('.byte $12,"return"', '.text $12,"return"')
         if changed != raw:
             file.write_bytes(changed.encode("latin1"))
             modified += 1
