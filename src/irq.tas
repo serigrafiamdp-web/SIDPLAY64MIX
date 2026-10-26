@@ -33,7 +33,7 @@ goplay
 color_playmusic2
 		lda #$a9
 		sta $d020
-		.if DEF_MIX03
+		.if DEF_MIX03*DEF_MIX03_PREFETCH
                 jsr mix03_music_play ;TEST03B uses same-sized IRQ-safe wrapper
 .else
                 jsr playmus     ;play call might change $01

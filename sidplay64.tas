@@ -34,6 +34,11 @@ def_basic	= 1	; Enable BASIC sids to be runned and played.
 .weak
 DEF_MIX03 = 0
 .endweak
+
+; TEST03B3: safe automatic Next; Krill experiment OFF until handoff safe.
+.weak
+DEF_MIX03_PREFETCH = 0
+.endweak
 ;--------------------------------------------------------------
 
 .include sidplay64.cfg	;see this file for Defset's
@@ -523,9 +528,15 @@ start                       		;JMP HERE FIRST TIME from SRC/INIT.TAS
 ;Y=$00
 
 
+.if DEF_MIX03
+        ldx #0                  ; TEST03B3: default mode N (Next)
+        stx plt_flag
+        lda #$4e                ; 'N' shown immediately at startup
+.else
 		ldx #2
 		stx plt_flag
 		lda #$4d		;"M"-anual selection
+.fi
 		sta plt_letter
 		lda #<txterror1-1
 		sta dzp
