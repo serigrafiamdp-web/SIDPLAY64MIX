@@ -316,6 +316,14 @@ endstacker
               .offs 0
 
 
+.if DEF_MIX03
+; TEST03A experimental helper at $3000-$30ff for the restricted SIDTRACKER
+; set only (all payloads $1000-$291e). Generic SIDs CAN overwrite this.
+        * = $3000
+.include src/mix03_timer_hook.tas
+.cerror *>$3100,"TEST03A helper too large for $3000-$30ff"
+.fi
+
 .if DEF_CHAMELEON*DEF_SIDFX
 .error "You can't compile SIDFX together with CHAMELEON!!"
 .fi
@@ -1389,10 +1397,7 @@ errormsg	sei			;sei only present in versions using kernal loader calls
 ;--------------------------------------------------------------
 .include src/irq.tas
 
-.if DEF_MIX03
-; Integration inside Glenn's relocatable driver. No Krill writes yet.
-.include src/mix03_timer_hook.tas
-.fi
+
 ;--------------------------------------------------------------
 
 resetCia
