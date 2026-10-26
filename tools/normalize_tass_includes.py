@@ -15,7 +15,7 @@ PATTERN = re.compile(
 def normalize(root: Path) -> tuple[int, int]:
     modified = 0
     total = 0
-    for file in [root / "sidplay64.tas", *root.rglob("*.tas")]:
+    for file in [root / "sidplay64.tas", root / "sidplay64.cfg", *root.rglob("*.tas")]:
         if not file.exists():
             continue
         data = file.read_bytes()
