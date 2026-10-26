@@ -1,0 +1,62 @@
+name: TEST03 original SIDPLAY64 integration — source validation
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - test/test03-sidplay64-integracion
+    paths:
+      - 'sidplay64.tas'
+      - 'src/mix03_timer_hook.tas'
+      - 'tools/normalize_tass_includes.py'
+      - 'src/plt_function.tas'
+      - '.github/workflows/test03-original-sidplay64.yml'
+      - 'tests/TEST03_INTEGRATION.md'
+permissions:
+  contents: read
+jobs:
+  assemble:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install 64tass
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends 64tass
+      - name: Prepare original build date
+        run: printf '26.10.2026 18:40\r\n' > timedate.clk
+      - name: Normalize historical include operands for current 64tass (build-only)
+        run: python tools/normalize_tass_includes.py
+      - name: Compile Glenn original (unmodified source flags)
+        run: |
+          mkdir -p build/test03
+          64tass --m6502 -D defset=4 -D DEF_SIDFX=0 -D DEF_REU=0 -D DEF_MIX03=0 -a sidplay64.tas -o build/test03/SIDPLAY64_ORIGINAL_SD2IEC.o64 -l build/test03/original.labels
+      - name: Compile TEST03 opt-in branch (same original UI and timer)
+        run: |
+          64tass --m6502 -D defset=4 -D DEF_SIDFX=0 -D DEF_REU=0 -D DEF_MIX03=1 -a sidplay64.tas -o build/test03/SIDPLAY64_TEST03_SD2IEC.o64 -l build/test03/test03.labels
+      - name: Verify changes are isolated
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          a=Path("build/test03/SIDPLAY64_ORIGINAL_SD2IEC.o64").read_bytes()
+          b=Path("build/test03/SIDPLAY64_TEST03_SD2IEC.o64").read_bytes()
+          assert a != b, "DEF_MIX03=1 should alter original program"
+          print("Both variants assembled. ORIGINAL",len(a),"TEST03",len(b))
+          print("NOTE: .o64 is uncompressed 64tass output; NOT directly BASIC-RUN runnable.")
+          PY
+      - name: Build PuCrunch (Glenn original packer)
+        run: |
+          git clone --depth=1 https://github.com/mist64/pucrunch.git build/pucrunch-src
+          make -C build/pucrunch-src
+      - name: Create runnable C64 PRG with original $9000 start address
+        run: |
+          build/pucrunch-src/pucrunch '-x$9000' build/test03/SIDPLAY64_ORIGINAL_SD2IEC.o64 build/test03/SIDPLAY64_ORIGINAL_SD2IEC.PRG
+          build/pucrunch-src/pucrunch '-x$9000' build/test03/SIDPLAY64_TEST03_SD2IEC.o64 build/test03/SIDPLAY64_TEST03_SD2IEC.PRG
+          ls -lh build/test03/*.PRG
+      - name: Upload binaries and symbol maps (even on integration failure)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: SIDPLAY64MIX_TEST03A_SOURCE_ASSEMBLED_NOT_RUNTIME_PASS
+          path: build/test03/
+          if-no-files-found: error

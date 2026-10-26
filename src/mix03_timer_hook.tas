@@ -1,0 +1,36 @@
+; TEST03A — compact opt-in NEXT candidate tracker inside Glenn's relocatable
+; screen driver. No disk I/O, no Krill, no altered timer behavior yet.
+; This must fit entirely BELOW $CF84. Until a real verified cache exists,
+; mix03_ready is *never set to 1*, and the standard loader ALWAYS runs.
+mix03_watch_next
+        lda plt_flag           ; 0 Next, 2 Manual, $81 Random
+        bne mix03_cancel
+        lda offs_cursor
+        clc
+        adc pos_cursor
+        clc
+        adc #1
+        cmp maxfile
+        bcc mix03_watched
+        lda #0
+mix03_watched
+        sta mix03_candidate
+        rts
+mix03_cancel
+        lda #$ff
+        sta mix03_candidate
+        rts
+
+; This is reached from NEXT, RANDOM and wrapping to first entry.
+mix03_before_load
+        lda offs_cursor
+        clc
+        adc pos_cursor
+        sta mix03_last_advance
+        lda #0
+        sta mix03_ready        ; fail closed, original loader remains intact
+        rts
+
+mix03_candidate      .byte $ff
+mix03_last_advance   .byte $ff
+mix03_ready          .byte 0

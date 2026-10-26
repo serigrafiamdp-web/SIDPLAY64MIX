@@ -31,7 +31,11 @@
 		beq doload		;jmp
 last_plt	jsr wjs_playlist	;plt_inc
 
-doload		ldy #1			;Set y = 1 for loading files
+doload
+.if DEF_MIX03
+        jsr mix03_before_load     ; reached from normal, wrap, and random
+.fi
+        ldy #1                  ; Set Y=1 for loading files
 		jmp (wjp_load)		;must have zp$01 set correctly to work
 	
 plt_random
