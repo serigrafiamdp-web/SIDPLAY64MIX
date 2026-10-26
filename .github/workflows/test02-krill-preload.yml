@@ -7,6 +7,7 @@ on:
       - test/test01-preload-staging
     paths:
       - 'tests/test02_krill_irq_harness.tas'
+      - 'tests/test02d_half_playrate.tas'
       - 'tools/build_test02_d64.py'
       - 'tools/test02_synthetic_tunes.py'
       - '.github/workflows/test02-krill-preload.yml'
@@ -48,6 +49,7 @@ jobs:
       - name: Assemble standalone 6502 runtime
         run: |
           64tass --m6502 -a tests/test02_krill_irq_harness.tas -o build/test02/TEST02.PRG
+          64tass --m6502 -a tests/test02d_half_playrate.tas -o build/test02/TEST02D.PRG
       - name: Create synthetic audio and build a 35-track D64
         run: |
           python tools/test02_synthetic_tunes.py build/test02
@@ -59,6 +61,14 @@ jobs:
             --b build/test02/MIX_B.PRG \
             --c build/test02/MIX_C.PRG \
             --out build/test02/SIDPLAY64MIX_TEST02_SYNTHETIC.d64
+          python tools/build_test02_d64.py \
+            --main build/test02/TEST02D.PRG \
+            --install build/test02/INSTA.PRG \
+            --resident build/test02/RESIDENT.PRG \
+            --a build/test02/MIX_A.PRG \
+            --b build/test02/MIX_B.PRG \
+            --c build/test02/MIX_C.PRG \
+            --out build/test02/SIDPLAY64MIX_TEST02D_SYNTHETIC.d64
       - name: Artifact - compiled test, NOT VICE validated
         uses: actions/upload-artifact@v4
         with:
