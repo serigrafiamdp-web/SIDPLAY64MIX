@@ -24,6 +24,8 @@ jobs:
           sudo apt-get install -y --no-install-recommends 64tass
       - name: Prepare original build date
         run: printf '26.10.2026 18:40\r\n' > timedate.clk
+      - name: Normalize historical include operands for current 64tass (build-only)
+        run: python tools/normalize_tass_includes.py
       - name: Compile Glenn original (unmodified source flags)
         run: |
           mkdir -p build/test03
