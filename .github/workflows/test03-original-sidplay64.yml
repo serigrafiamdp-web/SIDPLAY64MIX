@@ -1,14 +1,16 @@
-name: TEST03 original SIDPLAY64 integration — source validation
+name: TEST03B Krill integration — source validation
 on:
   workflow_dispatch:
   push:
     branches:
       - test/test03-sidplay64-integracion
+      - test/test03b-krill-live-prefetch
     paths:
       - 'sidplay64.tas'
       - 'src/mix03_timer_hook.tas'
       - 'tools/normalize_tass_includes.py'
       - 'src/plt_function.tas'
+      - 'src/irq.tas'
       - '.github/workflows/test03-original-sidplay64.yml'
       - 'tests/TEST03_INTEGRATION.md'
 permissions:
@@ -57,6 +59,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: SIDPLAY64MIX_TEST03A_SOURCE_ASSEMBLED_NOT_RUNTIME_PASS
+          name: SIDPLAY64MIX_TEST03B_WIP_COMPILED_NOT_AUDIO_PASS
           path: build/test03/
           if-no-files-found: error

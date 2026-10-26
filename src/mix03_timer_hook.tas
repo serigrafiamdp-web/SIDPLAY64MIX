@@ -1,36 +1,239 @@
-; TEST03A — compact opt-in NEXT candidate tracker inside Glenn's relocatable
-; screen driver. No disk I/O, no Krill, no altered timer behavior yet.
-; This must fit entirely BELOW $CF84. Until a real verified cache exists,
-; mix03_ready is *never set to 1*, and the standard loader ALWAYS runs.
+; SIDPLAY64MIX TEST03B-1 — first genuine Krill load while Glenn IRQ plays.
+; LIMITED SET: fixed PSIDs $1000..$2922 only. No direct RAM handoff yet.
+; Executed at $3000 after SIDPLAY64 startup; live-safe under restricted disk.
+; Last-known PASS baseline: TEST03A original UI + timer, preserved separately.
+;
+; A selected: list position 1 -> preload auxiliary STB at $5000.
+; B selected: list position 2 -> preload auxiliary STC at $5000.
+; Other positions: regular SIDPLAY64 playback and loader unchanged.
+;
+; Krill installer $6000 and resident $9000 are copied via KERNAL only once,
+; on first fileSelect (BEFORE a tune starts). Loading after that is via Krill.
+; Dedicated C0-D5 music ZP bank is swapped in IRQ while raw-load is running.
+;
+; State values: 0=uninitialized, 1=installer ready, $ff=install error.
 mix03_watch_next
-        lda plt_flag           ; 0 Next, 2 Manual, $81 Random
-        bne mix03_cancel
+        lda mix03_state
+        bne mix03_check_n
+        jsr mix03_install_once
+mix03_check_n
+        lda mix03_state
+        cmp #1
+        bne mix03_watch_done
+        lda plt_flag
+        bne mix03_watch_done  ; N mode ONLY
         lda offs_cursor
         clc
         adc pos_cursor
-        clc
-        adc #1
-        cmp maxfile
-        bcc mix03_watched
-        lda #0
-mix03_watched
-        sta mix03_candidate
-        rts
-mix03_cancel
-        lda #$ff
-        sta mix03_candidate
+        cmp #1
+        beq mix03_request_b
+        cmp #2
+        beq mix03_request_c
+        jmp mix03_watch_done
+mix03_request_b
+        lda #2
+        ldx #<mix03_name_b
+        ldy #>mix03_name_b
+        jmp mix03_ensure_loaded
+mix03_request_c
+        lda #3
+        ldx #<mix03_name_c
+        ldy #>mix03_name_c
+        jmp mix03_ensure_loaded
+mix03_watch_done
         rts
 
-; This is reached from NEXT, RANDOM and wrapping to first entry.
+; A=directory index to preload, X/Y pointer to PETSCII filename.
+mix03_ensure_loaded
+        cmp mix03_candidate
+        bne mix03_new_candidate
+        rts
+mix03_new_candidate
+        sta mix03_candidate
+        stx mix03_filename+1
+        sty mix03_filename+2
+        lda #0
+        sta mix03_ready
+        sei
+        ldx #21
+mix03_loader_enter
+        lda $c0,x
+        sta mix03_music_zp,x
+        lda mix03_loader_zp,x
+        sta $c0,x
+        dex
+        bpl mix03_loader_enter
+        lda #1
+        sta mix03_loading
+        cli
+mix03_filename
+        ldx #0
+        ldy #0
+        jsr $9000
+        php
+        pha
+        sei
+        lda #0
+        sta mix03_loading
+        ldx #21
+mix03_loader_exit
+        lda $c0,x
+        sta mix03_loader_zp,x
+        lda mix03_music_zp,x
+        sta $c0,x
+        dex
+        bpl mix03_loader_exit
+        pla
+        sta mix03_error
+        plp
+        bcs mix03_loader_failure
+        lda #1
+        sta mix03_ready
+        lda #$10          ; screen code P, visible even without border
+        jsr mix03_status
+        cli
+        rts
+mix03_loader_failure
+        lda #$05          ; screen code E
+        jsr mix03_status
+        lda #$ff
+        sta mix03_state
+        cli
+        rts
+
+; First attempt at the C64 menu. KERNAL ROM is enabled throughout installer.
+mix03_install_once
+        lda #$ff
+        sta mix03_state  ; no retries until we understand failure
+        sei
+        lda #$36
+        sta $01
+        ldx #<mix03_installer
+        ldy #>mix03_installer
+        lda #mix03_installer_e-mix03_installer
+        jsr mix03_kernal_load
+        bcs mix03_install_fail
+        ldx #<mix03_resident
+        ldy #>mix03_resident
+        lda #mix03_resident_e-mix03_resident
+        jsr mix03_kernal_load
+        bcs mix03_install_fail
+        lda $ba
+        sta $ae
+        jsr $6000
+        bcs mix03_install_fail
+        ldx #21
+mix03_save_loader
+        lda $c0,x
+        sta mix03_loader_zp,x
+        dex
+        bpl mix03_save_loader
+        lda #1
+        sta mix03_state
+        lda #$09             ; I installed
+        jsr mix03_status
+        lda #$36
+        sta $01
+        cli
+        rts
+mix03_install_fail
+        lda #$05
+        jsr mix03_status
+        lda #$36
+        sta $01
+        cli
+        rts
+
+; A=filename length; X/Y filename pointer. Original device from $ba.
+mix03_kernal_load
+        jsr $ffbd
+        lda #8
+        ldx $ba
+        ldy #1
+        jsr $ffba
+        lda #0
+        tax
+        tay
+        jsr $ffd5
+        rts
+
+; IRQ-time replacement of the original JSR playmus (same instruction size).
+; Glenn IRQ already swaps ZP $02-$08 and saves A/X/Y. This wrapper swaps
+; only the extra Krill's ZP $C0-$D5 if a Krill transfer is in progress.
+mix03_music_play
+        pha
+        lda mix03_loading
+        bne mix03_music_swap
+        pla                    ; preserve original A if no transfer
+        jmp playmus
+mix03_music_swap
+        pla                    ; preserve original A before SID PLAY
+        ldx #21
+mix03_in_zeropage
+        lda $c0,x
+        sta mix03_irq_zp,x
+        lda mix03_music_zp,x
+        sta $c0,x
+        dex
+        bpl mix03_in_zeropage
+        jsr playmus
+        sei                   ; tune may execute CLI
+        lda #$35
+        sta $01
+        ldx #21
+mix03_out_zeropage
+        lda $c0,x
+        sta mix03_music_zp,x
+        lda mix03_irq_zp,x
+        sta $c0,x
+        dex
+        bpl mix03_out_zeropage
+        rts
+
+; Reached on timer expiry, BEFORE Glenn's normal ROM loader.
+; Important: this experimental step doesn't use the cached data to switch
+; yet; doing that prematurely would skip SID header / reloc / init logic.
 mix03_before_load
         lda offs_cursor
         clc
         adc pos_cursor
         sta mix03_last_advance
         lda #0
-        sta mix03_ready        ; fail closed, original loader remains intact
+        sta mix03_ready
+        lda #$14             ; T: timer handoff via old original loader
+        jsr mix03_status
         rts
 
-mix03_candidate      .byte $ff
-mix03_last_advance   .byte $ff
-mix03_ready          .byte 0
+; Display non-invasive status at the very end of original screen row 24.
+; For this restricted PSID set screenpos is $C4; supports relocation by
+; selecting the current screen's page dynamically.
+mix03_status
+        pha
+        lda screenpos
+        clc
+        adc #3
+        sta mix03_status_store+2
+        pla
+mix03_status_store
+        sta $c7a0
+        rts
+
+mix03_installer
+        .byte $49,$4e,$53,$54,$41
+mix03_installer_e
+mix03_resident
+        .byte $52,$45,$53,$49,$44,$45,$4e,$54
+mix03_resident_e
+mix03_name_b
+        .byte $53,$54,$42,$00
+mix03_name_c
+        .byte $53,$54,$43,$00
+mix03_state         .byte 0
+mix03_loading       .byte 0
+mix03_ready         .byte 0
+mix03_candidate     .byte $ff
+mix03_last_advance  .byte $ff
+mix03_error         .byte 0
+mix03_loader_zp     .fill 22,0
+mix03_music_zp      .fill 22,0
+mix03_irq_zp        .fill 22,0

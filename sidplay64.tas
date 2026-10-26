@@ -321,7 +321,7 @@ endstacker
 ; set only (all payloads $1000-$291e). Generic SIDs CAN overwrite this.
         * = $3000
 .include src/mix03_timer_hook.tas
-.cerror *>$3100,"TEST03A helper too large for $3000-$30ff"
+.cerror *>$3400,"TEST03B helper too large for $3000-$33ff"
 .fi
 
 .if DEF_CHAMELEON*DEF_SIDFX
