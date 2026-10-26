@@ -353,10 +353,11 @@ new_sid_zp
         rts
 
 install_name
-        .text "INSTA"
+        ; Strict PETSCII file bytes matching the D64 directory (not .text screen encoding).
+        .byte $49,$4e,$53,$54,$41
 install_name_end
 resident_name
-        .text "RESIDENT"
+        .byte $52,$45,$53,$49,$44,$45,$4e,$54
 resident_name_end
 sid_a_name
         .byte $4d,$49,$58,$5f,$41
