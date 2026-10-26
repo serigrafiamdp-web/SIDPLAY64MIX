@@ -5,7 +5,7 @@
 ; with load/init=$1000 and play=$1003, e.g. SIPLAY.d64 A/B/C.
 ;
 ; Device 8, 1541 emulation.  Krill v184: INSTALL=$6000, RESIDENT=$9000,
-; ZP=$F0.  The loader binaries are separate files loaded with KERNAL
+; ZP=$C0.  The loader binaries are separate files loaded with KERNAL
 ; before SID A starts.  Using SD2IEC requires the Krill KERNAL fallback
 ; option; this TEST02 first targets a genuine/emulated 1541.
 ;
@@ -34,8 +34,8 @@ phase         .byte 0
 ticks_lo      .byte 0
 ticks_hi      .byte 0
 loader_status .byte 0
-music_zp      .fill 8,0
-loader_zp     .fill 8,0
+music_zp      .fill 22,0
+loader_zp     .fill 22,0
 
 boot
         sei
@@ -78,9 +78,9 @@ boot
         sei
         lda #$35
         sta $01
-        ldx #7
+        ldx #21
 capture_initial_zp
-        lda $f0,x
+        lda $c0,x
         sta music_zp,x
         dex
         bpl capture_initial_zp
@@ -191,13 +191,13 @@ sid_irq
         and #$01
         beq sid_irq_done
 
-        ; Store Krill ZP, present the tune's ZP for sid_play.
-        ldx #7
+        ; Store all 22 Krill ZP bytes, present the tune's ZP for sid_play.
+        ldx #21
 sid_zp_enter
-        lda $f0,x
+        lda $c0,x
         sta loader_zp,x
         lda music_zp,x
-        sta $f0,x
+        sta $c0,x
         dex
         bpl sid_zp_enter
 
@@ -205,12 +205,12 @@ sid_zp_enter
         sei                    ; defensive: tune may have executed CLI
         lda #$35
         sta $01
-        ldx #7
+        ldx #21
 sid_zp_exit
-        lda $f0,x
+        lda $c0,x
         sta music_zp,x
         lda loader_zp,x
-        sta $f0,x
+        sta $c0,x
         dex
         bpl sid_zp_exit
 
@@ -278,12 +278,12 @@ copy_byte
         bne copy_page
 
         ; Loader ZP must survive a music INIT.
-        ldx #7
+        ldx #21
 stash_loader_zp
-        lda $f0,x
+        lda $c0,x
         sta loader_zp,x
         lda #0
-        sta $f0,x
+        sta $c0,x
         dex
         bpl stash_loader_zp
         lda #0
@@ -291,12 +291,12 @@ stash_loader_zp
         sei
         lda #$35
         sta $01
-        ldx #7
+        ldx #21
 new_sid_zp
-        lda $f0,x
+        lda $c0,x
         sta music_zp,x
         lda loader_zp,x
-        sta $f0,x
+        sta $c0,x
         dex
         bpl new_sid_zp
 
