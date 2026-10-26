@@ -39,7 +39,7 @@ jobs:
             MAKEFILE=$(find vendor/krill -path '*/loader/Makefile' -print -quit)
           fi
           test -n "$MAKEFILE"
-          make -C "$(dirname "$MAKEFILE")" prg ZP=f0 INSTALL=6000 RESIDENT=9000
+          make -C "$(dirname "$MAKEFILE")" prg ZP=c0 INSTALL=6000 RESIDENT=9000
           mkdir -p build/test02
           find vendor/krill -name 'install-c64.prg' -print -quit | xargs -r -I{} cp '{}' build/test02/INSTA.PRG
           find vendor/krill -name 'loader-c64.prg' -print -quit | xargs -r -I{} cp '{}' build/test02/RESIDENT.PRG
