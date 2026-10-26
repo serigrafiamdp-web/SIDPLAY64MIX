@@ -1,0 +1,70 @@
+; TEST03A — candidate tracking and fail-closed timer hook.
+; This code is compiled INSIDE Glenn's relocatable SIDPLAY64 driver.
+; No Krill code is called here.  There is deliberately no claim of
+; gapless playback at this stage.
+;
+; State:
+;  mix03_next_index: directory index expected at the next N advance.
+;  mix03_candidate_valid: whether a next candidate is known.
+;  mix03_ready: resident Krill payload validity, presently ALWAYS ZERO.
+;  mix03_last_advance: directory index picked by Glenn on timer expiry.
+;
+; Preloading will be enabled only after verifying resident-loader placement,
+; ZP isolation, and *both* active/executing bank collision guards.
+; Random mode is intentionally ineligible until its random choice is
+; reserved in advance (otherwise cache and chosen item can differ).
+;
+mix03_watch_next
+        lda plt_flag
+        bne mix03_invalidate    ; only N mode (00); no manual/random
+        lda maxfile
+        beq mix03_invalidate
+        lda offs_cursor
+        clc
+        adc pos_cursor
+        clc
+        adc #1
+        cmp maxfile
+        bcc mix03_candidate
+        lda #0                 ; wrap to first directory entry
+mix03_candidate
+        cmp mix03_next_index
+        beq mix03_candidate_ok
+        sta mix03_next_index
+        lda #0
+        sta mix03_ready        ; invalidate stale cached file
+mix03_candidate_ok
+        lda #1
+        sta mix03_candidate_valid
+        rts
+
+mix03_invalidate
+        lda #0
+        sta mix03_candidate_valid
+        sta mix03_ready
+        rts
+
+; Must be called AFTER original plt_advance chose the item, BEFORE
+; its old JMP (wjp_load).  Never changes selection or uses drive.
+; X, Y, and A may be clobbered: caller sets Y=1 after the hook.
+mix03_before_load
+        lda offs_cursor
+        clc
+        adc pos_cursor
+        sta mix03_last_advance
+        lda mix03_candidate_valid
+        beq mix03_not_ready
+        lda mix03_last_advance
+        cmp mix03_next_index
+        bne mix03_not_ready
+        ; The future handoff goes here, but NEVER enable without code
+        ; that actually swaps the banks, installs metadata and calls INIT.
+mix03_not_ready
+        lda #0
+        sta mix03_ready        ; fail closed: use original ROM loader
+        rts
+
+mix03_next_index       .byte $ff
+mix03_candidate_valid  .byte 0
+mix03_ready            .byte 0
+mix03_last_advance     .byte $ff
