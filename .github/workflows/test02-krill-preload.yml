@@ -1,0 +1,67 @@
+name: TEST02 Krill IRQ preload build (experimental)
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - test/test01-preload-staging
+    paths:
+      - 'tests/test02_krill_irq_harness.tas'
+      - 'tools/build_test02_d64.py'
+      - 'tools/test02_synthetic_tunes.py'
+      - '.github/workflows/test02-krill-preload.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install assemblers
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends 64tass cc65 make unzip curl perl
+      - name: Fetch official Krill loader v184 source archive
+        run: |
+          mkdir -p vendor/krill
+          curl --fail --location --retry 2 --max-time 90 \
+            'https://krill.e2m.io/loader-v184.zip' -o vendor/loader-v184.zip
+          unzip -q vendor/loader-v184.zip -d vendor/krill
+          find vendor/krill -name Makefile | head -30
+      - name: Compile Krill with known test-only addresses
+        run: |
+          set -euo pipefail
+          MAKEFILE=$(find vendor/krill -path '*/loader/src/Makefile' -print -quit)
+          if [ -z "$MAKEFILE" ]; then
+            MAKEFILE=$(find vendor/krill -path '*/loader/Makefile' -print -quit)
+          fi
+          test -n "$MAKEFILE"
+          make -C "$(dirname "$MAKEFILE")" prg ZP=f0 INSTALL=6000 RESIDENT=9000
+          mkdir -p build/test02
+          find vendor/krill -name 'install-c64.prg' -print -quit | xargs -r -I{} cp '{}' build/test02/INSTA.PRG
+          find vendor/krill -name 'loader-c64.prg' -print -quit | xargs -r -I{} cp '{}' build/test02/RESIDENT.PRG
+          test -s build/test02/INSTA.PRG
+          test -s build/test02/RESIDENT.PRG
+      - name: Assemble standalone 6502 runtime
+        run: |
+          64tass --m6502 -a tests/test02_krill_irq_harness.tas -o build/test02/TEST02.PRG
+      - name: Create synthetic audio and build a 35-track D64
+        run: |
+          python tools/test02_synthetic_tunes.py build/test02
+          python tools/build_test02_d64.py \
+            --main build/test02/TEST02.PRG \
+            --install build/test02/INSTA.PRG \
+            --resident build/test02/RESIDENT.PRG \
+            --a build/test02/MIX_A.PRG \
+            --b build/test02/MIX_B.PRG \
+            --c build/test02/MIX_C.PRG \
+            --out build/test02/SIDPLAY64MIX_TEST02_SYNTHETIC.d64
+      - name: Artifact - compiled test, NOT VICE validated
+        uses: actions/upload-artifact@v4
+        with:
+          name: SIDPLAY64MIX_TEST02_WIP_NOT_PASS
+          path: build/test02/
+          if-no-files-found: error
