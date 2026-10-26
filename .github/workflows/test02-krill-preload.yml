@@ -28,7 +28,7 @@ jobs:
         run: |
           mkdir -p vendor/krill
           curl --fail --location --retry 2 --max-time 90 \
-            'https://krill.e2m.io/loader-v184.zip' -o vendor/loader-v184.zip
+            'https://csdb.dk/getinternalfile.php/196649/loader-v184.zip' -o vendor/loader-v184.zip
           unzip -q vendor/loader-v184.zip -d vendor/krill
           find vendor/krill -name Makefile | head -30
       - name: Compile Krill with known test-only addresses
