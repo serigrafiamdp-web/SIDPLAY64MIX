@@ -161,10 +161,13 @@ mix03_kernal_load
 ; Glenn IRQ already swaps ZP $02-$08 and saves A/X/Y. This wrapper swaps
 ; only the extra Krill's ZP $C0-$D5 if a Krill transfer is in progress.
 mix03_music_play
+        pha
         lda mix03_loading
         bne mix03_music_swap
+        pla                    ; preserve original A if no transfer
         jmp playmus
 mix03_music_swap
+        pla                    ; preserve original A before SID PLAY
         ldx #21
 mix03_in_zeropage
         lda $c0,x
