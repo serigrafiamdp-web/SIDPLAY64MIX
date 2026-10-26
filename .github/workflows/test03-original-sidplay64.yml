@@ -44,7 +44,8 @@ jobs:
           print("Both variants assembled. ORIGINAL",len(a),"TEST03",len(b))
           print("NOTE: .o64 is uncompressed 64tass output; NOT directly BASIC-RUN runnable.")
           PY
-      - name: Upload binaries and symbol maps (uncompressed)
+      - name: Upload binaries and symbol maps (even on integration failure)
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: SIDPLAY64MIX_TEST03A_SOURCE_ASSEMBLED_NOT_RUNTIME_PASS
