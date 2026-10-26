@@ -13,6 +13,7 @@
 ;
 ; State values: 0=uninitialized, 1=installer ready, $ff=install error.
 mix03_watch_next
+.if DEF_MIX03_PREFETCH
         lda mix03_state
         bne mix03_check_song
         ; STAGE Krill PRGs only, leaving 1541 standard DOS available
@@ -49,6 +50,11 @@ mix03_request_c
         jmp mix03_ensure_loaded
 mix03_watch_done
         rts
+.else
+        ; TEST03B3 SAFE: no Krill drive takeover while Glenn uses ROM LOAD.
+        ; N advances using Glenn's unmodified timer and disk routine.
+        rts
+.fi
 
 ; A=directory index to preload, X/Y pointer to PETSCII filename.
 mix03_ensure_loaded
