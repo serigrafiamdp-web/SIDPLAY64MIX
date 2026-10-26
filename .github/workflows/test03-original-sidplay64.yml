@@ -7,6 +7,7 @@ on:
     paths:
       - 'sidplay64.tas'
       - 'src/mix03_timer_hook.tas'
+      - 'tools/normalize_tass_includes.py'
       - 'src/plt_function.tas'
       - '.github/workflows/test03-original-sidplay64.yml'
       - 'tests/TEST03_INTEGRATION.md'
