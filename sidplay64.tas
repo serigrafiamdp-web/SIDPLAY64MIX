@@ -29,6 +29,11 @@ def_attractmode = 2	;0 = no attract mode, 1= basic attract mode, 2 = smooth attr
 def_remember_DIR = 1	; This option is only for the REU versions of 1541u2 and iec,cmd & ide64 drives
 ;--------------------------------------------------------------
 def_basic	= 1	; Enable BASIC sids to be runned and played.
+
+; TEST03 opt-in: defaults OFF, original make.bat stays compatible.
+.weak
+DEF_MIX03 = 0
+.endweak
 ;--------------------------------------------------------------
 
 .include sidplay64.cfg	;see this file for Defset's
@@ -588,6 +593,9 @@ clrmsg2		sta (dzp),y
 ;Notice that the background code is constantly looping here when playing music and selecting files:
 
 fileSelect	jsr wjs_display		;zp$01=36, then displayFiles, then scankeys
+.if DEF_MIX03
+                jsr mix03_watch_next ; read-only NEXT candidate tracking
+.fi
 		sec			;
 		bcs fileselect		;JMP
 ;---------------------------------------------------------------
@@ -1380,6 +1388,11 @@ errormsg	sei			;sei only present in versions using kernal loader calls
 ;----------- 0314/0315 & FFFE/FFFF IRQ ------------------------
 ;--------------------------------------------------------------
 .include src/irq.tas
+
+.if DEF_MIX03
+; Integration inside Glenn's relocatable driver. No Krill writes yet.
+.include src/mix03_timer_hook.tas
+.fi
 ;--------------------------------------------------------------
 
 resetCia
