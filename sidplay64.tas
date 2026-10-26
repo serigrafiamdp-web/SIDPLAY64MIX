@@ -1375,6 +1375,9 @@ errormsg	sei			;sei only present in versions using kernal loader calls
 		ldx #irq_keys		;Set corret key range when irq is running
 		stx numb
 		jsr wjs_restartTune	;RestartTune, also call wjs_resetCia
+.if DEF_MIX03
+                jsr mix03_mark_playing ; after NORMAL first SID load
+.fi
 		
 		;zp $01 = 35 here
 		      ;76543210	

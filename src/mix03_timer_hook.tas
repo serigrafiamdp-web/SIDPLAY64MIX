@@ -14,17 +14,24 @@
 ; State values: 0=uninitialized, 1=installer ready, $ff=install error.
 mix03_watch_next
         lda mix03_state
-        bne mix03_check_n
-        jsr mix03_install_once
-mix03_check_n
+        bne mix03_check_song
+        ; STAGE Krill PRGs only, leaving 1541 standard DOS available
+        ; for Glenn's first ordinary SID load.
+        jsr mix03_stage_once
+mix03_check_song
+        lda mix03_state
+        cmp #2
+        bne mix03_check_active
+        lda mix03_have_song
+        beq mix03_watch_done
+        lda plt_flag
+        bne mix03_watch_done
+        jsr mix03_install_now
+mix03_check_active
         lda mix03_state
         cmp #1
         bne mix03_watch_done
-        lda plt_flag
-        bne mix03_watch_done  ; N mode ONLY
-        lda offs_cursor
-        clc
-        adc pos_cursor
+        lda mix03_current_index
         cmp #1
         beq mix03_request_b
         cmp #2
@@ -63,6 +70,8 @@ mix03_loader_enter
         sta $c0,x
         dex
         bpl mix03_loader_enter
+        lda #2
+        sta plt_flag
         lda #1
         sta mix03_loading
         cli
@@ -102,9 +111,11 @@ mix03_loader_failure
         rts
 
 ; First attempt at the C64 menu. KERNAL ROM is enabled throughout installer.
-mix03_install_once
+; Step 1: load the two PRGs, but do NOT install the drive-side
+; fastloader. This is done before any tune loads, while the drive is DOS.
+mix03_stage_once
         lda #$ff
-        sta mix03_state  ; no retries until we understand failure
+        sta mix03_state  ; no retries if KERNAL IO fails
         sei
         lda #$36
         sta $01
@@ -118,6 +129,21 @@ mix03_install_once
         lda #mix03_resident_e-mix03_resident
         jsr mix03_kernal_load
         bcs mix03_install_fail
+        lda #2
+        sta mix03_state
+        lda #$13            ; screen code S: files staged / drive still DOS
+        jsr mix03_status
+        lda #$36
+        sta $01
+        cli
+        rts
+
+; Step 2: only enter this AFTER the first SID has been loaded via ROM.
+; Caveat: installing while a tune IRQ is active remains experimental.
+mix03_install_now
+        sei
+        lda #$36
+        sta $01
         lda $ba
         sta $ae
         jsr $6000
@@ -130,13 +156,20 @@ mix03_save_loader
         bpl mix03_save_loader
         lda #1
         sta mix03_state
-        lda #$09             ; I installed
+        ; CRITICAL: TEST03B-2 has NO cached handoff yet and normal ROM
+        ; loading after a Krill install is unsafe. Freeze playlist in M.
+        lda #2
+        sta plt_flag
+        lda #$09           ; screen code I
         jsr mix03_status
         lda #$36
         sta $01
         cli
         rts
+
 mix03_install_fail
+        lda #$ff
+        sta mix03_state
         lda #$05
         jsr mix03_status
         lda #$36
@@ -190,6 +223,17 @@ mix03_out_zeropage
         bpl mix03_out_zeropage
         rts
 
+; Record the song that Glenn ACTUALLY loaded. This is not derived from
+; arbitrary cursor navigation in the file-selector.
+mix03_mark_playing
+        lda offs_cursor
+        clc
+        adc pos_cursor
+        sta mix03_current_index
+        lda #1
+        sta mix03_have_song
+        rts
+
 ; Reached on timer expiry, BEFORE Glenn's normal ROM loader.
 ; Important: this experimental step doesn't use the cached data to switch
 ; yet; doing that prematurely would skip SID header / reloc / init logic.
@@ -229,6 +273,8 @@ mix03_name_b
 mix03_name_c
         .byte $53,$54,$43,$00
 mix03_state         .byte 0
+mix03_have_song     .byte 0
+mix03_current_index .byte $ff
 mix03_loading       .byte 0
 mix03_ready         .byte 0
 mix03_candidate     .byte $ff
