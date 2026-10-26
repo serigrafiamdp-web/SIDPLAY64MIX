@@ -44,6 +44,15 @@ jobs:
           print("Both variants assembled. ORIGINAL",len(a),"TEST03",len(b))
           print("NOTE: .o64 is uncompressed 64tass output; NOT directly BASIC-RUN runnable.")
           PY
+      - name: Build PuCrunch (Glenn original packer)
+        run: |
+          git clone --depth=1 https://github.com/mist64/pucrunch.git build/pucrunch-src
+          make -C build/pucrunch-src
+      - name: Create runnable C64 PRG with original $9000 start address
+        run: |
+          build/pucrunch-src/pucrunch '-x$9000' build/test03/SIDPLAY64_ORIGINAL_SD2IEC.o64 build/test03/SIDPLAY64_ORIGINAL_SD2IEC.PRG
+          build/pucrunch-src/pucrunch '-x$9000' build/test03/SIDPLAY64_TEST03_SD2IEC.o64 build/test03/SIDPLAY64_TEST03_SD2IEC.PRG
+          ls -lh build/test03/*.PRG
       - name: Upload binaries and symbol maps (even on integration failure)
         if: always()
         uses: actions/upload-artifact@v4
