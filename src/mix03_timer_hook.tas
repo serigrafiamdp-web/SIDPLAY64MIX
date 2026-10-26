@@ -223,6 +223,17 @@ mix03_out_zeropage
         bpl mix03_out_zeropage
         rts
 
+; Record the song that Glenn ACTUALLY loaded. This is not derived from
+; arbitrary cursor navigation in the file-selector.
+mix03_mark_playing
+        lda offs_cursor
+        clc
+        adc pos_cursor
+        sta mix03_current_index
+        lda #1
+        sta mix03_have_song
+        rts
+
 ; Reached on timer expiry, BEFORE Glenn's normal ROM loader.
 ; Important: this experimental step doesn't use the cached data to switch
 ; yet; doing that prematurely would skip SID header / reloc / init logic.
