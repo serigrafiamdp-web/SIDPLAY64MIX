@@ -49,24 +49,32 @@ boot
         ldy #>install_name
         lda #install_name_end-install_name
         jsr load_file
-        bcs boot_error
+        bcc +
+        jmp boot_error
++
         ldx #<resident_name
         ldy #>resident_name
         lda #resident_name_end-resident_name
         jsr load_file
-        bcs boot_error
+        bcc +
+        jmp boot_error
++
         ldx #<sid_a_name
         ldy #>sid_a_name
         lda #sid_a_name_end-sid_a_name
         jsr load_file
-        bcs boot_error
+        bcc +
+        jmp boot_error
++
 
         ; Install drive-side Krill protocol while KERNAL remains active.
         lda #$08
         sta $ae               ; FA: active drive for Krill installer
         sta $ba               ; current device
         jsr krill_install
-        bcs boot_error
+        bcc +
+        jmp boot_error
++
 
         ; Switch to all-RAM mapping and install a true hardware IRQ vector.
         ; BASIC/KERNAL will no longer be called while the SID is running.
@@ -316,11 +324,11 @@ resident_name
         .text "RESIDENT"
 resident_name_end
 sid_a_name
-        .text "MIX_A"
+        .byte $4d,$49,$58,$5f,$41
 sid_a_name_end
 sid_b_name
-        .text "MIX_B",0
+        .byte $4d,$49,$58,$5f,$42,0
 sid_c_name
-        .text "MIX_C",0
+        .byte $4d,$49,$58,$5f,$43,0
 
 .cerror *>=$1000,"TEST02 boot must not collide with active SID at $1000"
