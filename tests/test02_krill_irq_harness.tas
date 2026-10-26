@@ -43,6 +43,8 @@ boot
         sta $d020
         lda #$00
         sta $d021
+        lda #$01
+        jsr debug_stage
         ; Each PRG has a C64 load-address prefix.  The KERNAL loads them
         ; to their own absolute addresses before Krill takes over.
         ldx #<install_name
@@ -52,6 +54,8 @@ boot
         bcc +
         jmp boot_error
 +
+        lda #$02
+        jsr debug_stage
         ldx #<resident_name
         ldy #>resident_name
         lda #resident_name_end-resident_name
@@ -59,6 +63,8 @@ boot
         bcc +
         jmp boot_error
 +
+        lda #$03
+        jsr debug_stage
         ldx #<sid_a_name
         ldy #>sid_a_name
         lda #sid_a_name_end-sid_a_name
@@ -67,6 +73,8 @@ boot
         jmp boot_error
 +
 
+        lda #$04
+        jsr debug_stage
         ; Install drive-side Krill protocol while KERNAL remains active.
         lda #$08
         sta $ae               ; FA: active drive for Krill installer
@@ -75,6 +83,15 @@ boot
         bcc +
         jmp boot_error
 +
+        lda #$05
+        jsr debug_stage
+        ; Preserve all Krill ZP before invoking SID INIT.
+        ldx #21
+save_postinstall_krill_zp
+        lda $c0,x
+        sta loader_zp,x
+        dex
+        bpl save_postinstall_krill_zp
 
         ; Switch to all-RAM mapping and install a true hardware IRQ vector.
         ; BASIC/KERNAL will no longer be called while the SID is running.
@@ -90,8 +107,12 @@ boot
 capture_initial_zp
         lda $c0,x
         sta music_zp,x
+        lda loader_zp,x
+        sta $c0,x
         dex
         bpl capture_initial_zp
+        lda #$06
+        jsr debug_stage
         lda #<sid_irq
         sta $fffe
         lda #>sid_irq
@@ -101,6 +122,8 @@ capture_initial_zp
         jsr arm_cia_irq
         cli
 
+        lda #$07
+        jsr debug_stage
         ; First foreground load while SID A is already playing by IRQ.
         lda #1
         sta phase
@@ -110,12 +133,16 @@ capture_initial_zp
         ldy #>sid_b_name
         jsr krill_raw
         bcs runtime_error
+        lda #$08
+        jsr debug_stage
         lda #1
         sta next_ready
         lda #5
         sta $d020
         jsr await_timer
         jsr swap_staged_sid
+        lda #$09
+        jsr debug_stage
 
         ; SID B now plays.  Buffer $5000 may be overwritten by SID C.
         lda #2
@@ -132,6 +159,8 @@ capture_initial_zp
         sta $d020
         jsr await_timer
         jsr swap_staged_sid
+        lda #$0b
+        jsr debug_stage
         lda #3
         sta phase
         lda #2
@@ -140,7 +169,10 @@ finished
         jmp finished
 
 boot_error
-        ; KERNAL mapped; leave boot error clearly visible.
+        ; Last successful stage still shown at $0400.
+        sta $0402
+        lda #$05
+        sta $0401
         sei
         lda #10
         sta $d020
@@ -149,6 +181,9 @@ boot_halt
 
 runtime_error
         ; Keep the SID IRQ alive for debugging; no destructive handoff.
+        sta $0402
+        lda #$05
+        sta $0401
         lda #10
         sta $d020
 runtime_halt
@@ -330,5 +365,14 @@ sid_b_name
         .byte $4d,$49,$58,$5f,$42,0
 sid_c_name
         .byte $4d,$49,$58,$5f,$43,0
+
+; The top-left character shows the last checkpoint reached: A=1 .. K=11.
+; On errors, E appears next to it, error code shown in third cell.
+debug_stage
+        sta $0400
+        sta $d020
+        lda #$01
+        sta $d800
+        rts
 
 .cerror *>=$1000,"TEST02 boot must not collide with active SID at $1000"
