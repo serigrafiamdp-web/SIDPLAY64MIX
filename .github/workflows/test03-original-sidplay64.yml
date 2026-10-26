@@ -1,10 +1,11 @@
-name: TEST03B Krill integration — source validation
+name: TEST03B2 Krill deferred integration — source validation
 on:
   workflow_dispatch:
   push:
     branches:
       - test/test03-sidplay64-integracion
       - test/test03b-krill-live-prefetch
+      - test/test03b2-first-tune-before-krill
     paths:
       - 'sidplay64.tas'
       - 'src/mix03_timer_hook.tas'
