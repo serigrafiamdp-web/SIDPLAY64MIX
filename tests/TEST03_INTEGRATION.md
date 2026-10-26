@@ -17,7 +17,7 @@ En `sidplay64.tas`:
 - En el ciclo `fileSelect`, tras `wjs_display`, llamada a
   `mix03_watch_next` (solo memoriza próximo índice previsto en modo N).
 - El helper se ubica en `$3000-$30FF` exclusivamente para la colección
-  experimental que carga música en `$1000-$291F`, manteniendo el núcleo
+  experimental que carga música en `$1000-$2922`, manteniendo el núcleo
   autorreubicable de Glenn dentro de su límite.
 
 En `src/plt_function.tas`:
