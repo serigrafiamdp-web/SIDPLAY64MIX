@@ -1,0 +1,39 @@
+; SIDPLAY64MIX: fixed-bank experiment for test01/test03 ONLY.
+; NOT LINKED into sidplay64.tas until IRQ loader and readiness state are integrated.
+; Not compatible with arbitrary PSIDs.  Restricted to payloads:
+;   load $1000, init $1000, play $1003, <= 8192 bytes.
+;
+; Caller preconditions:
+;   - stage bytes already loaded to $5000-$6fff, intact (NEXT_READY=1).
+;   - playback and both hardware IRQ sources stopped; SEI active.
+;   - any live tune state that must be preserved has been saved already.
+;   - main SIDPLAY64 is resident outside $1000-$2fff/$5000-$6fff.
+;   - caller will re-INIT the newly copied tune and rearm CIA.
+;
+; This module ONLY moves the 8 KB exec window.  It does not perform disk I/O,
+; trigger KrillLoad, update playlist, restore metadata, or re-enable IRQs.
+; Zero page $f0-$f3 is scratch and must be preserved by caller if needed.
+;
+; 64tass syntax (include after appropriate memory placement is proven).
+
+mix_fixedbank_copy
+        lda #$00
+        sta $f0         ; source low
+        sta $f2         ; destination low
+        lda #$50
+        sta $f1         ; source $5000
+        lda #$10
+        sta $f3         ; destination $1000
+        ldx #$20        ; 32 pages = 8192 bytes
+mix_fixedbank_page
+        ldy #$00
+mix_fixedbank_byte
+        lda ($f0),y
+        sta ($f2),y
+        iny
+        bne mix_fixedbank_byte
+        inc $f1
+        inc $f3
+        dex
+        bne mix_fixedbank_page
+        rts
