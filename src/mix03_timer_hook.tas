@@ -207,6 +207,8 @@ mix03_before_load
 mix03_status
         pha
         lda screenpos
+        clc
+        adc #3
         sta mix03_status_store+2
         pla
 mix03_status_store
