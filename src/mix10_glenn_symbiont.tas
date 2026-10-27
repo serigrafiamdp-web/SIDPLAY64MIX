@@ -1,3 +1,6 @@
+; TEST12: eight tracks A-H using Glenn original UI. Stage files MIX_B/MIX_C/
+; MIX_D/MIX_E/MIX_F/MIX_G/MIX_H/MIX_A2; ready at CIA TOD 01:00.
+; TEST11 three-track VICE PASS remains frozen independently.
 ; TEST10 — KRILL LIVE SYMBIONT IN GLENN'S ORIGINAL PLAYER
 ; Built for the provided curated SID files, all load at $1000,
 ; INIT=$1000, PLAY=$1003 and code ends before $3000.
@@ -12,7 +15,7 @@
 mix10_staged       .byte 0       ; DOS loads of Krill files complete
 mix10_active       .byte 0       ; Krill owns 1541
 mix10_ready        .byte 0       ; $5000 music bank validated
-mix10_current      .byte 0       ; 0 A, 1 B, 2 C
+mix10_current      .byte 0       ; 0..7 correspond to 8-track bank A..H
 mix10_savevalid    .byte 0
 mix10_loader_zp    .fill 22,0
 mix10_music_zp     .fill 22,0
@@ -233,10 +236,20 @@ mix10_service
         lda #7
         sta $d020
         lda mix10_current
-        beq mix10_load_b
+        beq mix10_load_b             ; A -> B
         cmp #1
-        beq mix10_load_c
-        ldx #<mix10_file_a
+        beq mix10_load_c             ; B -> C
+        cmp #2
+        beq mix10_load_d             ; C -> D
+        cmp #3
+        beq mix10_load_e             ; D -> E
+        cmp #4
+        beq mix10_load_f             ; E -> F
+        cmp #5
+        beq mix10_load_g             ; F -> G
+        cmp #6
+        beq mix10_load_h             ; G -> H
+        ldx #<mix10_file_a          ; H -> A
         ldy #>mix10_file_a
         jmp mix10_load_go
 mix10_load_b
@@ -246,6 +259,26 @@ mix10_load_b
 mix10_load_c
         ldx #<mix10_file_c
         ldy #>mix10_file_c
+        jmp mix10_load_go
+mix10_load_d
+        ldx #<mix10_file_d
+        ldy #>mix10_file_d
+        jmp mix10_load_go
+mix10_load_e
+        ldx #<mix10_file_e
+        ldy #>mix10_file_e
+        jmp mix10_load_go
+mix10_load_f
+        ldx #<mix10_file_f
+        ldy #>mix10_file_f
+        jmp mix10_load_go
+mix10_load_g
+        ldx #<mix10_file_g
+        ldy #>mix10_file_g
+        jmp mix10_load_go
+mix10_load_h
+        ldx #<mix10_file_h
+        ldy #>mix10_file_h
 mix10_load_go
         jsr $9000               ; Krill v184 raw load, while Glenn ISR plays
         bcs mix10_service_failed
@@ -315,7 +348,7 @@ mix10_cp_byte
 
         inc mix10_current
         lda mix10_current
-        cmp #3
+        cmp #8
         bcc mix10_cur_ready
         lda #0
         sta mix10_current
@@ -341,3 +374,8 @@ mix10_resident_end
 mix10_file_b     .byte $4d,$49,$58,$5f,$42,0
 mix10_file_c     .byte $4d,$49,$58,$5f,$43,0
 mix10_file_a     .byte $4d,$49,$58,$5f,$41,$32,0
+mix10_file_d     .byte $4d,$49,$58,$5f,$44,0
+mix10_file_e     .byte $4d,$49,$58,$5f,$45,0
+mix10_file_f     .byte $4d,$49,$58,$5f,$46,0
+mix10_file_g     .byte $4d,$49,$58,$5f,$47,0
+mix10_file_h     .byte $4d,$49,$58,$5f,$48,0
