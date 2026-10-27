@@ -1,0 +1,52 @@
+name: TEST03D exact PASS binary patch - N startup
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - test/test03d-bytepatch-next-baseline
+    paths:
+      - 'tools/test03d_bytepatch.py'
+      - '.github/workflows/test03d-bytepatch-next.yml'
+permissions:
+  contents: read
+jobs:
+  patch:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install assembler
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends 64tass
+      - name: Reproduce exact TEST03A baseline, not the newer broken versions
+        run: |
+          printf '26.10.2026 18:40\r\n' > timedate.clk
+          python tools/normalize_tass_includes.py
+          mkdir -p build/test03d
+          64tass --m6502 -D defset=4 -D DEF_SIDFX=0 -D DEF_REU=0 -D DEF_MIX03=1 -a sidplay64.tas -o build/test03d/TEST03A_ORIGINAL_PASS.o64 -l build/test03d/test03d.labels
+      - name: Exactly TWO bytes patch and SHA256 baseline verification
+        run: |
+          python tools/test03d_bytepatch.py build/test03d/TEST03A_ORIGINAL_PASS.o64 build/test03d/TEST03D_NEXT.o64
+      - name: Build original Glenn PuCrunch
+        run: |
+          git clone --depth 1 https://github.com/mist64/pucrunch.git build/pucrunch-src
+          make -C build/pucrunch-src
+      - name: Make both packed PRGs with original entry point
+        run: |
+          build/pucrunch-src/pucrunch '-x$9000' build/test03d/TEST03A_ORIGINAL_PASS.o64 build/test03d/TEST03A_REPRO.PRG
+          build/pucrunch-src/pucrunch '-x$9000' build/test03d/TEST03D_NEXT.o64 build/test03d/TEST03D_NEXT.PRG
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib
+          b=Path("build/test03d/TEST03A_REPRO.PRG").read_bytes()
+          expected="fa0f95481b5ad429227304919bbc620dca634789ac9d9bd8208bcf2ff24020f0"
+          assert hashlib.sha256(b).hexdigest()==expected, "Original packed PRG differs from VICE-PASS TEST03A!"
+          print("PASS: reproduced the exact same 5336-byte TEST03A packed executable")
+          PY
+      - name: Upload exact binary comparison and RUN-able PRG
+        uses: actions/upload-artifact@v4
+        with:
+          name: SIDPLAY64MIX_TEST03D_TWO_BYTE_NEXT_PATCH
+          path: build/test03d/
+          if-no-files-found: error
