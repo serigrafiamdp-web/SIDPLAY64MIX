@@ -82,26 +82,50 @@ mix10_prepare
         sta $3ff3                  ; TOD seconds seen by service
         sta $3ff4                  ; current song index
         sta $3ff5                  ; pending song index
+        sta $3ff6
+        sta $3ff7
+        sta $3ff8
+        sta $3ff9
+        sta $3ffa
+        sta $3ffb
+        sta $3ffc
+        sta $3ffd
         rts
 
 ; Called from Glenn original load code AFTER SID header and body
 ; both loaded and original main relocated, but BEFORE tune INIT.
 mix10_activate
-        lda #$10
-        sta $3ff1                  ; init hook reached
+        ; TEST30: distinguish already-active, unstaged and directory checks.
         lda mix10_active
-        bne mix10_activate_done
+        beq mix10_act_check_staged
+        lda #$20
+        sta $3ff1                  ; already active; subsequent restart
+        rts
+mix10_act_check_staged
+        lda #$10
+        sta $3ff1                  ; activation entered but not yet accepted
         lda mix10_staged
-        beq mix10_activate_done
-
-        ; Activate only for 19 real PSID entries in Glenn's directory.
-        ; Index zero is BOOT and >=20 are symbiont/stage PRGs.
+        bne mix10_act_check_index
+        lda #$e1
+        sta $3ff1                  ; staged flag unexpectedly missing
+        rts
+mix10_act_check_index
+        ; A D64 starts with program SIDPLAY64MIX at entry 0.
+        ; Songs occupy entries 1..19. Keep original indexing for now.
         lda offs_cursor
         clc
         adc pos_cursor
-        beq mix10_activate_done
+        beq mix10_act_entry_zero
         cmp #20
-        bcs mix10_activate_done
+        bcc mix10_act_entry_valid
+        lda #$e3
+        sta $3ff1                  ; directory index >=20
+        rts
+mix10_act_entry_zero
+        lda #$e2
+        sta $3ff1                  ; entry 0 is the program, not a SID
+        rts
+mix10_act_entry_valid
         sec
         sbc #1
         sta mix10_current
@@ -214,6 +238,19 @@ mix10_music_out_done
 ; 19 SID directory entries, 13 MIX staging entries: MULTI-FILE VERSION.
 ; Original Glenn IRQ keeps SID audio alive.
 mix10_service
+        ; Inspect the real states even when no precache attempt occurs.
+        lda pos_cursor
+        sta $3ff8
+        lda offs_cursor
+        sta $3ff9
+        lda maxfile
+        sta $3ffa
+        lda mix10_staged
+        sta $3ffb
+        lda mix10_active
+        sta $3ffc
+        lda mix10_ready
+        sta $3ffd
         lda $dc09
         sta $3ff3                  ; most recent TOD seconds
         lda mix10_active
