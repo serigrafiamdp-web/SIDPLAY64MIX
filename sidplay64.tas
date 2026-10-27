@@ -324,6 +324,17 @@ endstacker
         * = $3000
 .include src/mix10_glenn_symbiont.tas
 .cerror *>$3600,"TEST10 symbiont must fit in $3000-$35ff"
+        ; TEST27: immutable Krill setup payloads embedded inside the
+        ; SINGLE C64 PRG. Their memory is temporary: installer $6000,
+        ; resident backup $8800 -> live $9000 after Glenn relocates.
+        ; Binary resources are produced from frozen TEST19 in CI,
+        ; checked byte-for-byte against original file payloads.
+        * = $6000
+        .binary "assets/krill_insta_payload.bin"
+        .cerror *>$7b00,"Krill installer exceeded reserved startup region"
+        * = $8800
+        .binary "assets/krill_resident_payload.bin"
+        .cerror *>$8a00,"Krill resident backup exceeded reserved region"
 .fi
 
 .if DEF_MIX03
