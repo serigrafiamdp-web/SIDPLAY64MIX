@@ -1,0 +1,278 @@
+; SIDPLAY64MIX TEST04 — 3 REAL PSID resident in RAM, no drive accesses
+; after boot. No Krill, NO SIDPLAY64 GUI modifications.
+;
+; Files on D64:
+;    RAM_A : raw MINIMERCADO payload stored at $7000
+;    RAM_B : raw CHACABEZA payload stored at $3000
+;    RAM_C : raw COMEME payload stored at $5000
+;
+; All 3 original PSID code payloads have INIT=$1000, PLAY=$1003,
+; length <= $1300. They must be copied to $1000 before executing.
+; Time between songs: CPU-only memcpy (19 pages) + INIT, no disk.
+; Standard KERNAL LOAD only before playback begins.
+; 50Hz CIA cadence (PAL), 300 frames / 6 sec per tune.
+;
+; $080d-$0fff = player, $1000-$22ff active, RAM caches at
+; $3000-$42ff, $5000-$62ff, $7000-$82ff.
+; IRQ vectored at $FFFE (ROMs off), CIA1 timer A.
+;
+* = $0801
+        .word $080b
+        .word 10
+        .byte $9e,$32,$30,$36,$31,0  ; BASIC: SYS 2061
+        .word 0
+* = $080d
+        jmp boot
+
+stage_a = $7000
+stage_b = $3000
+stage_c = $5000
+sid_init = $1000
+sid_play = $1003
+
+song_index       .byte 0
+source_page      .byte 0
+ticks_lo         .byte 0
+ticks_hi         .byte 0
+switch_count     .byte 0
+err_code         .byte 0
+
+boot
+        sei
+        lda #$06
+        sta $d020
+        lda #0
+        sta $d021
+        lda #$31
+        sta $0400                 ; '1' = first loading
+        ; No music and no custom IRQ are active during these loads.
+        ldx #<name_a
+        ldy #>name_a
+        lda #name_a_end-name_a
+        jsr load_file
+        bcs load_failed
+
+        lda #$32
+        sta $0400                 ; '2' = second loading
+        ldx #<name_b
+        ldy #>name_b
+        lda #name_b_end-name_b
+        jsr load_file
+        bcs load_failed
+
+        lda #$33
+        sta $0400                 ; '3' = third loading
+        ldx #<name_c
+        ldy #>name_c
+        lda #name_c_end-name_c
+        jsr load_file
+        bcs load_failed
+
+        lda #$04
+        sta $d020
+        ; Disk operations now FINISHED, permanently.
+        sei
+        lda #$7f
+        sta $dc0d
+        sta $dd0d
+        lda $dc0d
+        lda $dd0d
+        lda #0
+        sta $d01a
+        lda #$35                ; all-RAM mapping, KERNAL out
+        sta $01
+        lda #<music_irq
+        sta $fffe
+        lda #>music_irq
+        sta $ffff
+
+        lda #0
+        sta song_index
+        jsr activate_song
+
+main
+        ; Timer threshold $012C CIA1 ticks = approx six seconds PAL
+        lda ticks_hi
+        cmp #$01
+        bcc main
+        bne change_song
+        lda ticks_lo
+        cmp #$2c
+        bcc main
+change_song
+        sei
+        lda song_index
+        clc
+        adc #1
+        cmp #3
+        bcc +
+        lda #0
++
+        sta song_index
+        jsr activate_song
+        jmp main
+
+load_failed
+        sta err_code
+        lda #$05                ; screen code 'E'
+        sta $0401
+        lda err_code
+        sta $0402
+        sei
+        lda #10
+        sta $d020
+error_loop
+        jmp error_loop
+
+; A=len, X/Y ptr to PETSCII filename.  KERNAL load to 2-byte
+; address prefixed to PRG. On return C=1 means failure.
+load_file
+        jsr $ffbd
+        lda #8
+        ldx #8
+        ldy #1
+        jsr $ffba
+        lda #0
+        tax
+        tay
+        jsr $ffd5
+        rts
+
+; IRQ PLAY at PAL CIA 50Hz (19656 cycles ~= $4CC8).
+; The selected tunes' PSID flags request CIA clock, not VBI.
+arm_irq
+        lda #$7f
+        sta $dc0d
+        lda $dc0d
+        lda #$c8
+        sta $dc04
+        lda #$4c
+        sta $dc05
+        lda #$11
+        sta $dc0e
+        lda #$81
+        sta $dc0d
+        rts
+
+music_irq
+        pha
+        txa
+        pha
+        tya
+        pha
+        lda $01
+        pha
+        lda #$35
+        sta $01
+        lda $dc0d
+        and #$01
+        beq irq_done
+        jsr sid_play
+        sei
+        lda #$35
+        sta $01
+        inc ticks_lo
+        bne irq_done
+        inc ticks_hi
+irq_done
+        pla
+        sta $01
+        pla
+        tay
+        pla
+        tax
+        pla
+        rti
+
+; Called with interrupts disabled, KERNAL out and 3 caches READY.
+; Switching uses zero drive IO. Source caches always retained.
+activate_song
+        sei
+        lda #0
+        sta $dc0e
+        lda #$7f
+        sta $dc0d
+        lda $dc0d
+        lda #0
+        sta $d418
+
+        lda song_index
+        beq src_a
+        cmp #1
+        beq src_b
+        lda #>stage_c
+        bne src_selected
+src_a
+        lda #>stage_a
+        bne src_selected
+src_b
+        lda #>stage_b
+src_selected
+        sta source_page
+
+        ; Copy 19 pages (4864 bytes). Real maximum test PSID
+        ; is COMEME at 4737 bytes, so 19 pages fully covers it.
+        lda #0
+        sta $e0
+        sta $e2
+        lda source_page
+        sta $e1
+        lda #$10
+        sta $e3
+        ldx #$13
+copy_page
+        ldy #0
+copy_byte
+        lda ($e0),y
+        sta ($e2),y
+        iny
+        bne copy_byte
+        inc $e1
+        inc $e3
+        dex
+        bne copy_page
+
+        ; Isolated INIT: reset ZP $02-$FF (music work area)
+        ; before starting another completely different PSID.
+        ldx #$fe
+        lda #0
+reset_music_zp
+        sta $01,x
+        dex
+        bne reset_music_zp
+
+        lda #0
+        jsr sid_init
+        sei
+        lda #$35
+        sta $01
+
+        lda #0
+        sta ticks_lo
+        sta ticks_hi
+        lda song_index
+        clc
+        adc #$31
+        sta $0400               ; 1/2/3 = which SID is sounding
+        lda song_index
+        clc
+        adc #$01
+        sta $d020               ; visual color changes during handoff
+        inc switch_count
+        lda switch_count
+        sta $0401               ; number of switches
+        jsr arm_irq
+        cli
+        rts
+
+name_a
+        .byte $52,$41,$4d,$5f,$41 ; RAM_A
+name_a_end
+name_b
+        .byte $52,$41,$4d,$5f,$42 ; RAM_B
+name_b_end
+name_c
+        .byte $52,$41,$4d,$5f,$43 ; RAM_C
+name_c_end
+
+.cerror *>=$1000,"TEST04 player overlaps active SID $1000"

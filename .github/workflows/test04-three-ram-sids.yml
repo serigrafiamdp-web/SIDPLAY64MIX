@@ -1,0 +1,41 @@
+name: TEST04 — three real SID RAM slots, zero drive accesses at handoff
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - test/test04-three-sid-ram-no-drive-switch
+    paths:
+      - 'tests/test04_three_sid_ram_no_drive.tas'
+      - 'tools/build_test04_d64.py'
+      - '.github/workflows/test04-three-ram-sids.yml'
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install 64tass
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends 64tass
+      - name: Compile TEST04 player (no Krill)
+        run: |
+          mkdir -p build/test04
+          64tass --m6502 -a tests/test04_three_sid_ram_no_drive.tas -o build/test04/RAM_PLAYER.PRG -l build/test04/TEST04.labels
+          python - <<'PY'
+          from pathlib import Path
+          p=Path("build/test04/RAM_PLAYER.PRG").read_bytes()
+          assert p[:2]==b"\x01\x08" and len(p) <= 0x1000-0x0801+2
+          print("TEST04 64tass PASS, runtime size",len(p),"bytes")
+          PY
+      - name: 'Smoke test — package synthetic PSIDs into three RAM slots'
+        run: |
+          python tools/build_test04_d64.py --main build/test04/RAM_PLAYER.PRG --out build/test04/TEST04_SYNTHETIC_VERIFICATION.d64
+      - name: Upload executable player and labels
+        uses: actions/upload-artifact@v4
+        with:
+          name: SIDPLAY64MIX_TEST04_RAM_SWITCH_PREPARED_NOT_VICE_PASS
+          path: build/test04
+          if-no-files-found: error
