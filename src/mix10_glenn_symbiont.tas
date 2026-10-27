@@ -62,47 +62,17 @@ mix10_use_bank
 ; Called AFTER Glenn's PuCrunch unpacking, initial options and colors,
 ; but BEFORE directory KERNAL reading and the first SID.
 mix10_prepare
+        ; TEST27: Krill binaries are already installed by PuCrunch into
+        ; $6000 (installer) and $8800 (resident backup). DO NOT perform
+        ; extra KERNAL disk reads during Glenn's startup.
         lda #0
-        sta mix10_staged
         sta mix10_active
         sta mix10_ready
         sta mix10_current
-        ; First load original Krill installer directly into $6000.
-        lda #mix10_insta_end-mix10_insta
-        ldx #<mix10_insta
-        ldy #>mix10_insta
-        jsr $ffbd
-        lda #5
-        ldx #8
-        ldy #1                   ; respect $6000 PRG embedded address
-        jsr $ffba
-        lda #0
-        tax
-        tay
-        jsr $ffd5
-        bcs mix10_stage_failed
-
-        ; Krill resident must NOT overwrite Glenn's unpacked code at $9000!
-        ; Use KERNAL LOAD secondary 0 to relocate payload at $8800.
-        lda #mix10_resident_end-mix10_resident
-        ldx #<mix10_resident
-        ldy #>mix10_resident
-        jsr $ffbd
-        lda #6
-        ldx #8
-        ldy #0                   ; forced destination X/Y = $8800
-        jsr $ffba
-        lda #0
-        ldx #$00
-        ldy #$88
-        jsr $ffd5
-        bcs mix10_stage_failed
+        sta mix10_pending
+        sta mix10_savevalid
         lda #1
         sta mix10_staged
-        rts
-mix10_stage_failed
-        lda #2
-        sta $d020
         rts
 
 ; Called from Glenn original load code AFTER SID header and body
