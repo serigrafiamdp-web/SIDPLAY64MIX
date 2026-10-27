@@ -69,6 +69,10 @@ jobs:
               assert len(b)>1024, (p,len(b))
               print(p,len(b),hashlib.sha256(b).hexdigest(),b[:16].hex())
           PY
+      - name: Create original-player D64s with genuine original SID test files
+        run: |
+          python3 TRSE_PORT/tools/make_reference_d64.py --source pristine --prg output/SIDPLAY64_GLENN_NORMAL.PRG --output output/SIDPLAY64_GLENN_NORMAL.D64 --title "GLENN SIDPLAY NORM"
+          python3 TRSE_PORT/tools/make_reference_d64.py --source pristine --prg output/SIDPLAY64_GLENN_SD2IEC.PRG --output output/SIDPLAY64_GLENN_SD2IEC.D64 --title "GLENN SIDPLAY SD"
       - name: Prepare full and faithful source/binaries archive
         run: |
           mkdir -p output/reference
@@ -76,6 +80,7 @@ jobs:
           rm -rf output/reference/.git
           cp output/SIDPLAY64_GLENN_NORMAL.PRG output/SIDPLAY64_GLENN_SD2IEC.PRG output/reference/
           cp output/SIDPLAY64_GLENN_NORMAL.O64 output/SIDPLAY64_GLENN_SD2IEC.O64 output/reference/
+          cp output/SIDPLAY64_GLENN_NORMAL.D64 output/SIDPLAY64_GLENN_SD2IEC.D64 output/reference/
           cat > output/reference/COMO_PROBAR.txt <<'EOF'
           SIDPLAY64 GLENN v1.21 — REFERENCIA AUTENTICA 2018
           
@@ -87,13 +92,14 @@ jobs:
           Primero ejecutar NORMAL.PRG o SD2IEC.PRG en una C64/VICE nueva.
           En VICE seleccionar unidad 8 y luego contestar las preguntas originales.
           No se ha hecho port a OrgAsm: esta es la referencia funcional real.
+          D64 incluye 8 SID originales sin duplicados MIX ni parches.
           No se ha validado en VICE, solo el ensamblado/compactacion en CI.
           EOF
           (cd output/reference && zip -qr ../GLENN_121_ORIGINAL_COMPLETO.zip .)
       - name: Publish reference binaries to development branch (not master)
         run: |
           mkdir -p TRSE_PORT/REFERENCE_ORIGINAL
-          cp output/SIDPLAY64_GLENN_NORMAL.PRG output/SIDPLAY64_GLENN_SD2IEC.PRG output/GLENN_121_ORIGINAL_COMPLETO.zip TRSE_PORT/REFERENCE_ORIGINAL/
+          cp output/SIDPLAY64_GLENN_NORMAL.PRG output/SIDPLAY64_GLENN_SD2IEC.PRG output/SIDPLAY64_GLENN_NORMAL.D64 output/SIDPLAY64_GLENN_SD2IEC.D64 output/GLENN_121_ORIGINAL_COMPLETO.zip TRSE_PORT/REFERENCE_ORIGINAL/
           git add TRSE_PORT/REFERENCE_ORIGINAL
           git -c user.name='SIDPLAY64 build bot' -c user.email='sidplay64-build@users.noreply.github.com' commit -m 'build: verified Glenn original v1.21 64tass baseline' || true
           git push origin HEAD:development/trse-port
@@ -104,5 +110,6 @@ jobs:
           path: |
             output/GLENN_121_ORIGINAL_COMPLETO.zip
             output/*.PRG
+            output/*.D64
             output/*.O64
           if-no-files-found: error
