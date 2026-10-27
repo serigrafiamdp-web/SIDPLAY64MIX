@@ -1,7 +1,7 @@
 name: TEST32 master SID sectors preserved; diagnose Krill drive hang
 on:
   push:
-    branches: [test/test32-index-from-filename-krill]
+    branches: [test/test32-preserve-test19-sectors]
     paths:
       - '.github/workflows/test32-master-sector-layout.yml'
       - 'sidplay64.tas'
@@ -114,4 +114,4 @@ jobs:
           cp build/test32/SIDPLAY64MIX_TEST32.D64 build/test32/SIDPLAY64MIX_TEST32_PROYECTO_COMPLETO.zip build/test32/REPORT.json TESTS/TEST32/
           git add TESTS/TEST32/
           git -c user.name='SIDPLAY64 native build bot' -c user.email='sidplay64-build@users.noreply.github.com' commit -m 'test32: build 1 Glenn+Krill PRG + 19 original SID (VICE pending)' || true
-          git push origin HEAD:test/test32-index-from-filename-krill
+          git push origin HEAD:test/test32-preserve-test19-sectors
