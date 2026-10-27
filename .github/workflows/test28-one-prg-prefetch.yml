@@ -4,6 +4,9 @@ on:
     branches: [test/test28-unified-fixed-prefetch]
     paths:
       - '.github/workflows/test28-one-prg-prefetch.yml'
+      - 'tools/test28_prepare_assets.py'
+      - 'tools/test28_pack.py'
+      - 'sidplay64.tas'
   workflow_dispatch:
 permissions:
   contents: write
