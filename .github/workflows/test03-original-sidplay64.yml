@@ -1,11 +1,13 @@
-name: TEST03 original SIDPLAY64 integration — source validation
+name: TEST03C Quickstart + default N — source validation
 on:
   workflow_dispatch:
   push:
     branches:
       - test/test03-sidplay64-integracion
+      - test/test03c-quickstart-next
     paths:
       - 'sidplay64.tas'
+      - 'src/init.tas'
       - 'src/mix03_timer_hook.tas'
       - 'tools/normalize_tass_includes.py'
       - 'src/plt_function.tas'
@@ -57,6 +59,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: SIDPLAY64MIX_TEST03A_SOURCE_ASSEMBLED_NOT_RUNTIME_PASS
+          name: SIDPLAY64MIX_TEST03C_QUICKSTART_N_NOT_VICE_PASS
           path: build/test03/
           if-no-files-found: error
