@@ -1,0 +1,466 @@
+; SIDPLAY64MIX TEST06 — CIA1 TOD timer 10s/03:05 on TEST05 VICE PASS
+; Original Krill/IRQ/double buffer remains identical, only timer glue changes.
+;
+; Source TEST05 PASS: dac550bfff24fd20cd18ec34c983a02402d7f69b
+; Build with TEST06_LONG=0 (10 sec) or TEST06_LONG=1 (3m05sec).
+;
+; Built DIRECTLY on user VICE PASS TEST02C, not failed TEST03 integrations.
+; No SIDPLAY64 UI yet. Correct experiment: ONE active SID at $1000 and
+; ONE NEXT bank at $5000, with true Krill background load under PLAY IRQ.
+; The 3 songs loop A->B->C->A indefinitely and NEVER call KERNAL on a switch.
+; Each stage PRG carries 19 full pages incl zero pad; all original code
+; has INIT=$1000 PLAY=$1003. Driver $9000 and stage $5000 don't overlap.
+;
+; Device 8, 1541 emulation.  Krill v184: INSTALL=$6000, RESIDENT=$9000,
+; ZP=$C0.  The loader binaries are separate files loaded with KERNAL
+; before SID A starts.  Using SD2IEC requires the Krill KERNAL fallback
+; option; this TEST02 first targets a genuine/emulated 1541.
+;
+; Krill uses ZP $C0-$D5, swapped (22 bytes) around each SID PLAY IRQ.
+; TEST05 defaults to PAL ~50Hz PLAY, midpoint between TEST02C user-reported
+; fast 60Hz and TEST02D user-reported slow 30Hz. Verify in VICE.
+; BORDER: 6 boot, 7 loading, 5 next READY, 1/2/3 active, 10 error.
+; $0400 = active index 1/2/3; $0401 = number of changes (screen byte).
+;
+; 64tass --m6502 -D TEST06_LONG=0 -a tests/test06_tod_timer.tas -o TEST06_10S.PRG
+; 64tass --m6502 -D TEST06_LONG=1 -a tests/test06_tod_timer.tas -o TEST06_3M05.PRG
+;
+.weak
+TEST06_LONG = 0
+.endweak
+.if TEST06_LONG
+TIMER_MIN = $03   ; BCD minutes
+TIMER_SEC = $05   ; BCD seconds
+.else
+TIMER_MIN = $00
+TIMER_SEC = $10
+.fi
+;
+* = $0801
+        .word $080b
+        .word 10
+        .byte $9e,$32,$30,$36,$31,0
+        .word 0
+* = $080d
+        jmp boot
+
+krill_install = $6000
+krill_raw     = $9000
+sid_init      = $1000
+sid_play      = $1003
+stage_base    = $5000
+exec_base     = $1000
+next_ready    .byte 0
+phase         .byte 0
+current_index .byte 0
+switch_count  .byte 0
+ticks_lo      .byte 0
+ticks_hi      .byte 0
+loader_status .byte 0
+tod_minutes   .byte 0
+tod_seconds   .byte 0
+music_zp      .fill 22,0
+loader_zp     .fill 22,0
+
+boot
+        sei
+        lda #$06
+        sta $d020
+        lda #$00
+        sta $d021
+        lda #$01
+        jsr debug_stage
+        ; Each PRG has a C64 load-address prefix.  The KERNAL loads them
+        ; to their own absolute addresses before Krill takes over.
+        ldx #<install_name
+        ldy #>install_name
+        lda #install_name_end-install_name
+        jsr load_file
+        bcc +
+        jmp boot_error
++
+        lda #$02
+        jsr debug_stage
+        ldx #<resident_name
+        ldy #>resident_name
+        lda #resident_name_end-resident_name
+        jsr load_file
+        bcc +
+        jmp boot_error
++
+        lda #$03
+        jsr debug_stage
+        ldx #<sid_a_name
+        ldy #>sid_a_name
+        lda #sid_a_name_end-sid_a_name
+        jsr load_file
+        bcc +
+        jmp boot_error
++
+
+        lda #$04
+        jsr debug_stage
+        ; Install drive-side Krill protocol while KERNAL remains active.
+        lda #$08
+        sta $ae               ; FA: active drive for Krill installer
+        sta $ba               ; current device
+        jsr krill_install
+        bcc +
+        jmp boot_error
++
+        lda #$05
+        jsr debug_stage
+        ; Preserve all Krill ZP before invoking SID INIT.
+        ldx #21
+save_postinstall_krill_zp
+        lda $c0,x
+        sta loader_zp,x
+        dex
+        bpl save_postinstall_krill_zp
+
+        ; Switch to all-RAM mapping and install a true hardware IRQ vector.
+        ; BASIC/KERNAL will no longer be called while the SID is running.
+        sei
+        lda #$35
+        sta $01
+        lda #0
+        jsr sid_init
+        sei
+        lda #$35
+        sta $01
+        ldx #21
+capture_initial_zp
+        lda $c0,x
+        sta music_zp,x
+        lda loader_zp,x
+        sta $c0,x
+        dex
+        bpl capture_initial_zp
+        lda #$06
+        jsr debug_stage
+        lda #<sid_irq
+        sta $fffe
+        lda #>sid_irq
+        sta $ffff
+        lda #$00
+        sta $d01a              ; disable VIC raster IRQ
+        jsr reset_tod
+        jsr arm_cia_irq
+        cli
+
+        ; Initial SID A is playing. First Krill load starts NOW,
+        ; i.e. immediately after the first music IRQ was armed.
+        ; Only one additional buffer ($5000) is ever used.
+        lda #0
+        sta current_index
+        sta switch_count
+        lda #$31                 ; screen-code digit 1 = active A
+        sta $0400
+        lda #$0e                ; screen code 'N' (auto NEXT)
+        sta $0403
+
+next_background_load
+        lda #7
+        sta $d020               ; cyan = drive loading under music
+        lda current_index
+        beq preload_b
+        cmp #1
+        beq preload_c
+        ; Current C -> next A (stage copy, independent of $1000 active)
+        ldx #<sid_a_stage_name
+        ldy #>sid_a_stage_name
+        jmp preload_do
+preload_b
+        ldx #<sid_b_name
+        ldy #>sid_b_name
+        jmp preload_do
+preload_c
+        ldx #<sid_c_name
+        ldy #>sid_c_name
+
+preload_do
+        jsr krill_raw            ; active song keeps playing via IRQ!
+        bcs runtime_error
+        lda #1
+        sta next_ready          ; exact selected stage is now fully READY
+        lda #5
+        sta $d020               ; green = stage ready, drive idle
+        jsr await_timer         ; CPU waits ONLY while current SID plays
+        jsr swap_staged_sid     ; 19-page RAM memcpy + INIT, zero disk IO
+
+        inc current_index
+        lda current_index
+        cmp #3
+        bcc select_done
+        lda #0
+        sta current_index
+select_done
+        clc
+        adc #$31
+        sta $0400               ; display active song 1/2/3
+        inc switch_count
+        lda switch_count
+        sta $0401               ; count of handoffs
+        jmp next_background_load
+
+boot_error
+        ; Last successful stage still shown at $0400.
+        sta $0402
+        lda #$05
+        sta $0401
+        sei
+        lda #10
+        sta $d020
+boot_halt
+        jmp boot_halt
+
+runtime_error
+        ; Keep the SID IRQ alive for debugging; no destructive handoff.
+        sta $0402
+        lda #$05
+        sta $0401
+        lda #10
+        sta $d020
+runtime_halt
+        jmp runtime_halt
+
+; LOAD PRG from device 8 to the embedded two-byte load address.
+; In: A=name length, X/Y=name pointer.  Out: carry from $FFD5.
+load_file
+        jsr $ffbd              ; SETNAM
+        lda #8                 ; logical file
+        ldx #8                 ; device
+        ldy #1                 ; secondary 1 (honor PRG load address)
+        jsr $ffba              ; SETLFS
+        lda #0
+        tax
+        tay
+        jsr $ffd5              ; LOAD
+        rts
+
+; PAL CIA approx 50.1Hz (985248 / $4CC8 = 50.13).
+; This is a first speed calibration between the tested 60Hz and 30Hz.
+; The TOD input select bit7 is PAL=50 Hz; TIMER A remains $4CC8.
+; Do not infer clock solely from PSID flag; compare audibly with TEST03A.
+arm_cia_irq
+        lda #$7f
+        sta $dc0d
+        lda $dc0d
+        lda #$c8
+        sta $dc04
+        lda #$4c
+        sta $dc05
+        lda #%10010001        ; TEST06: bit7 TOD 50 Hz PAL; Timer A still $4CC8
+        sta $dc0e
+        lda #$81
+        sta $dc0d
+        rts
+
+; Hardware IRQ, ROMs disabled, loader mainline interrupted at any point.
+sid_irq
+        pha
+        txa
+        pha
+        tya
+        pha
+        lda $01
+        pha
+        lda #$35
+        sta $01
+        lda $dc0d             ; ACK CIA IRQ
+        and #$01
+        beq sid_irq_done
+
+        ; Store all 22 Krill ZP bytes, present the tune's ZP for sid_play.
+        ldx #21
+sid_zp_enter
+        lda $c0,x
+        sta loader_zp,x
+        lda music_zp,x
+        sta $c0,x
+        dex
+        bpl sid_zp_enter
+
+        jsr sid_play
+        sei                    ; defensive: tune may have executed CLI
+        lda #$35
+        sta $01
+        ldx #21
+sid_zp_exit
+        lda $c0,x
+        sta music_zp,x
+        lda loader_zp,x
+        sta $c0,x
+        dex
+        bpl sid_zp_exit
+
+        inc ticks_lo
+        bne sid_irq_done
+        inc ticks_hi
+sid_irq_done
+        pla
+        sta $01
+        pla
+        tay
+        pla
+        tax
+        pla
+        rti
+
+; TEST06 timer: CIA1 TOD clock, like the timebase Glenn displays.
+; The 10s and 03:05 variants are real BCD minute:second comparisons.
+; Music IRQ frequency does NOT determine elapsed-song timer.
+; $DC0B read latches TOD; $DC08 releases its snapshot.
+; Never access the drive while advancing; next_ready is a hard gate.
+reset_tod
+        lda #0
+        sta $dc0b              ; writing hours stops TOD during zeroing
+        sta $dc0a
+        sta $dc09
+        sta $dc08              ; writing tenths restarts TOD
+        rts
+
+; Read TOD from hardware and draw MM:SS (screen bytes at $0405..$0409).
+draw_tod
+        lda $dc0b              ; latch on hours
+        lda $dc0a
+        sta tod_minutes
+        lda $dc09
+        sta tod_seconds
+        lda $dc08              ; release latched time, tenths ignored
+
+        lda tod_minutes
+        lsr
+        lsr
+        lsr
+        lsr
+        ora #$30
+        sta $0405
+        lda tod_minutes
+        and #$0f
+        ora #$30
+        sta $0406
+        lda #$3a               ; screen-code colon
+        sta $0407
+        lda tod_seconds
+        lsr
+        lsr
+        lsr
+        lsr
+        ora #$30
+        sta $0408
+        lda tod_seconds
+        and #$0f
+        ora #$30
+        sta $0409
+        rts
+
+await_timer
+        lda next_ready
+        beq await_timer
+await_tod
+        jsr draw_tod
+        lda tod_minutes
+        cmp #TIMER_MIN
+        bcc await_tod
+        bne await_done
+        lda tod_seconds
+        cmp #TIMER_SEC
+        bcc await_tod
+await_done
+        rts
+
+; Caller: staged SID ready, A/B tune will be discarded.
+; IRQs disabled only for memcpy + INIT + new CIA setup.
+swap_staged_sid
+        sei
+        lda #0
+        sta $dc0e
+        lda #$7f
+        sta $dc0d
+        lda $dc0d
+        lda #0
+        sta $d418
+        sta next_ready
+
+        ; copy ONLY $5000-$62ff -> $1000-$22ff, 4864 B including zero padding
+        lda #0
+        sta $e0
+        sta $e2
+        lda #$50
+        sta $e1
+        lda #$10
+        sta $e3
+        ldx #$13
+copy_page
+        ldy #0
+copy_byte
+        lda ($e0),y
+        sta ($e2),y
+        iny
+        bne copy_byte
+        inc $e1
+        inc $e3
+        dex
+        bne copy_page
+
+        ; Loader ZP must survive a music INIT.
+        ldx #21
+stash_loader_zp
+        lda $c0,x
+        sta loader_zp,x
+        lda #0
+        sta $c0,x
+        dex
+        bpl stash_loader_zp
+        lda #0
+        jsr sid_init
+        sei
+        lda #$35
+        sta $01
+        ldx #21
+new_sid_zp
+        lda $c0,x
+        sta music_zp,x
+        lda loader_zp,x
+        sta $c0,x
+        dex
+        bpl new_sid_zp
+
+        lda #0
+        sta ticks_lo
+        sta ticks_hi
+        jsr reset_tod
+        jsr arm_cia_irq
+        lda #4                  ; active song green/ready marker
+        sta $d020
+        cli
+        rts
+
+install_name
+        ; Strict PETSCII file bytes matching the D64 directory (not .text screen encoding).
+        .byte $49,$4e,$53,$54,$41
+install_name_end
+resident_name
+        .byte $52,$45,$53,$49,$44,$45,$4e,$54
+resident_name_end
+sid_a_name
+        .byte $4d,$49,$58,$5f,$41
+sid_a_name_end
+sid_b_name
+        .byte $4d,$49,$58,$5f,$42,0
+sid_c_name
+        .byte $4d,$49,$58,$5f,$43,0
+sid_a_stage_name
+        .byte $4d,$49,$58,$5f,$41,$32,0 ; MIX_A2: staged A at $5000
+
+; The top-left character shows the last checkpoint reached: A=1 .. K=11.
+; On errors, E appears next to it, error code shown in third cell.
+debug_stage
+        sta $0400
+        sta $d020
+        lda #$01
+        sta $d800
+        rts
+
+.cerror *>=$1000,"TEST06 boot must not collide with active SID at $1000"
