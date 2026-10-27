@@ -218,8 +218,15 @@ conbit2		asl tmp
 		lda #$18
 		sta $d018
 
-		lda #0
+lda #0
 		jsr setup_colors	;$01 = 37 on end
+.if DEF_MIX03
+        ; TEST03C quickstart: skip 'Press 0-9 for colors' and its
+        ; keyboard wait. Jump directly to Glenn's initialization path.
+        ; Our TEST03C build sets def_attractmode=0, so there are
+        ; no scroller/sprite/IRQ bytes to pop from the stack.
+        jmp trkinstd
+.fi
 
 ;---------------------------------
 .if def_attractmode=2
