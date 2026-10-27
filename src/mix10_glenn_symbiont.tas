@@ -17,6 +17,40 @@ mix10_savevalid    .byte 0
 mix10_loader_zp    .fill 22,0
 mix10_music_zp     .fill 22,0
 
+; All driver hooks reuse existing 3-byte JSR/JMP footprints to respect
+; Glenn's strict relocator boundary ($CF84).
+;
+; Wrapper around original wjs_display; services Krill only after screen.
+mix10_display
+        jsr wjs_display
+        jmp mix10_service
+
+; Wrapper around original played SID INIT after normal load.
+mix10_restart_wrap
+        jsr mix10_activate
+        jsr wjs_restartTune
+        jmp mix10_after_restart
+
+; Wrapper around Glenn original IRQ music play (zero-page protected).
+mix10_music_play
+        jsr mix10_music_enter
+        jsr playmus
+        jmp mix10_music_exit
+
+; Wrapper around reset at Glenn's original playlist advance.
+mix10_plt_reset
+        jsr mix10_before_plt_advance
+        jmp wjs_resetCia
+
+; Wrapper dispatch for either original unmodified loader or RAM NEXT.
+mix10_select
+        lda mix10_active
+        bne mix10_use_bank
+        ldy #1
+        jmp (wjp_load)
+mix10_use_bank
+        jmp mix10_fast_next
+
 ; Called AFTER Glenn's PuCrunch unpacking, initial options and colors,
 ; but BEFORE directory KERNAL reading and the first SID.
 mix10_prepare
