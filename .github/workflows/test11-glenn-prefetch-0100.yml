@@ -3,13 +3,14 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - test/test11-glenn-live-krill-symbiont
+      - test/test11-glenn-krill-prefetch-0100
     paths:
       - 'sidplay64.tas'
       - 'src/init.tas'
       - 'src/irq.tas'
       - 'src/plt_function.tas'
       - 'src/mix10_glenn_symbiont.tas'
+      - '.github/workflows/test11-glenn-prefetch-0100.yml'
       - '.github/workflows/test11-glenn-live-krill.yml'
 permissions:
   contents: read
