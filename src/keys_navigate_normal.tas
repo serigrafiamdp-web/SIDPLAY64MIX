@@ -105,8 +105,12 @@ key6		cpy #keyReturn		;"RETURN"
 		beq ingenfil
 dirbackw	pla
 		pla
-		jsr wjs_resetCia	;zp $01 = 36
-		jmp (wjp_load)
+.if DEF_MIX10
+        jmp mix10_manual_select    ; manual RETURN uses Krill, not KERNAL
+.else
+        jsr wjs_resetCia
+        jmp (wjp_load)
+.fi
 
 ;--- code continues in main source:
 key7
