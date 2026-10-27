@@ -314,6 +314,7 @@ sid_irq_done
 ; Never access the drive while advancing; next_ready is a hard gate.
 reset_tod
         lda #0
+        sta $dc0f              ; select TOD CLOCK, not alarm, and stop unused TB
         sta $dc0b              ; writing hours stops TOD during zeroing
         sta $dc0a
         sta $dc09
