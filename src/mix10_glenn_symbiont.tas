@@ -134,6 +134,7 @@ mix31_scan_loop
         jsr getpos              ; A=hi, Y=lo directory pointer
         sta $fc
         sty $fb
+        php                      ; preserve caller IRQ state
         lda $01
         pha
         sei
@@ -148,6 +149,7 @@ mix31_scan_compare
         bpl mix31_scan_compare
         pla
         sta $01
+        plp
         lda mix31_scan_idx
         sta $3ff6              ; actual directory index, 1..19
         sec
@@ -157,6 +159,7 @@ mix31_scan_compare
 mix31_scan_next
         pla
         sta $01
+        plp
         inc mix31_scan_idx
         jmp mix31_scan_loop
 mix31_scan_fail
