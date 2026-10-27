@@ -1,3 +1,9 @@
+; TEST13 -- generic 19 PSID disk prefetch via Krill raw PSID loader.
+; Original Glenn GUI, CIA TOD 01:00 prefetch, manual RETURN via Krill.
+; All 19 PSIDs: load $1000, init $1000, play $1003, size <= $1A00.
+; Input PSID first bytes 'PS' encode Krill load target $5350.
+; Raw bytes 2+ appear at $5350; SID body begins $53CC.
+; Keep TEST11 3 tunes VICE PASS frozen independently.
 ; TEST10 — KRILL LIVE SYMBIONT IN GLENN'S ORIGINAL PLAYER
 ; Built for the provided curated SID files, all load at $1000,
 ; INIT=$1000, PLAY=$1003 and code ends before $3000.
@@ -12,7 +18,9 @@
 mix10_staged       .byte 0       ; DOS loads of Krill files complete
 mix10_active       .byte 0       ; Krill owns 1541
 mix10_ready        .byte 0       ; $5000 music bank validated
-mix10_current      .byte 0       ; 0 A, 1 B, 2 C
+mix10_current      .byte 0       ; 0..18: currently playing original PSID directory track
+mix10_pending      .byte 0       ; 0..18: staged original PSID track
+mix10_filename     .fill 17,0   ; exact Glenn directory 16-char filename + NUL
 mix10_savevalid    .byte 0
 mix10_loader_zp    .fill 22,0
 mix10_music_zp     .fill 22,0
@@ -105,21 +113,17 @@ mix10_activate
         lda mix10_staged
         beq mix10_activate_done
 
-        ; Explicit safe pilot: MINIMERCADO.SID only.
-        ; Other songs follow original Glenn unaltered (no Krill activation).
-        lda fname
-        cmp #$4d                 ; M
-        bne mix10_activate_done
-        lda fname+1
-        cmp #$49                 ; I
-        bne mix10_activate_done
-        lda fname+2
-        cmp #$4e                 ; N
-        bne mix10_activate_done
-        lda fname+3
-        cmp #$49                 ; I
-        bne mix10_activate_done
-
+        ; Activate only for 19 real PSID entries in Glenn's directory.
+        ; Index zero is BOOT and >=20 are symbiont/stage PRGs.
+        lda offs_cursor
+        clc
+        adc pos_cursor
+        beq mix10_activate_done
+        cmp #20
+        bcs mix10_activate_done
+        sec
+        sbc #1
+        sta mix10_current
         sei
         lda #$36
         sta $01
@@ -144,8 +148,8 @@ mix10_initial_save
         dex
         bpl mix10_initial_save
         lda #0
-        sta mix10_current
         sta mix10_ready
+        sta mix10_pending
         sta mix10_savevalid
         lda #1
         sta mix10_active
@@ -214,52 +218,202 @@ mix10_music_out_loop
 mix10_music_out_done
         rts
 
-; Invoked from Glenn's own fileSelect idle screen loop.
-; Only foreground Krill I/O occurs, MUSIC PLAY keeps running in IRQ.
-; TEST11: Delayed background load. The actual Glenn TOD minute reaches
-; BCD 01 (01:00) BEFORE Krill can start reading the next SID.
-; Glenn keeps playing without touching the drive for the first minute.
-; After the stage becomes READY, next switch still follows Glenn's
-; original timer threshold (normally 03:05), not this preload deadline.
-; TOD is reset by Glenn's own restartTune after every new SID.
+; Foreground background-prefetch service, triggered only at CIA TOD
+; BCD minute 01 or later. Original Glenn IRQ keeps SID audio alive.
 mix10_service
         lda mix10_active
         beq mix10_service_done
         lda mix10_ready
         bne mix10_service_done
-        lda $dc0a             ; CIA1 TOD minutes, BCD, no music-rate coupling
+        lda $dc0a
         cmp #$01
-        bcc mix10_service_done ; no Krill read until 01:00
-        lda #7
-        sta $d020
+        bcc mix10_service_done
         lda mix10_current
-        beq mix10_load_b
-        cmp #1
-        beq mix10_load_c
-        ldx #<mix10_file_a
-        ldy #>mix10_file_a
-        jmp mix10_load_go
-mix10_load_b
-        ldx #<mix10_file_b
-        ldy #>mix10_file_b
-        jmp mix10_load_go
-mix10_load_c
-        ldx #<mix10_file_c
-        ldy #>mix10_file_c
-mix10_load_go
-        jsr $9000               ; Krill v184 raw load, while Glenn ISR plays
+        clc
+        adc #1
+        cmp #19
+        bcc mix10_service_target_ok
+        lda #0
+mix10_service_target_ok
+        sta mix10_pending
+        jsr mix10_stage_pending
         bcs mix10_service_failed
         lda #1
         sta mix10_ready
-        lda #5                  ; green: next SID ready
+        lda #5
         sta $d020
 mix10_service_done
         rts
 mix10_service_failed
         lda #2
+        sta mix10_ready
         sta $d020
+        rts
+
+; Manual RETURN, intercepted at the original Glenn key dispatcher.
+; Before Krill is installed follow EXACT original Glenn RESET+LOAD.
+; After Krill takeover do not call KERNAL. Stage the selected PSID,
+; then hand off through Glenn's own restartTune and timer.
+mix10_manual_select
+        lda mix10_active
+        bne mix10_manual_active
+        jsr wjs_resetCia
+        jmp (wjp_load)
+mix10_manual_active
+        lda offs_cursor
+        clc
+        adc pos_cursor
+        beq mix10_manual_exit
+        cmp #20
+        bcs mix10_manual_exit
+        sec
+        sbc #1
+        sta mix10_pending
+        lda #0
+        sta mix10_ready
+        jsr mix10_stage_pending
+        bcs mix10_manual_fail
+        lda #1
+        sta mix10_ready
+        jmp mix10_fast_next
+mix10_manual_fail
         lda #2
-        sta mix10_ready         ; failed, do NOT retry endlessly or handoff
+        sta mix10_ready
+        sta $d020
+mix10_manual_exit
+        jmp (wjp_fileselect)
+
+; Read one filename from original Glenn directory RAM under I/O.
+; Directory: index 0 BOOT, entries 1..19 are authentic .SID names.
+; Bounded 16 chars, preserve embedded spaces, strip trailing padding.
+mix10_make_filename
+        lda mix10_pending
+        clc
+        adc #1
+        tax
+        jsr getpos
+        sta $fc
+        sty $fb
+        sei
+        lda $01
+        pha
+        lda #$34
+        sta $01
+        ldy #15
+mix10_cp_name
+        lda ($fb),y
+        sta mix10_filename,y
+        dey
+        bpl mix10_cp_name
+        pla
+        sta $01
+        cli
+        ldx #15
+mix10_trim_name
+        lda mix10_filename,x
+        cmp #$20
+        beq mix10_trim_byte
+        cmp #$a0
+        beq mix10_trim_byte
+        inx
+        lda #0
+        sta mix10_filename,x
+        rts
+mix10_trim_byte
+        dex
+        bpl mix10_trim_name
+        lda #0
+        sta mix10_filename
+        rts
+
+; Krill raw load an original PSID, not extra pre-converted MIX_x files.
+; File begins ASCII PSID, so Krill PRG loader interprets $5350 as
+; address from first two bytes 'P','S'. Remaining header goes at $5350.
+; Off $7C and load-address WORD $1000 => music body at $53CC.
+; Stage 26 pages at $5000-$69FF; PSCIIDSK2 uses ~6435 bytes.
+; Clear scratch $5300-$6DFF BEFORE loading so tail zero padding is safe.
+mix10_stage_pending
+        jsr mix10_make_filename
+        lda #7
+        sta $d020
+        lda #$00
+        sta $fb
+        lda #$53
+        sta $fc
+        ldx #27
+mix10_zero_page
+        ldy #0
+mix10_zero_byte
+        lda #0
+        sta ($fb),y
+        iny
+        bne mix10_zero_byte
+        inc $fc
+        dex
+        bne mix10_zero_page
+
+        ldx #<mix10_filename
+        ldy #>mix10_filename
+        jsr $9000                  ; foreground Krill, IRQ SID playback
+        bcs mix10_stage_bad
+
+        ; Validate original SID header, offset, load, INIT and PLAY.
+        ; PSID bytes [2]='I',[3]='D' land at 5350/5351.
+        lda $5350
+        cmp #$49
+        bne mix10_stage_bad
+        lda $5351
+        cmp #$44
+        bne mix10_stage_bad
+        lda $5354                  ; big endian data offset $007C
+        bne mix10_stage_bad
+        lda $5355
+        cmp #$7c
+        bne mix10_stage_bad
+        lda $5356                  ; big endian load address $0000
+        ora $5357
+        bne mix10_stage_bad
+        lda $5358                  ; big endian init $1000
+        cmp #$10
+        bne mix10_stage_bad
+        lda $5359
+        bne mix10_stage_bad
+        lda $535a                  ; big endian play $1003
+        cmp #$10
+        bne mix10_stage_bad
+        lda $535b
+        cmp #$03
+        bne mix10_stage_bad
+        lda $53ca                  ; embedded little endian body load $1000
+        bne mix10_stage_bad
+        lda $53cb
+        cmp #$10
+        bne mix10_stage_bad
+
+        lda #$cc                   ; $53CC -> $5000
+        sta $fb
+        lda #$53
+        sta $fc
+        lda #$00
+        sta $fd
+        lda #$50
+        sta $fe
+        ldx #$1a                   ; 26 full pages, length <=6656
+mix10_stage_cp_page
+        ldy #0
+mix10_stage_cp_byte
+        lda ($fb),y
+        sta ($fd),y
+        iny
+        bne mix10_stage_cp_byte
+        inc $fc
+        inc $fe
+        dex
+        bne mix10_stage_cp_page
+        clc
+        rts
+mix10_stage_bad
+        sec
         rts
 
 ; Called before Glenn clears $0C-$FF at playlist auto-advance.
@@ -300,7 +454,7 @@ mix10_fast_next
         sta $fc
         lda #$10
         sta $fe
-        ldx #$13                 ; exactly 19 pages
+        ldx #$1a                 ; full 26 pages for all 19 original SIDs
 mix10_cp_page
         ldy #0
 mix10_cp_byte
@@ -313,18 +467,34 @@ mix10_cp_byte
         dex
         bne mix10_cp_page
 
-        inc mix10_current
-        lda mix10_current
-        cmp #3
-        bcc mix10_cur_ready
-        lda #0
+        ; Adopt the exact chosen/prefetched song, not an internal
+        ; A/B/C counter disconnected from Glenn's directory.
+        lda mix10_pending
         sta mix10_current
-        ; Wrap cached playlist to first SID entry after BOOT,
-        ; while preserving Glenn's original directory display.
-        sta offs_cursor
-        lda #1
+        clc
+        adc #1                     ; Glenn list includes BOOT at index 0
+        cmp #15
+        bcs mix10_scroll_down
         sta pos_cursor
-mix10_cur_ready
+        lda #0
+        sta offs_cursor
+        jmp mix10_display_synced
+mix10_scroll_down
+        sec
+        sbc #14
+        sta offs_cursor
+        lda #14
+        sta pos_cursor
+mix10_display_synced
+        ; Krill's loader ZP must survive Glenn restartTune's CIA reset.
+        ldx #21
+mix10_commit_loader_zp
+        lda $c0,x
+        sta mix10_loader_zp,x
+        dex
+        bpl mix10_commit_loader_zp
+        lda #$35
+        sta $01
         jsr wjs_restartTune     ; same Glenn INIT/PLAY and timer
         jsr mix10_after_restart ; restore loader zp
         jmp (wjp_fileselect)
@@ -338,6 +508,3 @@ mix10_insta      .byte $49,$4e,$53,$54,$41
 mix10_insta_end
 mix10_resident   .byte $52,$45,$53,$49,$44,$45,$4e,$54
 mix10_resident_end
-mix10_file_b     .byte $4d,$49,$58,$5f,$42,0
-mix10_file_c     .byte $4d,$49,$58,$5f,$43,0
-mix10_file_a     .byte $4d,$49,$58,$5f,$41,$32,0
