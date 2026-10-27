@@ -1,7 +1,7 @@
 name: TEST31 filename-based song index and Krill activation (VICE pending)
 on:
   push:
-    branches: [test/test31-activation-reason-trace]
+    branches: [test/test31-index-from-filename-krill]
     paths:
       - '.github/workflows/test31-filename-prefetch.yml'
       - 'sidplay64.tas'
@@ -114,4 +114,4 @@ jobs:
           cp build/test31/SIDPLAY64MIX_TEST31.D64 build/test31/SIDPLAY64MIX_TEST31_PROYECTO_COMPLETO.zip build/test31/REPORT.json TESTS/TEST31/
           git add TESTS/TEST31/
           git -c user.name='SIDPLAY64 native build bot' -c user.email='sidplay64-build@users.noreply.github.com' commit -m 'test31: build 1 Glenn+Krill PRG + 19 original SID (VICE pending)' || true
-          git push origin HEAD:test/test31-activation-reason-trace
+          git push origin HEAD:test/test31-index-from-filename-krill
