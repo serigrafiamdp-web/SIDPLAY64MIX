@@ -1,0 +1,104 @@
+name: TEST28 original FIX + generic ENGINE in single PRG (VICE pending)
+on:
+  push:
+    branches: [test/test28-unified-fixed-prefetch]
+    paths:
+      - '.github/workflows/test28-one-prg-prefetch.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Load immutable original PASS disk
+        uses: actions/checkout@v4
+        with:
+          ref: master
+          path: frozen-master
+          persist-credentials: false
+      - name: Install Glenn's assembler and PuCrunch
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends 64tass build-essential zip
+          git clone --depth=1 https://github.com/mist64/pucrunch.git /tmp/pucrunch-src
+          make -C /tmp/pucrunch-src
+      - name: Reproduce EXACT binary hooks and generic loader from PASS disk / TEST25
+        run: |
+          python3 tools/test28_prepare_assets.py
+      - name: Normalize old 64tass directives in ephemeral build workspace
+        run: |
+          printf '27.10.2026 00:00\r\n' > timedate.clk
+          python3 tools/normalize_tass_includes.py
+      - name: Assemble authentic Glenn+Krill with boot callbacks at $0500
+        run: |
+          mkdir -p build/test28
+          64tass --m6502 -D defset=4 -D DEF_SIDFX=0 -D DEF_REU=0 -D DEF_MIX03=0 -D DEF_MIX10=1 -D DEF_UNIFIED28=1 -a sidplay64.tas -o build/test28/SIDPLAY64MIX.O64 -l build/test28/SIDPLAY64MIX.labels
+          python3 - <<'PY'
+          from pathlib import Path
+          b=Path('build/test28/SIDPLAY64MIX.O64').read_bytes()
+          start=int.from_bytes(b[:2],'little')
+          print('UNPACKED LOAD START',hex(start),'bytes',len(b))
+          assert start==0x0500
+          def at(addr,n):return b[2+addr-start:2+addr-start+n]
+          assert at(0x0500,4)==bytes((0xa2,0,0xbd,0x80))
+          assert at(0x0563,3)==bytes((0x4c,0x00,0x36))
+          assert at(0x058a,5)==bytes((0xad,0x09,0xdc,0xc9,0x05))
+          assert at(0x3600,4)==bytes((0xa9,0x13,0x8d,0x18))
+          assert at(0x6000,3)==bytes((0x4c,0x15,0x74))
+          assert at(0x8800,3)==bytes((0x20,0x2b,0x90))
+          print('STATIC PASS: original FIX entry, 5s hook, generic ENGINE, Krill embedded')
+          PY
+          /tmp/pucrunch-src/pucrunch '-x$0500' build/test28/SIDPLAY64MIX.O64 build/test28/SIDPLAY64MIX.PRG
+      - name: Build 1 PRG + 19 unchanged SID D64
+        run: |
+          python3 tools/test28_pack.py --master frozen-master/MASTERS/2026-10-27_PASS/TEST19_MULTIPLES_ARCHIVOS_KRILL_5_SEGUNDOS.d64 --prg build/test28/SIDPLAY64MIX.PRG --output build/test28/SIDPLAY64MIX_TEST28.D64 --report build/test28/REPORT.json
+      - name: Create self-contained ASM source and test pack, no Windows executables
+        run: |
+          mkdir -p build/test28/PROJECT
+          python3 - <<'PY'
+          from pathlib import Path
+          import shutil
+          root=Path('build/test28/PROJECT')
+          for pat in ['src/**/*.tas','bin/*.o64','assets/*.bin']:
+              for f in Path('.').glob(pat):
+                  target=root/f;target.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(f,target)
+          for f in ['sidplay64.tas','sidplay64.cfg','timedate.clk','tools/normalize_tass_includes.py','tools/test27_pack.py','tools/test28_pack.py','tools/test28_prepare_assets.py']:
+              target=root/f;target.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(f,target)
+          assert not list(root.rglob('*.exe'))
+          PY
+          cp build/test28/SIDPLAY64MIX.PRG build/test28/SIDPLAY64MIX_TEST28.D64 build/test28/REPORT.json build/test28/PROJECT/
+          cat > build/test28/PROJECT/LEEME_TEST28.txt <<'EOF'
+          TEST28: 1 PRG + 19 SID, SIN archivos auxiliares.
+          Basado en el SIDPLAY64 original Glenn y en el FIX de TEST19:
+          * FIX de TEST19 incrustado en $0500, entrypoint $0500
+          * ENGINE generico exacto de TEST25 incrustado $3600
+          * INSTALADOR Krill original $6000 y RESIDENT backup $8800
+          * FIX salta directamente a ENGINE sin KERNAL cargar nada extra
+          * 19 SID originales sin modificar
+          
+          Compilacion y comprobacion estatica OK; PENDIENTE PRUEBA EN VICE.
+          En VICE limpio: LOAD"*",8,1 y RUN.
+          Probar primera musica, precarga a 00:05, M/N y RETURN.
+          Si no hay precarga, anotar color de borde en 00:05, si se
+          activa Krill, sonido, y monitor. Nunca declarar PASS sin VICE.
+          EOF
+          (cd build/test28/PROJECT && zip -qr ../SIDPLAY64MIX_TEST28_COMPLETO.zip .)
+      - name: Publish experimental artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: SIDPLAY64MIX_TEST28_ONE_PRG_PREFETCH_NOT_VICE_PASS
+          path: |
+            build/test28/SIDPLAY64MIX_TEST28.D64
+            build/test28/SIDPLAY64MIX_TEST28_COMPLETO.zip
+            build/test28/REPORT.json
+          if-no-files-found: error
+      - name: Commit binaries only to this experimental test branch
+        run: |
+          mkdir -p TESTS/TEST28
+          cp build/test28/SIDPLAY64MIX_TEST28.D64 build/test28/SIDPLAY64MIX_TEST28_COMPLETO.zip build/test28/REPORT.json TESTS/TEST28/
+          git add TESTS/TEST28
+          git -c user.name='SIDPLAY64 test builder' -c user.email='sidplay64-test@users.noreply.github.com' commit -m 'test28: integrate original FIX/ENGINE into single PRG, VICE pending' || true
+          git push origin HEAD:test/test28-unified-fixed-prefetch
