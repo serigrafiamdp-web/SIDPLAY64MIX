@@ -216,11 +216,20 @@ mix10_music_out_done
 
 ; Invoked from Glenn's own fileSelect idle screen loop.
 ; Only foreground Krill I/O occurs, MUSIC PLAY keeps running in IRQ.
+; TEST11: Delayed background load. The actual Glenn TOD minute reaches
+; BCD 01 (01:00) BEFORE Krill can start reading the next SID.
+; Glenn keeps playing without touching the drive for the first minute.
+; After the stage becomes READY, next switch still follows Glenn's
+; original timer threshold (normally 03:05), not this preload deadline.
+; TOD is reset by Glenn's own restartTune after every new SID.
 mix10_service
         lda mix10_active
         beq mix10_service_done
         lda mix10_ready
         bne mix10_service_done
+        lda $dc0a             ; CIA1 TOD minutes, BCD, no music-rate coupling
+        cmp #$01
+        bcc mix10_service_done ; no Krill read until 01:00
         lda #7
         sta $d020
         lda mix10_current
