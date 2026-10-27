@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - test/test12-glenn-krill-prefetch-0100
+      - test/test12-eight-sid-glenn-krill-cycle
     paths:
       - 'sidplay64.tas'
       - 'src/init.tas'
@@ -11,7 +11,6 @@ on:
       - 'src/plt_function.tas'
       - 'src/mix10_glenn_symbiont.tas'
       - '.github/workflows/test12-eight-sid-glenn-krill.yml'
-      - '.github/workflows/test12-glenn-live-krill.yml'
 permissions:
   contents: read
 jobs:
