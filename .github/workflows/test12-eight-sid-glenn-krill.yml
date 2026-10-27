@@ -1,0 +1,53 @@
+name: TEST12 Glenn native GUI + actual Krill live prefetch
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - test/test12-eight-sid-glenn-krill-cycle
+    paths:
+      - 'sidplay64.tas'
+      - 'src/init.tas'
+      - 'src/irq.tas'
+      - 'src/plt_function.tas'
+      - 'src/mix10_glenn_symbiont.tas'
+      - '.github/workflows/test12-eight-sid-glenn-krill.yml'
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 17
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install assembler/build dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends 64tass build-essential
+      - name: Prepare exact Glenn source/clock and include normalization
+        run: |
+          printf '27.10.2026 04:45\r\n' > timedate.clk
+          python tools/normalize_tass_includes.py
+      - name: Assemble real symbiont inside unmodified Glenn UI source
+        run: |
+          mkdir -p build/test12
+          64tass --m6502 -D defset=4 -D DEF_SIDFX=0 -D DEF_REU=0 -D DEF_MIX03=0 -D DEF_MIX10=1 -a sidplay64.tas -o build/test12/GLENN12.O64 -l build/test12/GLENN12.labels
+      - name: Build Glenn original PuCrunch executable
+        run: |
+          git clone --depth=1 https://github.com/mist64/pucrunch.git build/pucrunch-src
+          make -C build/pucrunch-src
+          build/pucrunch-src/pucrunch '-x$9000' build/test12/GLENN12.O64 build/test12/GLENN12.PRG
+      - name: Print checksums
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib
+          for p in Path('build/test12').glob('GLENN12.*'):
+            if p.suffix.lower() in ('.prg','.o64'):
+              print(p.name,len(p.read_bytes()),hashlib.sha256(p.read_bytes()).hexdigest(),p.read_bytes()[:5].hex())
+          PY
+      - name: Upload pack and symbol map
+        uses: actions/upload-artifact@v4
+        with:
+          name: SIDPLAY64MIX_TEST12_GLENN_KRILL_LIVE_NOT_VICE_PASS
+          path: build/test12/GLENN12.*
+          if-no-files-found: error
