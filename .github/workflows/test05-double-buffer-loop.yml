@@ -1,0 +1,40 @@
+name: TEST05 double-buffer live Krill playlist (build only)
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - test/test05-double-buffer-krill-loop
+    paths:
+      - 'tests/test05_double_buffer_loop.tas'
+      - '.github/workflows/test05-double-buffer-loop.yml'
+permissions:
+  contents: read
+jobs:
+  assemble:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install assembler
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends 64tass
+      - name: Assemble TEST05 standalone
+        run: |
+          mkdir -p build/test05
+          64tass --m6502 -a tests/test05_double_buffer_loop.tas -o build/test05/TEST05.PRG -l build/test05/test05.labels
+      - name: Check load address and overlap
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('build/test05/TEST05.PRG').read_bytes()
+          assert p[:2] == b'\x01\x08', p[:2]
+          assert len(p) < 0x1000-0x0801+2, len(p)
+          print('TEST05 standalone PASS (assembly+size only)',len(p))
+          PY
+      - name: Upload testable runtime
+        uses: actions/upload-artifact@v4
+        with:
+          name: SIDPLAY64MIX_TEST05_COMPILADO_SIN_PASS_AUDIO
+          path: build/test05/
+          if-no-files-found: error
