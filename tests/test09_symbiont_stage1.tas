@@ -72,34 +72,34 @@ got_glenn
         sty end_src_hi
 
         lda #$00
-        sta src_lo
+        sta $fb
         lda #$30
-        sta src_hi
+        sta $fc
         lda #$01
-        sta dst_lo
+        sta $fd
         lda #$08
-        sta dst_hi
+        sta $fe
 
         ; Copy Glenn packed bytes (KERNAL LOAD strips 2-byte prefix).
         ; Callers must execute $080D (BASIC SYS 2061 entry).
 copy_glenn
-        lda src_hi
+        lda $fc
         cmp end_src_hi
         bne copy_another
-        lda src_lo
+        lda $fb
         cmp end_src_lo
         beq glenn_ready
 copy_another
         ldy #0
-        lda (src_lo),y
-        sta (dst_lo),y
-        inc src_lo
+        lda ($fb),y
+        sta ($fd),y
+        inc $fb
         bne src_nocarry
-        inc src_hi
+        inc $fc
 src_nocarry
-        inc dst_lo
+        inc $fd
         bne copy_glenn
-        inc dst_hi
+        inc $fe
         jmp copy_glenn
 
 glenn_ready
@@ -143,11 +143,8 @@ load_absolute
         jsr $ffd5
         rts
 
-; Four bytes at $7Cxx are self-contained loader copy pointers.
-src_lo .byte 0
-src_hi .byte 0
-dst_lo .byte 0
-dst_hi .byte 0
+; Pointer $FB-$FE is reusable after final KERNAL LOAD. RAM under ROM.
+; Read/end pointer $FB-$FC, destination pointer $FD-$FE.
 end_src_lo .byte 0
 end_src_hi .byte 0
 
