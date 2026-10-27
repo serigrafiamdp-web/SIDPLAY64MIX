@@ -34,6 +34,9 @@ def_basic	= 1	; Enable BASIC sids to be runned and played.
 .weak
 DEF_MIX03 = 0
 .endweak
+.weak
+DEF_MIX10 = 0
+.endweak
 ;--------------------------------------------------------------
 
 .include sidplay64.cfg	;see this file for Defset's
@@ -315,6 +318,13 @@ endstacker
               * = *-stacker+stack
               .offs 0
 
+
+.if DEF_MIX10
+; TEST10 resident symbiont ($3000) -- static overlay to avoid relocating Glenn.
+        * = $3000
+.include src/mix10_glenn_symbiont.tas
+.cerror *>$3600,"TEST10 symbiont must fit in $3000-$35ff"
+.fi
 
 .if DEF_MIX03
 ; TEST03A experimental helper at $3000-$30ff for the restricted SIDTRACKER
@@ -601,6 +611,9 @@ clrmsg2		sta (dzp),y
 ;Notice that the background code is constantly looping here when playing music and selecting files:
 
 fileSelect	jsr wjs_display		;zp$01=36, then displayFiles, then scankeys
+.if DEF_MIX10
+        jsr mix10_service       ; Krill prefetch in Glenn's native screen loop
+.fi
 .if DEF_MIX03
                 jsr mix03_watch_next ; read-only NEXT candidate tracking
 .fi
@@ -1374,7 +1387,13 @@ errormsg	sei			;sei only present in versions using kernal loader calls
 		;zp $01 = 36 here
 		ldx #irq_keys		;Set corret key range when irq is running
 		stx numb
+.if DEF_MIX10
+        jsr mix10_activate     ; only after Glenn has KERNAL-loaded the SID
+.fi
 		jsr wjs_restartTune	;RestartTune, also call wjs_resetCia
+.if DEF_MIX10
+        jsr mix10_after_restart
+.fi
 		
 		;zp $01 = 35 here
 		      ;76543210	
