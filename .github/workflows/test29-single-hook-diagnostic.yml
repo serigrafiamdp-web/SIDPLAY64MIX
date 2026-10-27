@@ -3,11 +3,10 @@ on:
   push:
     branches: [test/test29-single-hook-prefetch-diagnostics]
     paths:
-      - '.github/workflows/test29-one-prg.yml'
+      - '.github/workflows/test29-single-hook-diagnostic.yml'
       - 'sidplay64.tas'
       - 'src/mix10_glenn_symbiont.tas'
       - 'tools/test29_pack.py'
-      - 'src/mix10_glenn_symbiont.tas'
   workflow_dispatch:
 permissions:
   contents: write
