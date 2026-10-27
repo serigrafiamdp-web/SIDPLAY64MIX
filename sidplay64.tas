@@ -37,6 +37,9 @@ DEF_MIX03 = 0
 .weak
 DEF_MIX10 = 0
 .endweak
+.weak
+DEF_UNIFIED28 = 0
+.endweak
 ;--------------------------------------------------------------
 
 .include sidplay64.cfg	;see this file for Defset's
@@ -142,6 +145,14 @@ bakd011		= $d01b
 ;         SIDPLAY64 STACK JUMPS, TABLES, DATA
 ;--------------------------------------------------------------
 topstack	= $ff        ;$01fb
+
+.if DEF_UNIFIED28
+; TEST28: original FIX bootstrap integrated into 1 packed PRG.
+; Native callback installer then jumps to generic ENGINE at $3600.
+        * = $0500
+        .binary "assets/test28_fix_embedded.bin"
+        .cerror *>$0800,"TEST28 bootstrap exceeds startup memory"
+.fi
 
                * = $1100
 stack 
@@ -324,6 +335,11 @@ endstacker
         * = $3000
 .include src/mix10_glenn_symbiont.tas
 .cerror *>$3600,"TEST10 symbiont must fit in $3000-$35ff"
+.if DEF_UNIFIED28
+        * = $3600
+        .binary "assets/test28_engine_embedded.bin"
+        .cerror *>$3900,"TEST28 generic engine exceeds reserved region"
+.fi
         ; TEST27: immutable Krill setup payloads embedded inside the
         ; SINGLE C64 PRG. Their memory is temporary: installer $6000,
         ; resident backup $8800 -> live $9000 after Glenn relocates.
