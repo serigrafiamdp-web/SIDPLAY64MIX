@@ -1,4 +1,5 @@
 name: Build authentic Glenn SIDPLAY64 v1.21 (reference)
+# D64 file-chain verification corrected: compare original bytes to disk bytes.
 on:
   push:
     branches: [development/trse-port]
