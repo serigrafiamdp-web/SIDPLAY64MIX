@@ -1,0 +1,117 @@
+name: TEST31 filename-based song index and Krill activation (VICE pending)
+on:
+  push:
+    branches: [test/test31-activation-reason-trace]
+    paths:
+      - '.github/workflows/test31-filename-prefetch.yml'
+      - 'sidplay64.tas'
+      - 'src/mix10_glenn_symbiont.tas'
+      - 'tools/test31_pack.py'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checkout frozen TEST19 disk for Krill payloads and SID data
+        uses: actions/checkout@v4
+        with:
+          ref: master
+          path: frozen-master
+          persist-credentials: false
+      - name: Install original assembler and packer
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends 64tass build-essential zip
+          git clone --depth=1 https://github.com/mist64/pucrunch.git /tmp/pucrunch-src
+          make -C /tmp/pucrunch-src
+      - name: Extract Krill installer and resident exactly from PASS TEST19
+        run: |
+          python3 - <<'PY'
+          import hashlib
+          from pathlib import Path
+          from tools.test31_pack import files
+          root=Path('frozen-master/MASTERS/2026-10-27_PASS/TEST19_MULTIPLES_ARCHIVOS_KRILL_5_SEGUNDOS.d64')
+          b=root.read_bytes()
+          assert hashlib.sha256(b).hexdigest() == 'b247f58ce9d3df87025d0f09ca145998bffe31e8f9e520c5c29dcfc238d66cc5'
+          fs=dict(files(b))
+          assert fs['INSTA'][:2]==b'\x00\x60' and len(fs['INSTA'])==6888
+          assert fs['RESIDENT'][:2]==b'\x00\x90' and len(fs['RESIDENT'])==497
+          Path('assets').mkdir(exist_ok=True)
+          Path('assets/krill_insta_payload.bin').write_bytes(fs['INSTA'][2:])
+          Path('assets/krill_resident_payload.bin').write_bytes(fs['RESIDENT'][2:])
+          print('Krill installer: $6000',len(fs['INSTA'])-2,'bytes')
+          print('Krill resident: compiled for $9000, staged at $8800',len(fs['RESIDENT'])-2,'bytes')
+          PY
+      - name: Normalize only legacy 64tass include syntax in working source
+        run: |
+          printf '27.10.2026 00:00\r\n' > timedate.clk
+          python3 tools/normalize_tass_includes.py
+      - name: Assemble real Glenn+Krill into one C64 executable
+        run: |
+          mkdir -p build/test31
+          64tass --m6502 -D defset=4 -D DEF_SIDFX=0 -D DEF_REU=0 -D DEF_MIX03=0 -D DEF_MIX10=1 -a sidplay64.tas -o build/test31/SIDPLAY64MIX.O64 -l build/test31/SIDPLAY64MIX.labels
+          /tmp/pucrunch-src/pucrunch '-x$9000' build/test31/SIDPLAY64MIX.O64 build/test31/SIDPLAY64MIX.PRG
+      - name: Build and byte-verify D64 with ONLY the PRG and 19 original SIDs
+        run: |
+          python3 tools/test31_pack.py --master frozen-master/MASTERS/2026-10-27_PASS/TEST19_MULTIPLES_ARCHIVOS_KRILL_5_SEGUNDOS.d64 --prg build/test31/SIDPLAY64MIX.PRG --output build/test31/SIDPLAY64MIX_TEST31.D64 --report build/test31/REPORT.json
+      - name: Include complete ASM source and resources, no Windows EXE in ZIP
+        run: |
+          mkdir -p build/test31/PROJECT/src build/test31/PROJECT/bin build/test31/PROJECT/assets
+          python3 - <<'PY'
+          from pathlib import Path
+          import shutil
+          root=Path('build/test31/PROJECT')
+          for pat in ['src/**/*.tas','bin/*.o64']:
+              for f in Path('.').glob(pat):
+                  dest=root/f
+                  dest.parent.mkdir(parents=True,exist_ok=True)
+                  shutil.copy2(f,dest)
+          for f in ['sidplay64.tas','sidplay64.cfg','timedate.clk','tools/normalize_tass_includes.py','tools/test31_pack.py','assets/krill_insta_payload.bin','assets/krill_resident_payload.bin']:
+              dest=root/f
+              dest.parent.mkdir(parents=True,exist_ok=True)
+              shutil.copy2(f,dest)
+          assert not list(root.rglob('*.exe'))
+          print('Included ASM sources',len(list(root.rglob('*.tas'))))
+          PY
+          cp build/test31/SIDPLAY64MIX.PRG build/test31/SIDPLAY64MIX_TEST31.D64 build/test31/REPORT.json build/test31/PROJECT/
+          cat > build/test31/PROJECT/LEEME.txt <<'EOF'
+          TEST31: 1 PRG + 19 SID, match name of SID actually loaded. PRUEBA, NO PASS VICE.\n          Monitor VICE durante cancion: m $3ff0 $3ffd
+          $3ff0=01 preparado, $3ff1: 10 entro, 11 aceptado, 12 Krill ok
+          $3ff1: E4 loaded filename not in directory; E5 invalid PSID; E0 installer failed
+          $3ff1: 20 Krill ya estaba activo; $3ff6=entry real (1..19)
+          $3ff2: 03 intentando precarga; 04 completa; FF error; 00 no
+          $3ff3: segundos BCD. $3ff4: SID actual. $3ff5: siguiente
+          $3ff8: pos_cursor, $3ff9: offs_cursor, $3ffa: maxfile
+          $3ffb: staged, $3ffc: active, $3ffd: ready
+          Glenn real + hooks Krill. Installer/Resident incrustados en PRG
+          con 64tass y empaquetado PuCrunch.
+          El ZIP contiene fuentes ASM y binarios C64, NO .EXE de Windows.
+          Abrir SIDPLAY64MIX_TEST31.D64 en VICE C64 limpio:
+            LOAD"*",8,1
+            RUN
+          Verificar intro, scroll, canciones, precarga 5 s M/N, bordes.
+          TEST25 PASS y TEST19 PASS permanecen intactos.
+          Restricción actual: 19 SID del test con LOAD/INIT $1000, PLAY $1003.
+          Soporte genérico de PSID/RSID pendiente de memoria/compatibilidad.
+          EOF
+          (cd build/test31/PROJECT && zip -qr ../SIDPLAY64MIX_TEST31_PROYECTO_COMPLETO.zip .)
+      - name: Archive TEST31 for testing (not a PASS)
+        uses: actions/upload-artifact@v4
+        with:
+          name: SIDPLAY64MIX_TEST31_SINGLE_PRG_NOT_VICE_PASS
+          path: |
+            build/test31/SIDPLAY64MIX_TEST31.D64
+            build/test31/SIDPLAY64MIX_TEST31_PROYECTO_COMPLETO.zip
+            build/test31/REPORT.json
+          if-no-files-found: error
+      - name: Publish test binaries to experimental branch (never master)
+        run: |
+          mkdir -p TESTS/TEST31
+          cp build/test31/SIDPLAY64MIX_TEST31.D64 build/test31/SIDPLAY64MIX_TEST31_PROYECTO_COMPLETO.zip build/test31/REPORT.json TESTS/TEST31/
+          git add TESTS/TEST31/
+          git -c user.name='SIDPLAY64 native build bot' -c user.email='sidplay64-build@users.noreply.github.com' commit -m 'test31: build 1 Glenn+Krill PRG + 19 original SID (VICE pending)' || true
+          git push origin HEAD:test/test31-activation-reason-trace
