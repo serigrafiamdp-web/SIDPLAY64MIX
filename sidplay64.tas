@@ -24,7 +24,7 @@
 def_currentdate	= 1	;1 = include current clock and date in build.
 def_illegal	= 1	;1 = use illegal opcodes
 def_colorselect	= 1	;use 1.  0 = for debugging new colors.
-def_attractmode = 2	;0 = no attract mode, 1= basic attract mode, 2 = smooth attract mode
+def_attractmode = 0	; TEST03C: skip color/attract UI, enter directory immediately (opt-in branch)
 ;--------------------------------------------------------------
 def_remember_DIR = 1	; This option is only for the REU versions of 1541u2 and iec,cmd & ide64 drives
 ;--------------------------------------------------------------
@@ -523,9 +523,9 @@ start                       		;JMP HERE FIRST TIME from SRC/INIT.TAS
 ;Y=$00
 
 
-		ldx #2
-		stx plt_flag
-		lda #$4d		;"M"-anual selection
+        ldx #0
+        stx plt_flag            ; TEST03C: default N / Next from startup
+        lda #$4e                ; visible N mode indicator
 		sta plt_letter
 		lda #<txterror1-1
 		sta dzp
