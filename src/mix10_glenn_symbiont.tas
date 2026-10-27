@@ -22,6 +22,7 @@ mix10_current      .byte 0       ; 0..18: currently playing original PSID direct
 mix10_pending      .byte 0       ; 0..18: staged original PSID track
 mix10_filename     .fill 17,0   ; exact Glenn directory 16-char filename + NUL
 mix10_savevalid    .byte 0
+mix31_scan_idx     .byte 0  ; TEST31 filename/directory matcher
 mix10_loader_zp    .fill 22,0
 mix10_music_zp     .fill 22,0
 
@@ -36,106 +37,41 @@ mix10_display
 ; Wrapper around original played SID INIT after normal load.
 mix10_restart_wrap
         jsr mix10_activate
-        jsr wjs_restartTune
-        jmp mix10_after_restart
-
-; Wrapper around Glenn original IRQ music play (zero-page protected).
-mix10_music_play
-        jsr mix10_music_enter
-        jsr playmus
-        jmp mix10_music_exit
-
-; Wrapper around reset at Glenn's original playlist advance.
-mix10_plt_reset
-        jsr mix10_before_plt_advance
-        jmp wjs_resetCia
-
-; Wrapper dispatch for either original unmodified loader or RAM NEXT.
-mix10_select
+        ; TEST31: identify the actual loaded SID from its original name
+        ; in fname ($0200) rather than assuming cursor index survived load.
         lda mix10_active
-        bne mix10_use_bank
-        ldy #1
-        jmp (wjp_load)
-mix10_use_bank
-        jmp mix10_fast_next
-
-; Called AFTER Glenn's PuCrunch unpacking, initial options and colors,
-; but BEFORE directory KERNAL reading and the first SID.
-mix10_prepare
-        ; TEST27: Krill binaries are already installed by PuCrunch into
-        ; $6000 (installer) and $8800 (resident backup). DO NOT perform
-        ; extra KERNAL disk reads during Glenn's startup.
-        lda #0
-        sta mix10_active
-        sta mix10_ready
-        sta mix10_current
-        sta mix10_pending
-        sta mix10_savevalid
-        lda #1
-        sta mix10_staged
-        ; TEST29: trace bytes outside the current curated SID payload.
-        ; Monitor in VICE: m $3ff0 $3ff7
-        sta $3ff0                  ; $01: Krill payloads prepared
-        lda #0
-        sta $3ff1                  ; activation status
-        sta $3ff2                  ; service/prefetch status
-        sta $3ff3                  ; TOD seconds seen by service
-        sta $3ff4                  ; current song index
-        sta $3ff5                  ; pending song index
-        sta $3ff6
-        sta $3ff7
-        sta $3ff8
-        sta $3ff9
-        sta $3ffa
-        sta $3ffb
-        sta $3ffc
-        sta $3ffd
-        rts
-
-; Called from Glenn original load code AFTER SID header and body
-; both loaded and original main relocated, but BEFORE tune INIT.
-mix10_activate
-        ; TEST30: distinguish already-active, unstaged and directory checks.
-        lda mix10_active
-        beq mix10_act_check_staged
+        beq mix31_activate_first
         lda #$20
-        sta $3ff1                  ; already active; subsequent restart
+        sta $3ff1
         rts
-mix10_act_check_staged
+mix31_activate_first
         lda #$10
-        sta $3ff1                  ; activation entered but not yet accepted
-        lda mix10_staged
-        bne mix10_act_check_index
-        lda #$e1
-        sta $3ff1                  ; staged flag unexpectedly missing
-        rts
-mix10_act_check_index
-        ; A D64 starts with program SIDPLAY64MIX at entry 0.
-        ; Songs occupy entries 1..19. Keep original indexing for now.
-        lda offs_cursor
-        clc
-        adc pos_cursor
-        beq mix10_act_entry_zero
-        cmp #20
-        bcc mix10_act_entry_valid
-        lda #$e3
-        sta $3ff1                  ; directory index >=20
-        rts
-mix10_act_entry_zero
-        lda #$e2
-        sta $3ff1                  ; entry 0 is the program, not a SID
-        rts
-mix10_act_entry_valid
-        sec
-        sbc #1
+        sta $3ff1
+        lda #$50                 ; PSID only in curated set
+        cmp magicID
+        bne mix31_bad_header
+        lda #$53
+        cmp magicID+1
+        bne mix31_bad_header
+        lda #$49
+        cmp magicID+2
+        bne mix31_bad_header
+        lda #$44
+        cmp magicID+3
+        bne mix31_bad_header
+
+        ; Source binary already contains Krill at $6000 and $8800:
+        ; do not require a mutable staged flag.
+        jsr mix31_find_loaded_index
+        bcs mix31_not_found
         sta mix10_current
-        sta $3ff4                  ; selected SID index
+        sta $3ff4
         lda #$11
-        sta $3ff1                  ; recognized SID entry
+        sta $3ff1
+
         sei
         lda #$36
         sta $01
-        ; Restore resident AFTER Glenn relocated its executable.
         ldx #0
 mix10_copy_resident
         lda $8800,x
@@ -147,10 +83,10 @@ mix10_copy_resident
         lda #8
         sta $ae
         sta $ba
-        jsr $6000               ; Krill drive takeover: first SID is loaded
+        jsr $6000
         bcs mix10_activate_failed
         lda #$12
-        sta $3ff1                  ; Krill installer returned success
+        sta $3ff1
         ldx #21
 mix10_initial_save
         lda $c0,x
@@ -166,14 +102,65 @@ mix10_initial_save
         lda #6
         sta $d020
         rts
+
+mix31_bad_header
+        lda #$e5
+        sta $3ff1
+        rts
+mix31_not_found
+        lda #$e4
+        sta $3ff1
+        rts
 mix10_activate_failed
         lda #$e0
-        sta $3ff1                  ; installer returned error
-        ; Installation failed: continuing with DOS KERNAL would be risky.
-        ; Preserve Glenn's loaded SID but mark failure and disable hook.
+        sta $3ff1
         lda #2
         sta $d020
-mix10_activate_done
+        rts
+
+; Scan only SID rows 1..maxfile-1. The D64 has SIDPLAY64MIX
+; as entry 0, followed by 19 original SID files. Match against
+; the filename Glenn actually KERNAL-loaded (fname at $0200).
+; Return A = 0..18 and C clear; otherwise C set.
+; IRQ disabled ONLY while banked-out directory name is compared.
+mix31_find_loaded_index
+        lda #1
+        sta mix31_scan_idx
+mix31_scan_loop
+        lda mix31_scan_idx
+        cmp maxfile
+        bcs mix31_scan_fail
+        tax
+        jsr getpos              ; A=hi, Y=lo directory pointer
+        sta $fc
+        sty $fb
+        lda $01
+        pha
+        sei
+        lda #$34               ; RAM under I/O for directory entries
+        sta $01
+        ldy #15
+mix31_scan_compare
+        lda ($fb),y
+        cmp fname,y            ; raw filename saved by Glenn load routine
+        bne mix31_scan_next
+        dey
+        bpl mix31_scan_compare
+        pla
+        sta $01
+        lda mix31_scan_idx
+        sta $3ff6              ; actual directory index, 1..19
+        sec
+        sbc #1
+        clc
+        rts
+mix31_scan_next
+        pla
+        sta $01
+        inc mix31_scan_idx
+        jmp mix31_scan_loop
+mix31_scan_fail
+        sec
         rts
 
 ; Original Glenn restartTune calls CIA reset (clears ZP $0C-$FF),
@@ -235,7 +222,7 @@ mix10_music_out_done
 ; Start at 00:05 by reading CIA TOD seconds ($DC09, BCD 05);
 ; DO NOT CHANGE Glenn's song-end/next-playlist timer.
 ; This follows the two-byte patch verified in the TEST19 D64.
-; 19 SID directory entries, 13 MIX staging entries: MULTI-FILE VERSION.
+; TEST31: one executable entry and 19 unmodified PSID directory entries.
 ; Original Glenn IRQ keeps SID audio alive.
 mix10_service
         ; Inspect the real states even when no precache attempt occurs.
@@ -323,7 +310,7 @@ mix10_manual_exit
         jmp (wjp_fileselect)
 
 ; Read one filename from original Glenn directory RAM under I/O.
-; Directory: index 0 BOOT, entries 1..19 are authentic .SID names.
+; Directory: index 0 SIDPLAY64MIX executable; entries 1..19 are SID files.
 ; Bounded 16 chars, preserve embedded spaces, strip trailing padding.
 mix10_make_filename
         sei                   ; dir pointer $FB/$FC must survive IRQ while reading
@@ -515,7 +502,7 @@ mix10_cp_byte
         lda mix10_pending
         sta mix10_current
         clc
-        adc #1                     ; Glenn list includes BOOT at index 0
+        adc #1                     ; Glenn list includes SIDPLAY64MIX at index 0
         cmp #15
         bcs mix10_scroll_down
         sta pos_cursor
