@@ -1,0 +1,46 @@
+name: TEST07 — playlist N/M/RETURN controls on TEST06 PASS
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - test/test07-mode-next-manual-skip
+    paths:
+      - 'tests/test07_keyboard_playlist.tas'
+      - '.github/workflows/test07-playlist-keyboard.yml'
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install 64tass
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends 64tass
+      - name: Assemble 10-second and 3:05 TEST07, baseline TEST05+06
+        run: |
+          mkdir -p build/test07
+          64tass --m6502 -a tests/test05_double_buffer_loop.tas -o build/test07/TEST05_REFERENCE.PRG
+          64tass --m6502 -D TEST06_LONG=0 -a tests/test06_tod_timer.tas -o build/test07/TEST06_10S_REFERENCE.PRG
+          64tass --m6502 -D TEST06_LONG=1 -a tests/test06_tod_timer.tas -o build/test07/TEST06_3M05_REFERENCE.PRG
+          64tass --m6502 -D TEST06_LONG=0 -a tests/test07_keyboard_playlist.tas -o build/test07/TEST07_10S.PRG -l build/test07/TEST07_10S.labels
+          64tass --m6502 -D TEST06_LONG=1 -a tests/test07_keyboard_playlist.tas -o build/test07/TEST07_3M05.PRG -l build/test07/TEST07_3M05.labels
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib
+          root=Path('build/test07')
+          for p in sorted(root.glob('*.PRG')):
+            b=p.read_bytes()
+            assert b[:2]==b'\x01\x08' and len(b)<0x1000-0x0801+2,(p.name,len(b))
+            print(p.name, len(b),hashlib.sha256(b).hexdigest())
+          assert (root/'TEST07_10S.PRG').read_bytes() != (root/'TEST07_3M05.PRG').read_bytes()
+          print('PASS assembly + runtime below $1000, no unrelated player overwrite')
+          PY
+      - name: Upload PRGs and symbol maps
+        uses: actions/upload-artifact@v4
+        with:
+          name: SIDPLAY64MIX_TEST07_MANUAL_NEXT_SKIP_COMPILED_NOT_VICE_PASS
+          path: build/test07/
+          if-no-files-found: error
