@@ -19,7 +19,7 @@ hwirq		lda $01
 		sta $01
 		lda stopmusic
 		beq end_irq
-		lda $dc08		;Må lese tenths registeret for at tod skal fortsette
+		lda $dc08		;MÃ¥ lese tenths registeret for at tod skal fortsette
 
 		ldx #zpBuffSize-1
 bp2		lda zerop,x		;Buffer background zp
@@ -33,7 +33,13 @@ goplay
 color_playmusic2
 		lda #$a9
 		sta $d020
+.if DEF_MIX10
+        jsr mix10_music_enter
+.fi
 		jsr playmus     ;play call might change $01
+.if DEF_MIX10
+        jsr mix10_music_exit
+.fi
 		sei		;play call might change sei/cli - BUT I'm unsure if it ever reach here if cli is set in playcall.
 		lda #$35        ;Force $01
 		sta $01
