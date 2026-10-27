@@ -71,8 +71,8 @@ jobs:
           PY
       - name: Create original-player D64s with genuine original SID test files
         run: |
-          python3 TRSE_PORT/tools/make_reference_d64.py --source pristine --prg output/SIDPLAY64_GLENN_NORMAL.PRG --output output/SIDPLAY64_GLENN_NORMAL.D64 --title "GLENN SIDPLAY NORM"
-          python3 TRSE_PORT/tools/make_reference_d64.py --source pristine --prg output/SIDPLAY64_GLENN_SD2IEC.PRG --output output/SIDPLAY64_GLENN_SD2IEC.D64 --title "GLENN SIDPLAY SD"
+          python3 TRSE_PORT/tools/make_reference_d64.py --source pristine --prg output/SIDPLAY64_GLENN_NORMAL.PRG --output output/SIDPLAY64_GLENN_NORMAL.D64 --title "GLENN ORIGINAL"
+          python3 TRSE_PORT/tools/make_reference_d64.py --source pristine --prg output/SIDPLAY64_GLENN_SD2IEC.PRG --output output/SIDPLAY64_GLENN_SD2IEC.D64 --title "GLENN SD2IEC"
       - name: Prepare full and faithful source/binaries archive
         run: |
           mkdir -p output/reference
