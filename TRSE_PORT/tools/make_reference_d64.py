@@ -94,7 +94,7 @@ def build(output_path, title, files):
     Path(output_path).write_bytes(disk)
     assert len(disk) == SIZE
     # Re-read every file from the actual linked sectors to validate output.
-    for name, payload, count, start in report:
+    for (name, payload), (_, _, count, start) in zip(files, report):
         t, s = start
         found = bytearray()
         hops = 0
