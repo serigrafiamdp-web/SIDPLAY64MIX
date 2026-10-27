@@ -1,0 +1,10 @@
+{
+  "version": "TEST29",
+  "status": "STATIC PASS ONLY; needs VICE",
+  "files": 20,
+  "sids": 19,
+  "program_bytes": 12015,
+  "d64_sha256": "92a1ba322a73c2beb0ee78a4c1bd0df79782970a3f71badb37034639c83702e0",
+  "music_unchanged": true,
+  "supported_now": "current curated PSID v2 $1000 titles; PRELOAD not yet VICE PASS"
+}
