@@ -1,0 +1,44 @@
+name: TEST06 CIA TOD timer 10s and 3m05 — Krill PASS engine
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - test/test06-cia-tod-timer-3m05
+    paths:
+      - 'tests/test06_tod_timer.tas'
+      - '.github/workflows/test06-tod-timer.yml'
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install assembler
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends 64tass
+      - name: Build both TEST06 variants and the frozen TEST05 regression baseline
+        run: |
+          mkdir -p build/test06
+          64tass --m6502 -a tests/test05_double_buffer_loop.tas -o build/test06/TEST05_REFERENCE.PRG
+          64tass --m6502 -D TEST06_LONG=0 -a tests/test06_tod_timer.tas -o build/test06/TEST06_10S.PRG -l build/test06/test06_10s.labels
+          64tass --m6502 -D TEST06_LONG=1 -a tests/test06_tod_timer.tas -o build/test06/TEST06_3M05.PRG -l build/test06/test06_3m05.labels
+          python - <<'PY'
+          from pathlib import Path
+          from hashlib import sha256
+          root=Path('build/test06')
+          x={f.name:f.read_bytes() for f in root.glob('*.PRG')}
+          for k,v in x.items():
+            assert v[:2]==b'\x01\x08' and len(v)<0x1000-0x0801+2,(k,len(v))
+            print(k,len(v),sha256(v).hexdigest())
+          assert x['TEST06_3M05.PRG']!=x['TEST06_10S.PRG']
+          print('PASS assembly, 10s and 03:05 variants, no collision with music region')
+          PY
+      - name: Upload player builds and symbol maps
+        uses: actions/upload-artifact@v4
+        with:
+          name: SIDPLAY64MIX_TEST06_TOD_TIMER_TWO_VARIANTS_NOT_VICE_PASS
+          path: build/test06/
+          if-no-files-found: error
