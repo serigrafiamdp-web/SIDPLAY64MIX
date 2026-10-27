@@ -1,9 +1,9 @@
 name: TEST30 activation cause + live loader state diagnosis (VICE pending)
 on:
   push:
-    branches: [test/test30-single-hook-prefetch-diagnostics]
+    branches: [test/test30-activation-reason-trace]
     paths:
-      - '.github/workflows/test30-single-hook-diagnostic.yml'
+      - '.github/workflows/test30-activation-diagnostic.yml'
       - 'sidplay64.tas'
       - 'src/mix10_glenn_symbiont.tas'
       - 'tools/test30_pack.py'
@@ -114,4 +114,4 @@ jobs:
           cp build/test30/SIDPLAY64MIX_TEST30.D64 build/test30/SIDPLAY64MIX_TEST30_PROYECTO_COMPLETO.zip build/test30/REPORT.json TESTS/TEST30/
           git add TESTS/TEST30/
           git -c user.name='SIDPLAY64 native build bot' -c user.email='sidplay64-build@users.noreply.github.com' commit -m 'test30: build 1 Glenn+Krill PRG + 19 original SID (VICE pending)' || true
-          git push origin HEAD:test/test30-single-hook-prefetch-diagnostics
+          git push origin HEAD:test/test30-activation-reason-trace
