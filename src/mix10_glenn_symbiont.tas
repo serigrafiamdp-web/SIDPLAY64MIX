@@ -22,7 +22,7 @@ mix10_current      .byte 0       ; 0..18: currently playing original PSID direct
 mix10_pending      .byte 0       ; 0..18: staged original PSID track
 mix10_filename     .fill 17,0   ; exact Glenn directory 16-char filename + NUL
 mix10_savevalid    .byte 0
-mix31_scan_idx     .byte 0  ; TEST31 filename/directory matcher
+mix31_scan_idx     .byte 0  ; filename match index
 mix10_loader_zp    .fill 22,0
 mix10_music_zp     .fill 22,0
 
@@ -37,6 +37,65 @@ mix10_display
 ; Wrapper around original played SID INIT after normal load.
 mix10_restart_wrap
         jsr mix10_activate
+        jsr wjs_restartTune
+        jmp mix10_after_restart
+
+; Wrapper around Glenn original IRQ music play (zero-page protected).
+mix10_music_play
+        jsr mix10_music_enter
+        jsr playmus
+        jmp mix10_music_exit
+
+; Wrapper around reset at Glenn's original playlist advance.
+mix10_plt_reset
+        jsr mix10_before_plt_advance
+        jmp wjs_resetCia
+
+; Wrapper dispatch for either original unmodified loader or RAM NEXT.
+mix10_select
+        lda mix10_active
+        bne mix10_use_bank
+        ldy #1
+        jmp (wjp_load)
+mix10_use_bank
+        jmp mix10_fast_next
+
+; Called AFTER Glenn's PuCrunch unpacking, initial options and colors,
+; but BEFORE directory KERNAL reading and the first SID.
+mix10_prepare
+        ; TEST27: Krill binaries are already installed by PuCrunch into
+        ; $6000 (installer) and $8800 (resident backup). DO NOT perform
+        ; extra KERNAL disk reads during Glenn's startup.
+        lda #0
+        sta mix10_active
+        sta mix10_ready
+        sta mix10_current
+        sta mix10_pending
+        sta mix10_savevalid
+        lda #1
+        sta mix10_staged
+        ; TEST29: trace bytes outside the current curated SID payload.
+        ; Monitor in VICE: m $3ff0 $3ff7
+        sta $3ff0                  ; $01: Krill payloads prepared
+        lda #0
+        sta $3ff1                  ; activation status
+        sta $3ff2                  ; service/prefetch status
+        sta $3ff3                  ; TOD seconds seen by service
+        sta $3ff4                  ; current song index
+        sta $3ff5                  ; pending song index
+        sta $3ff6
+        sta $3ff7
+        sta $3ff8
+        sta $3ff9
+        sta $3ffa
+        sta $3ffb
+        sta $3ffc
+        sta $3ffd
+        rts
+
+; Called from Glenn original load code AFTER SID header and body
+; both loaded and original main relocated, but BEFORE tune INIT.
+mix10_activate
         ; TEST31: identify the actual loaded SID from its original name
         ; in fname ($0200) rather than assuming cursor index survived load.
         lda mix10_active
@@ -166,6 +225,7 @@ mix31_scan_fail
         sec
         rts
 
+
 ; Original Glenn restartTune calls CIA reset (clears ZP $0C-$FF),
 ; then invokes music INIT. Restore the loader's private ZP afterwards.
 mix10_after_restart
@@ -225,7 +285,7 @@ mix10_music_out_done
 ; Start at 00:05 by reading CIA TOD seconds ($DC09, BCD 05);
 ; DO NOT CHANGE Glenn's song-end/next-playlist timer.
 ; This follows the two-byte patch verified in the TEST19 D64.
-; TEST31: one executable entry and 19 unmodified PSID directory entries.
+; Single PRG in directory position 0, followed by 19 original SID files.
 ; Original Glenn IRQ keeps SID audio alive.
 mix10_service
         ; Inspect the real states even when no precache attempt occurs.
@@ -313,7 +373,7 @@ mix10_manual_exit
         jmp (wjp_fileselect)
 
 ; Read one filename from original Glenn directory RAM under I/O.
-; Directory: index 0 SIDPLAY64MIX executable; entries 1..19 are SID files.
+; Directory: index 0 SIDPLAY64MIX; entries 1..19 are original SIDs.
 ; Bounded 16 chars, preserve embedded spaces, strip trailing padding.
 mix10_make_filename
         sei                   ; dir pointer $FB/$FC must survive IRQ while reading
