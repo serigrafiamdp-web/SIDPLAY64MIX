@@ -34,11 +34,9 @@ color_playmusic2
 		lda #$a9
 		sta $d020
 .if DEF_MIX10
-        jsr mix10_music_enter
-.fi
+        jsr mix10_music_play
+.else
 		jsr playmus     ;play call might change $01
-.if DEF_MIX10
-        jsr mix10_music_exit
 .fi
 		sei		;play call might change sei/cli - BUT I'm unsure if it ever reach here if cli is set in playcall.
 		lda #$35        ;Force $01
