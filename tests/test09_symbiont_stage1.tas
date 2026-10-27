@@ -21,6 +21,8 @@ entry
         sei
         lda #$0f
         sta $d020
+        lda #$33                 ; checkpoint 3 = stage1 running
+        sta $0400
 
         ; Load resident first using KERNAL while device uses DOS.
         ; It arrives at $9000; save two whole pages at $8400.
@@ -31,6 +33,8 @@ entry
         bcc got_resident
         jmp failed
 got_resident
+        lda #$34                 ; checkpoint 4 = RESIDENT loaded
+        sta $0400
         ldx #0
 copy_resident
         lda $9000,x
@@ -49,6 +53,8 @@ copy_resident
         bcc got_installer
         jmp failed
 got_installer
+        lda #$35                 ; checkpoint 5 = INSTA loaded, NOT installed
+        sta $0400
         ; The disk drive is STILL normal DOS. Do not JSR $6000 yet.
 
         ; Load EXACT Glenn packed executable from disk at $3000,
@@ -68,6 +74,8 @@ got_installer
         bcc got_glenn
         jmp failed
 got_glenn
+        lda #$36                 ; checkpoint 6 = packed GLENN loaded
+        sta $0400
         stx end_src_lo
         sty end_src_hi
 
@@ -103,6 +111,8 @@ src_nocarry
         jmp copy_glenn
 
 glenn_ready
+        lda #$37                 ; checkpoint 7 = copied exact Glenn, boot next
+        sta $0400
         ; TEST09 signature; monitor M 8B00 8B0F in VICE to inspect.
         lda #$53               ; S
         sta $8b00
@@ -125,6 +135,9 @@ glenn_ready
 
 failed
         sta $8b0f
+        sta $0402               ; error code
+        lda #$05               ; E as screen code
+        sta $0401
         lda #$02
         sta $d020
 spin
@@ -149,13 +162,13 @@ end_src_lo .byte 0
 end_src_hi .byte 0
 
 resident_name
-        .text "RESIDENT"
+        .byte $52,$45,$53,$49,$44,$45,$4e,$54  ; raw CBM filename
 resident_name_end
 installer_name
-        .text "INSTA"
+        .byte $49,$4e,$53,$54,$41 ; raw CBM filename
 installer_name_end
 glenn_name
-        .text "GLENN"
+        .byte $47,$4c,$45,$4e,$4e ; raw CBM filename
 glenn_name_end
 
 .cerror *>=$8000,"Stage1 must remain in $7C00-$7FFF"
