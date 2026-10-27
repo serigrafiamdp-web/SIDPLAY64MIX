@@ -218,15 +218,20 @@ mix10_music_out_loop
 mix10_music_out_done
         rts
 
-; Foreground background-prefetch service, triggered only at CIA TOD
-; BCD minute 01 or later. Original Glenn IRQ keeps SID audio alive.
+; MASTER TEST19 PASS (27-Oct-2026)
+; Always prefetch while a SID is playing, in Manual or Next mode.
+; Start at 00:05 by reading CIA TOD seconds ($DC09, BCD 05);
+; DO NOT CHANGE Glenn's song-end/next-playlist timer.
+; This follows the two-byte patch verified in the TEST19 D64.
+; 19 SID directory entries, 13 MIX staging entries: MULTI-FILE VERSION.
+; Original Glenn IRQ keeps SID audio alive.
 mix10_service
         lda mix10_active
         beq mix10_service_done
         lda mix10_ready
         bne mix10_service_done
-        lda $dc0a
-        cmp #$01
+        lda $dc09             ; TOD seconds (BCD), not minute
+        cmp #$05              ; start prefetch at 00:05
         bcc mix10_service_done
         lda mix10_current
         clc
