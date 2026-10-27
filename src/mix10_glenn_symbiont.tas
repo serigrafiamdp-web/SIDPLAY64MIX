@@ -287,6 +287,7 @@ mix10_manual_exit
 ; Directory: index 0 BOOT, entries 1..19 are authentic .SID names.
 ; Bounded 16 chars, preserve embedded spaces, strip trailing padding.
 mix10_make_filename
+        sei                   ; dir pointer $FB/$FC must survive IRQ while reading
         lda mix10_pending
         clc
         adc #1
@@ -294,7 +295,6 @@ mix10_make_filename
         jsr getpos
         sta $fc
         sty $fb
-        sei
         lda $01
         pha
         lda #$34
@@ -336,6 +336,7 @@ mix10_stage_pending
         jsr mix10_make_filename
         lda #7
         sta $d020
+        sei                   ; scratch pointer $FB/$FC also used by some SIDs
         lda #$00
         sta $fb
         lda #$53
@@ -352,6 +353,7 @@ mix10_zero_byte
         dex
         bne mix10_zero_page
 
+        cli                   ; Krill read must overlap live Glenn SID IRQ
         ldx #<mix10_filename
         ldy #>mix10_filename
         jsr $9000                  ; foreground Krill, IRQ SID playback
@@ -390,6 +392,7 @@ mix10_zero_byte
         cmp #$10
         bne mix10_stage_bad
 
+        sei                   ; preserve pointers during fast 26-page bank copy
         lda #$cc                   ; $53CC -> $5000
         sta $fb
         lda #$53
@@ -410,6 +413,7 @@ mix10_stage_cp_byte
         inc $fe
         dex
         bne mix10_stage_cp_page
+        cli
         clc
         rts
 mix10_stage_bad
