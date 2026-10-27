@@ -11,6 +11,8 @@ boot
         sei
         lda #$06
         sta $d020
+        lda #$31                 ; checkpoint 1 = BOOT trying SYMBIONT
+        sta $0400
         lda #stage1_name_end-stage1_name
         ldx #<stage1_name
         ldy #>stage1_name
@@ -24,13 +26,17 @@ boot
         tay
         jsr $ffd5                   ; LOAD
         bcs failure
+        lda #$32                 ; checkpoint 2 = SYMBIONT was loaded
+        sta $0400
         jmp $7c00                  ; Stage 1 outside loaded helper ranges
 failure
-        sta $0400
+        sta $0402                 ; KERNAL error code (screen diagnostic)
+        lda #$05                 ; E as screen code
+        sta $0401
         lda #$02
         sta $d020
 halt
         jmp halt
 stage1_name
-        .text "SYMBIONT"
+        .byte $53,$59,$4d,$42,$49,$4f,$4e,$54  ; raw CBM filename
 stage1_name_end
