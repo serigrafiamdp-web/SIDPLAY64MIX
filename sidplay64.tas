@@ -702,6 +702,14 @@ timeloop	lda $dc09,x  ;dc09,dc0a,dc0b
 		bne scankeys
 		tay			;A=0
 
+.if DEF_MIX10
+        lda mix10_active
+        beq mix10_tod_allow
+        lda mix10_ready
+        cmp #1
+        bne scankeys           ; clock must never advance without ready SID
+mix10_tod_allow
+.fi
 checkdigits	lda (gzp),y
 		cmp minuteshi,y
 		beq equ
