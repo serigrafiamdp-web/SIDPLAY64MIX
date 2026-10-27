@@ -1,0 +1,42 @@
+; TEST09 SIMBIONTE - Stage 0 at $0801.
+; Load Stage1 at $7C00 with KERNAL before invoking original Glenn.
+; ZERO changes to Glenn packed binary; KRILL is only STAGED, not installed.
+* = $0801
+        .word $080b
+        .word 10
+        .byte $9e,$32,$30,$36,$31,0   ; 10 SYS2061
+        .word 0
+* = $080d
+boot
+        sei
+        lda #$06
+        sta $d020
+        lda #$31                 ; checkpoint 1 = BOOT trying SYMBIONT
+        sta $0400
+        lda #stage1_name_end-stage1_name
+        ldx #<stage1_name
+        ldy #>stage1_name
+        jsr $ffbd                   ; SETNAM
+        lda #1
+        ldx #8
+        ldy #1                      ; use embedded load address
+        jsr $ffba                   ; SETLFS
+        lda #0
+        tax
+        tay
+        jsr $ffd5                   ; LOAD
+        bcs failure
+        lda #$32                 ; checkpoint 2 = SYMBIONT was loaded
+        sta $0400
+        jmp $7c00                  ; Stage 1 outside loaded helper ranges
+failure
+        sta $0402                 ; KERNAL error code (screen diagnostic)
+        lda #$05                 ; E as screen code
+        sta $0401
+        lda #$02
+        sta $d020
+halt
+        jmp halt
+stage1_name
+        .byte $53,$59,$4d,$42,$49,$4f,$4e,$54  ; raw CBM filename
+stage1_name_end

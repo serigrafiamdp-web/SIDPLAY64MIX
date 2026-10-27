@@ -1,0 +1,174 @@
+; TEST09 SIMBIONTE - Stage 1 lives at $7C00 (not $6000, $9000).
+; This is a real bootstrap that loads Krill code BEFORE Glenn, but
+; MUST NOT install Krill's drive protocol until Glenn no longer uses
+; KERNAL OPEN/CHRIN for directory and the first PSID.
+;
+; Krill $6000-$7AE5 stays staged; its resident $9000-$91F0 is
+; copied to $8400-$85FF before Glenn's PuCrunch unpacker uses $9000.
+; The source PRG "GLENN" is the exact executable from TEST03A VICE PASS
+; (only renaming the CBM file name; the program bytes are unchanged).
+;
+; $7C00-$7FFF: Stage1 code, forbidden to overlap staged installer.
+; $8400-$85FF: protected Krill resident copy
+; $8B00-$8B0F: resident signature and state
+; $6000-$7AE5: Krill installer staged in inert form
+; $3000-$44FF: temporary buffer for packed Glenn (copied to $0801)
+;
+; Current proof does NOT install, HOOK, or PREFETCH. The bootstrap
+; needs VICE PASS before we intervene inside Glenn's live loader.
+* = $7c00
+entry
+        sei
+        lda #$0f
+        sta $d020
+        lda #$33                 ; checkpoint 3 = stage1 running
+        sta $0400
+
+        ; Load resident first using KERNAL while device uses DOS.
+        ; It arrives at $9000; save two whole pages at $8400.
+        lda #resident_name_end-resident_name
+        ldx #<resident_name
+        ldy #>resident_name
+        jsr load_absolute
+        bcc got_resident
+        jmp failed
+got_resident
+        lda #$34                 ; checkpoint 4 = RESIDENT loaded
+        sta $0400
+        ldx #0
+copy_resident
+        lda $9000,x
+        sta $8400,x
+        lda $9100,x
+        sta $8500,x
+        inx
+        bne copy_resident
+
+        ; Installer is ~6886 data bytes starting at $6000.
+        ; $6000 + 6886 = $7AE6, safely below our $7C00 code.
+        lda #installer_name_end-installer_name
+        ldx #<installer_name
+        ldy #>installer_name
+        jsr load_absolute
+        bcc got_installer
+        jmp failed
+got_installer
+        lda #$35                 ; checkpoint 5 = INSTA loaded, NOT installed
+        sta $0400
+        ; The disk drive is STILL normal DOS. Do not JSR $6000 yet.
+
+        ; Load EXACT Glenn packed executable from disk at $3000,
+        ; forced-relocated. Standard PRG bytes normally at $0801.
+        lda #glenn_name_end-glenn_name
+        ldx #<glenn_name
+        ldy #>glenn_name
+        jsr $ffbd
+        lda #4
+        ldx #8
+        ldy #0                    ; secondary=0: use X/Y relocation
+        jsr $ffba
+        lda #0
+        ldx #$00
+        ldy #$30
+        jsr $ffd5                ; X,Y = end address after LOAD
+        bcc got_glenn
+        jmp failed
+got_glenn
+        lda #$36                 ; checkpoint 6 = packed GLENN loaded
+        sta $0400
+        stx end_src_lo
+        sty end_src_hi
+
+        lda #$00
+        sta $fb
+        lda #$30
+        sta $fc
+        lda #$01
+        sta $fd
+        lda #$08
+        sta $fe
+
+        ; Copy Glenn packed bytes (KERNAL LOAD strips 2-byte prefix).
+        ; Callers must execute $080D (BASIC SYS 2061 entry).
+copy_glenn
+        lda $fc
+        cmp end_src_hi
+        bne copy_another
+        lda $fb
+        cmp end_src_lo
+        beq glenn_ready
+copy_another
+        ldy #0
+        lda ($fb),y
+        sta ($fd),y
+        inc $fb
+        bne src_nocarry
+        inc $fc
+src_nocarry
+        inc $fd
+        bne copy_glenn
+        inc $fe
+        jmp copy_glenn
+
+glenn_ready
+        lda #$37                 ; checkpoint 7 = copied exact Glenn, boot next
+        sta $0400
+        ; TEST09 signature; monitor M 8B00 8B0F in VICE to inspect.
+        lda #$53               ; S
+        sta $8b00
+        lda #$59               ; Y
+        sta $8b01
+        lda #$4d               ; M
+        sta $8b02
+        lda #$31               ; 1
+        sta $8b03
+        lda #1
+        sta $8b04              ; Krill code staged, NOT installed
+        lda #$00
+        sta $8b05              ; drive protocol active = 0
+        sta $8b06              ; ready bank = 0
+        sta $8b07              ; song running = 0
+
+        lda #$06
+        sta $d020
+        jmp $080d              ; Glenn packed executable untouched
+
+failed
+        sta $8b0f
+        sta $0402               ; error code
+        lda #$05               ; E as screen code
+        sta $0401
+        lda #$02
+        sta $d020
+spin
+        jmp spin
+
+; A length; X/Y name pointer; PRG embedded address respected.
+load_absolute
+        jsr $ffbd
+        lda #3
+        ldx #8
+        ldy #1
+        jsr $ffba
+        lda #0
+        tax
+        tay
+        jsr $ffd5
+        rts
+
+; Pointer $FB-$FE is reusable after final KERNAL LOAD. RAM under ROM.
+; Read/end pointer $FB-$FC, destination pointer $FD-$FE.
+end_src_lo .byte 0
+end_src_hi .byte 0
+
+resident_name
+        .byte $52,$45,$53,$49,$44,$45,$4e,$54  ; raw CBM filename
+resident_name_end
+installer_name
+        .byte $49,$4e,$53,$54,$41 ; raw CBM filename
+installer_name_end
+glenn_name
+        .byte $47,$4c,$45,$4e,$4e ; raw CBM filename
+glenn_name_end
+
+.cerror *>=$8000,"Stage1 must remain in $7C00-$7FFF"

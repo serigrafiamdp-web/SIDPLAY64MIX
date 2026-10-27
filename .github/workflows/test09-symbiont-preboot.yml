@@ -1,0 +1,44 @@
+name: TEST09 Symbiont preboot on original Glenn
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - test/test09-symbiont-bootstrap-preserve-glenn
+    paths:
+      - 'tests/test09_boot0.tas'
+      - 'tests/test09_symbiont_stage1.tas'
+      - '.github/workflows/test09-symbiont-preboot.yml'
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install assembler
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends 64tass
+      - name: Compile both loader stages
+        run: |
+          mkdir -p build/test09
+          64tass --m6502 -a tests/test09_boot0.tas -o build/test09/BOOT.PRG -l build/test09/boot.labels
+          64tass --m6502 -a tests/test09_symbiont_stage1.tas -o build/test09/SYMBIONT.PRG -l build/test09/symbiont.labels
+      - name: Verify addresses and memory budgets
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          b=Path('build/test09/BOOT.PRG').read_bytes()
+          s=Path('build/test09/SYMBIONT.PRG').read_bytes()
+          assert b[:2]==b'\x01\x08' and len(b)<0x1000-0x0801+2,(len(b),b[:2])
+          assert s[:2]==b'\x00\x7c' and len(s)<0x400+2,(len(s),s[:2])
+          print('BOOT:',len(b),'BYTES @ $0801; SYMBIONT:',len(s),'BYTES @ $7C00')
+          print('TEST09 structural build PASS, runtime in VICE untested.')
+          PY
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: SIDPLAY64MIX_TEST09_SYMBIONT_BOOTSTRAP_NOT_VICE_PASS
+          path: build/test09/
+          if-no-files-found: error
