@@ -1,0 +1,45 @@
+name: TEST08 — playlist screen on frozen TEST07 VICE PASS
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - test/test08-playlist-ui-on-test07-pass
+    paths:
+      - 'tests/test08_visual_playlist.tas'
+      - '.github/workflows/test08-visual-playlist.yml'
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install 64tass
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends 64tass
+      - name: Compile TEST08 and reproduce baseline TEST07
+        run: |
+          mkdir -p build/test08
+          64tass --m6502 -D TEST06_LONG=0 -a tests/test07_keyboard_playlist.tas -o build/test08/TEST07_10S_REFERENCE.PRG
+          64tass --m6502 -D TEST06_LONG=1 -a tests/test07_keyboard_playlist.tas -o build/test08/TEST07_3M05_REFERENCE.PRG
+          64tass --m6502 -D TEST06_LONG=0 -a tests/test08_visual_playlist.tas -o build/test08/TEST08_10S.PRG -l build/test08/TEST08_10S.labels
+          64tass --m6502 -D TEST06_LONG=1 -a tests/test08_visual_playlist.tas -o build/test08/TEST08_3M05.PRG -l build/test08/TEST08_3M05.labels
+          python - <<'PY'
+          from pathlib import Path
+          root=Path('build/test08')
+          files=list(root.glob('*.PRG'))
+          for p in files:
+              b=p.read_bytes()
+              assert b[:2]==b'\x01\x08' and len(b)<(0x1000-0x0801+2),(p.name,len(b))
+              print(p.name,len(b),'PASS: size below active SID')
+          assert len(files)==4
+          print("TEST08 source compiles; VICE test pending")
+          PY
+      - name: Upload binaries + symbol maps
+        uses: actions/upload-artifact@v4
+        with:
+          name: SIDPLAY64MIX_TEST08_VISUAL_PLAYLIST_NOT_VICE_PASS
+          path: build/test08/
+          if-no-files-found: error
