@@ -610,9 +610,11 @@ clrmsg2		sta (dzp),y
 
 ;Notice that the background code is constantly looping here when playing music and selecting files:
 
-fileSelect	jsr wjs_display		;zp$01=36, then displayFiles, then scankeys
+fileSelect
 .if DEF_MIX10
-        jsr mix10_service       ; Krill prefetch in Glenn's native screen loop
+        jsr mix10_display     ; wrapper displays native UI then preloads
+.else
+        jsr wjs_display
 .fi
 .if DEF_MIX03
                 jsr mix03_watch_next ; read-only NEXT candidate tracking
@@ -702,14 +704,6 @@ timeloop	lda $dc09,x  ;dc09,dc0a,dc0b
 		bne scankeys
 		tay			;A=0
 
-.if DEF_MIX10
-        lda mix10_active
-        beq mix10_tod_allow
-        lda mix10_ready
-        cmp #1
-        bne scankeys           ; clock must never advance without ready SID
-mix10_tod_allow
-.fi
 checkdigits	lda (gzp),y
 		cmp minuteshi,y
 		beq equ
@@ -1396,11 +1390,9 @@ errormsg	sei			;sei only present in versions using kernal loader calls
 		ldx #irq_keys		;Set corret key range when irq is running
 		stx numb
 .if DEF_MIX10
-        jsr mix10_activate     ; only after Glenn has KERNAL-loaded the SID
-.fi
-		jsr wjs_restartTune	;RestartTune, also call wjs_resetCia
-.if DEF_MIX10
-        jsr mix10_after_restart
+        jsr mix10_restart_wrap
+.else
+        jsr wjs_restartTune    ; Glenn unchanged for normal build
 .fi
 		
 		;zp $01 = 35 here
