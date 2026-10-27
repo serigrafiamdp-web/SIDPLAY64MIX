@@ -402,6 +402,9 @@ fix1		stx fixdc0e+1	;located in 36 ram
 		
 		lda $ba
 		sta device
+.if DEF_MIX10
+        jsr mix10_prepare       ; stage Krill files before directory, DOS still normal
+.fi
 
 		ldy #0			;all new DIR reads needs Y=0
 		;jsr resetCia		;SEI, clear 000c-0100 and 020c-0300 returns with zp$01 = 36
