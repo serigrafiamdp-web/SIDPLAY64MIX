@@ -1,0 +1,108 @@
+name: Build authentic Glenn SIDPLAY64 v1.21 (reference)
+on:
+  push:
+    branches: [development/trse-port]
+    paths:
+      - '.github/workflows/build-glenn-original.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  original:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout development branch
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Checkout ORIGINAL 2018 Glenn commit, no project changes
+        uses: actions/checkout@v4
+        with:
+          ref: aa607572dfdd09838456ca4a7033f5c97fc00a2e
+          path: pristine
+          persist-credentials: false
+      - name: Install native original assembler
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends 64tass build-essential zip
+          git clone --depth=1 https://github.com/mist64/pucrunch.git /tmp/pucrunch-src
+          make -C /tmp/pucrunch-src
+      - name: Prepare syntax-only build copy of 2018 sources
+        run: |
+          cp -a pristine native-build
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          base=Path('native-build')
+          # File bytes/logic remain authentic in pristine/. Only normalize legacy
+          # 64tass include directives in disposable native-build/ workspace.
+          pat=re.compile(r'(?im)^(\s*\.(?:include|binary)\s+)(?!["\x27])([A-Za-z_][A-Za-z0-9_./\\-]*)')
+          for file in [base/'sidplay64.tas',base/'sidplay64.cfg',*base.rglob('*.tas')]:
+              if not file.exists():continue
+              raw=file.read_bytes().decode('latin1')
+              fixed=pat.sub(lambda m:m.group(1)+'"'+m.group(2).replace('\\','/')+'"',raw)
+              if file.parent==base/'src':
+                  fixed=fixed.replace('.include "src/', '.include "')
+                  fixed=fixed.replace('.binary "timedate.clk"', '.binary "../timedate.clk"')
+              if file.name=='irq-attract-mode.tas':
+                  fixed=fixed.replace('.enc screen','.enc "screen"').replace('.enc none','.enc "none"')
+              if file.name=='devicecheck.tas':
+                  fixed=fixed.replace('.byte $12,"return"', '.text $12,"return"')
+              if fixed!=raw:file.write_bytes(fixed.encode('latin1'))
+          (base/'timedate.clk').write_bytes(b'27.10.2026 00:00\r\n')
+          PY
+      - name: Assemble pristine functionality with 64tass
+        run: |
+          mkdir -p output
+          cd native-build
+          64tass --m6502 -D defset=1 -D DEF_SIDFX=0 -D DEF_REU=0 -a sidplay64.tas -o ../output/SIDPLAY64_GLENN_NORMAL.O64 -l ../output/SIDPLAY64_GLENN_NORMAL.labels
+          64tass --m6502 -D defset=4 -D DEF_SIDFX=0 -D DEF_REU=0 -a sidplay64.tas -o ../output/SIDPLAY64_GLENN_SD2IEC.O64 -l ../output/SIDPLAY64_GLENN_SD2IEC.labels
+          /tmp/pucrunch-src/pucrunch '-x$9000' ../output/SIDPLAY64_GLENN_NORMAL.O64 ../output/SIDPLAY64_GLENN_NORMAL.PRG
+          /tmp/pucrunch-src/pucrunch '-x$9000' ../output/SIDPLAY64_GLENN_SD2IEC.O64 ../output/SIDPLAY64_GLENN_SD2IEC.PRG
+          cd ..
+          python3 - <<'PY'
+          import hashlib
+          from pathlib import Path
+          for p in sorted(Path('output').glob('*.PRG')):
+              b=p.read_bytes()
+              assert len(b)>1024, (p,len(b))
+              print(p,len(b),hashlib.sha256(b).hexdigest(),b[:16].hex())
+          PY
+      - name: Prepare full and faithful source/binaries archive
+        run: |
+          mkdir -p output/reference
+          cp -a pristine/. output/reference/
+          rm -rf output/reference/.git
+          cp output/SIDPLAY64_GLENN_NORMAL.PRG output/SIDPLAY64_GLENN_SD2IEC.PRG output/reference/
+          cp output/SIDPLAY64_GLENN_NORMAL.O64 output/SIDPLAY64_GLENN_SD2IEC.O64 output/reference/
+          cat > output/reference/COMO_PROBAR.txt <<'EOF'
+          SIDPLAY64 GLENN v1.21 — REFERENCIA AUTENTICA 2018
+          
+          Fuentes originales: commit aa607572dfdd09838456ca4a7033f5c97fc00a2e.
+          NORMAL y SD2IEC compilados con 64tass y empaquetados con PuCrunch.
+          Se aplicaron cambios sintacticos a una COPIA TEMPORAL durante el build;
+          los fuentes del directorio reference/ estan intactos.
+          
+          Primero ejecutar NORMAL.PRG o SD2IEC.PRG en una C64/VICE nueva.
+          En VICE seleccionar unidad 8 y luego contestar las preguntas originales.
+          No se ha hecho port a OrgAsm: esta es la referencia funcional real.
+          No se ha validado en VICE, solo el ensamblado/compactacion en CI.
+          EOF
+          (cd output/reference && zip -qr ../GLENN_121_ORIGINAL_COMPLETO.zip .)
+      - name: Publish reference binaries to development branch (not master)
+        run: |
+          mkdir -p TRSE_PORT/REFERENCE_ORIGINAL
+          cp output/SIDPLAY64_GLENN_NORMAL.PRG output/SIDPLAY64_GLENN_SD2IEC.PRG output/GLENN_121_ORIGINAL_COMPLETO.zip TRSE_PORT/REFERENCE_ORIGINAL/
+          git add TRSE_PORT/REFERENCE_ORIGINAL
+          git -c user.name='SIDPLAY64 build bot' -c user.email='sidplay64-build@users.noreply.github.com' commit -m 'build: verified Glenn original v1.21 64tass baseline' || true
+          git push origin HEAD:development/trse-port
+      - name: Attach complete baseline ZIP and raw binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: GLENN_SIDPLAY64_V121_ORIGINAL_REFERENCE
+          path: |
+            output/GLENN_121_ORIGINAL_COMPLETO.zip
+            output/*.PRG
+            output/*.O64
+          if-no-files-found: error
