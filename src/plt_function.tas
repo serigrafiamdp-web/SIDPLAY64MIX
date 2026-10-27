@@ -11,11 +11,13 @@
 
 
 		txa			;untouched from plt_flag
-		tay.if DEF_MIX10
-        jsr mix10_before_plt_advance
-.fi
+		tay
+.if DEF_MIX10
+        jsr mix10_plt_reset
+.else
 
 		jsr wjs_resetCia	;sei & zp $01=36 
+.fi
 					;X = FF
 					;Y = untouched
 		txs			;X=FF = topstack
@@ -35,17 +37,15 @@
 last_plt	jsr wjs_playlist	;plt_inc
 
 doload
-.if DEF_MIX10
-        lda mix10_active
-        beq mix10_normal_next
-        jmp mix10_fast_next      ; avoid KERNAL after Krill drive takeover
-mix10_normal_next
-.fi
 .if DEF_MIX03
         jsr mix03_before_load     ; reached from normal, wrap, and random
 .fi
+.if DEF_MIX10
+        jmp mix10_select
+.else
         ldy #1                  ; Set Y=1 for loading files
 		jmp (wjp_load)		;must have zp$01 set correctly to work
+.fi
 	
 plt_random
 
