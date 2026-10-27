@@ -73,11 +73,22 @@ mix10_prepare
         sta mix10_savevalid
         lda #1
         sta mix10_staged
+        ; TEST29: trace bytes outside the current curated SID payload.
+        ; Monitor in VICE: m $3ff0 $3ff7
+        sta $3ff0                  ; $01: Krill payloads prepared
+        lda #0
+        sta $3ff1                  ; activation status
+        sta $3ff2                  ; service/prefetch status
+        sta $3ff3                  ; TOD seconds seen by service
+        sta $3ff4                  ; current song index
+        sta $3ff5                  ; pending song index
         rts
 
 ; Called from Glenn original load code AFTER SID header and body
 ; both loaded and original main relocated, but BEFORE tune INIT.
 mix10_activate
+        lda #$10
+        sta $3ff1                  ; init hook reached
         lda mix10_active
         bne mix10_activate_done
         lda mix10_staged
@@ -94,6 +105,9 @@ mix10_activate
         sec
         sbc #1
         sta mix10_current
+        sta $3ff4                  ; selected SID index
+        lda #$11
+        sta $3ff1                  ; recognized SID entry
         sei
         lda #$36
         sta $01
@@ -111,6 +125,8 @@ mix10_copy_resident
         sta $ba
         jsr $6000               ; Krill drive takeover: first SID is loaded
         bcs mix10_activate_failed
+        lda #$12
+        sta $3ff1                  ; Krill installer returned success
         ldx #21
 mix10_initial_save
         lda $c0,x
@@ -127,6 +143,8 @@ mix10_initial_save
         sta $d020
         rts
 mix10_activate_failed
+        lda #$e0
+        sta $3ff1                  ; installer returned error
         ; Installation failed: continuing with DOS KERNAL would be risky.
         ; Preserve Glenn's loaded SID but mark failure and disable hook.
         lda #2
@@ -196,6 +214,8 @@ mix10_music_out_done
 ; 19 SID directory entries, 13 MIX staging entries: MULTI-FILE VERSION.
 ; Original Glenn IRQ keeps SID audio alive.
 mix10_service
+        lda $dc09
+        sta $3ff3                  ; most recent TOD seconds
         lda mix10_active
         beq mix10_service_done
         lda mix10_ready
@@ -203,6 +223,8 @@ mix10_service
         lda $dc09             ; TOD seconds (BCD), not minute
         cmp #$05              ; start prefetch at 00:05
         bcc mix10_service_done
+        lda #$03
+        sta $3ff2                  ; five-second path reached
         lda mix10_current
         clc
         adc #1
@@ -211,15 +233,20 @@ mix10_service
         lda #0
 mix10_service_target_ok
         sta mix10_pending
+        sta $3ff5                  ; song being prefetched
         jsr mix10_stage_pending
         bcs mix10_service_failed
         lda #1
         sta mix10_ready
+        lda #4
+        sta $3ff2                  ; successful prefetch
         lda #5
         sta $d020
 mix10_service_done
         rts
 mix10_service_failed
+        lda #$ff
+        sta $3ff2                  ; failed prefetch / validation
         lda #2
         sta mix10_ready
         sta $d020
