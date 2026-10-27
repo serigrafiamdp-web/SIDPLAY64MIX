@@ -27,7 +27,7 @@ def main():
     offset=2+(0x0563-0x0500)
     assert fix[offset:offset+3]==bytes((0x4c,0x00,0x90))
     fix[offset:offset+3]=bytes((0x4c,0x00,0x36))
-    assert fix[2+(0x0587-0x0500):2+(0x058d-0x0500)]==bytes((0xad,0x09,0xdc,0xc9,0x05,0x90)), "TEST19 5s hook altered"
+    assert fix[2+(0x058a-0x0500):2+(0x0590-0x0500)]==bytes((0xad,0x09,0xdc,0xc9,0x05,0x90)), "TEST19 5s hook altered"
     Path("assets").mkdir(exist_ok=True)
     Path("assets/test28_fix_embedded.bin").write_bytes(fix[2:])
     Path("assets/test28_engine_embedded.bin").write_bytes(engine[2:])
