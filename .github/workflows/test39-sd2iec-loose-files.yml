@@ -1,0 +1,120 @@
+name: TEST39 SD2IEC loose files and dynamic directory length
+on:
+  push:
+    branches: [test/test39-normalize-cover-and-file]
+    paths:
+      - '.github/workflows/test39-sd2iec-loose-files.yml'
+      - 'sidplay64.tas'
+      - 'src/mix10_glenn_symbiont.tas'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checkout frozen TEST19 disk for Krill payloads and SID data
+        uses: actions/checkout@v4
+        with:
+          ref: master
+          path: frozen-master
+          persist-credentials: false
+      - name: Install original assembler and packer
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends 64tass build-essential zip
+          git clone --depth=1 https://github.com/mist64/pucrunch.git /tmp/pucrunch-src
+          make -C /tmp/pucrunch-src
+      - name: Extract Krill installer and resident exactly from PASS TEST19
+        run: |
+          python3 - <<'PY'
+          import hashlib
+          from pathlib import Path
+          from tools.test31_pack import files
+          root=Path('frozen-master/MASTERS/2026-10-27_PASS/TEST19_MULTIPLES_ARCHIVOS_KRILL_5_SEGUNDOS.d64')
+          b=root.read_bytes()
+          assert hashlib.sha256(b).hexdigest() == 'b247f58ce9d3df87025d0f09ca145998bffe31e8f9e520c5c29dcfc238d66cc5'
+          fs=dict(files(b))
+          assert fs['INSTA'][:2]==b'\x00\x60' and len(fs['INSTA'])==6888
+          assert fs['RESIDENT'][:2]==b'\x00\x90' and len(fs['RESIDENT'])==497
+          Path('assets').mkdir(exist_ok=True)
+          Path('assets/krill_insta_payload.bin').write_bytes(fs['INSTA'][2:])
+          Path('assets/krill_resident_payload.bin').write_bytes(fs['RESIDENT'][2:])
+          print('Krill installer: $6000',len(fs['INSTA'])-2,'bytes')
+          print('Krill resident: compiled for $9000, staged at $8800',len(fs['RESIDENT'])-2,'bytes')
+          PY
+      - name: Normalize only legacy 64tass include syntax in working source
+        run: |
+          printf '27.10.2026 00:00\r\n' > timedate.clk
+          python3 tools/normalize_tass_includes.py
+      - name: Assemble real Glenn+Krill into one C64 executable
+        run: |
+          mkdir -p build/test39
+          64tass --m6502 -D defset=4 -D DEF_SIDFX=0 -D DEF_REU=0 -D DEF_MIX03=0 -D DEF_MIX10=1 -a sidplay64.tas -o build/test39/SIDPLAY64MIX.O64 -l build/test39/SIDPLAY64MIX.labels
+          /tmp/pucrunch-src/pucrunch '-x$9000' build/test39/SIDPLAY64MIX.O64 build/test39/SIDPLAY64MIX.PRG
+      - name: Verify 72 loose SID names fit directory and dynamic wrapping math
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          prg=Path('build/test39/SIDPLAY64MIX.PRG').read_bytes()
+          assert prg[:2]==b'\x01\x08', 'Not a valid packed BASIC C64 PRG'
+          for maxfile in [2,3,20,73,163]:
+              for cur in range(maxfile-1):
+                  target=(cur+1)%(maxfile-1)
+                  simulated=cur+1 if (cur+2)<maxfile else 0
+                  assert target==simulated,(maxfile,cur,target,simulated)
+          print('TEST39 static wrap: PASS for 1, 2, 19, 72, 162 SID')
+          PY
+          mkdir -p build/test39/SD2IEC_FOLDER
+          cp build/test39/SIDPLAY64MIX.PRG build/test39/SD2IEC_FOLDER/00PLAYER.PRG
+          (cd build/test39/SD2IEC_FOLDER && zip -q ../TEST39_LAUNCHER_SD2IEC.zip 00PLAYER.PRG)
+      - name: Include complete ASM source and resources, no Windows EXE in ZIP
+        run: |
+          mkdir -p build/test39/PROJECT/src build/test39/PROJECT/bin build/test39/PROJECT/assets
+          python3 - <<'PY'
+          from pathlib import Path
+          import shutil
+          root=Path('build/test39/PROJECT')
+          for pat in ['src/**/*.tas','bin/*.o64']:
+              for f in Path('.').glob(pat):
+                  dest=root/f
+                  dest.parent.mkdir(parents=True,exist_ok=True)
+                  shutil.copy2(f,dest)
+          for f in ['sidplay64.tas','sidplay64.cfg','timedate.clk','tools/normalize_tass_includes.py','tools/test31_pack.py','assets/krill_insta_payload.bin','assets/krill_resident_payload.bin']:
+              dest=root/f
+              dest.parent.mkdir(parents=True,exist_ok=True)
+              shutil.copy2(f,dest)
+          assert not list(root.rglob('*.exe'))
+          print('Included ASM sources',len(list(root.rglob('*.tas'))))
+          PY
+          cp build/test39/SIDPLAY64MIX.PRG build/test39/SIDPLAY64MIX.labels build/test39/PROJECT/
+          cat > build/test39/PROJECT/LEEME.txt <<'EOF'
+          TEST39 SD2IEC FAT LOOSE FILES (VICE/real SD2IEC pending).
+          Compiled Glenn defset=4, 1 launcher PRG + up to 162 SID in same folder.
+          Put ONLY 00PLAYER.PRG and numbered .SID files (max 16-char names) in
+          one newly created SD2IEC folder. No README/ZIP/D64 mixed in.
+          LOAD"00PLAYER.PRG",8,1
+          RUN
+          $3ffa = directory entries including launcher.
+          Krill SD2IEC compatibility is hardware/firmware dependent.
+          No success can be claimed until testing on real SD2IEC.
+          MASTER TEST35 and TEST38 sources remain preserved.
+          EOF
+          (cd build/test39/PROJECT && zip -qr ../SIDPLAY64MIX_TEST39_PROYECTO_COMPLETO.zip .)
+      - name: Archive TEST39 for testing (not a PASS)
+        uses: actions/upload-artifact@v4
+        with:
+          name: SIDPLAY64MIX_TEST39_SD2IEC_STATIC_ONLY
+          path: |
+            build/test39/TEST39_LAUNCHER_SD2IEC.zip
+            build/test39/SIDPLAY64MIX_TEST39_PROYECTO_COMPLETO.zip
+          if-no-files-found: error
+      - name: Publish test binaries to experimental branch (never master)
+        run: |
+          mkdir -p TESTS/TEST39
+          cp build/test39/SIDPLAY64MIX_TEST39_PROYECTO_COMPLETO.zip build/test39/TEST39_LAUNCHER_SD2IEC.zip build/test39/SIDPLAY64MIX.PRG build/test39/SIDPLAY64MIX.labels TESTS/TEST39/
+          git add TESTS/TEST39/
+          git -c user.name='SIDPLAY64 native build bot' -c user.email='sidplay64-build@users.noreply.github.com' commit -m 'test39: SD2IEC 00PLAYER.PRG dynamic SID list, static checks only' || true
+          git push origin HEAD:test/test39-normalize-cover-and-file
