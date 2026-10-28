@@ -1,7 +1,7 @@
 name: TEST39 SD2IEC loose files and dynamic directory length
 on:
   push:
-    branches: [test/test39-normalize-cover-and-file]
+    branches: [test/test39-sd2iec-loose-files-72]
     paths:
       - '.github/workflows/test39-sd2iec-loose-files.yml'
       - 'sidplay64.tas'
@@ -117,4 +117,4 @@ jobs:
           cp build/test39/SIDPLAY64MIX_TEST39_PROYECTO_COMPLETO.zip build/test39/TEST39_LAUNCHER_SD2IEC.zip build/test39/SIDPLAY64MIX.PRG build/test39/SIDPLAY64MIX.labels TESTS/TEST39/
           git add TESTS/TEST39/
           git -c user.name='SIDPLAY64 native build bot' -c user.email='sidplay64-build@users.noreply.github.com' commit -m 'test39: SD2IEC 00PLAYER.PRG dynamic SID list, static checks only' || true
-          git push origin HEAD:test/test39-normalize-cover-and-file
+          git push origin HEAD:test/test39-sd2iec-loose-files-72
