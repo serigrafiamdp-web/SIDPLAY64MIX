@@ -493,18 +493,22 @@ mix44_krill_ok
         ; PSID bytes [2]='I',[3]='D' land at 5350/5351.
         lda $5350
         cmp #$49
-        bne mix44_bad_header
+        bne mix46_early_bad
         lda $5351
         cmp #$44
-        bne mix44_bad_header
+        bne mix46_early_bad
         lda $5354                  ; big endian data offset $007C
-        bne mix44_bad_header
+        bne mix46_early_bad
         lda $5355
         cmp #$7c
-        bne mix44_bad_header
+        bne mix46_early_bad
         lda $5356                  ; big endian load address $0000
         ora $5357
-        bne mix44_bad_header
+        bne mix46_early_bad
+        jmp mix46_early_ok
+mix46_early_bad
+        jmp mix44_bad_header
+mix46_early_ok
         ; TEST46: allow special LOAD=$0FFF (exact 1 byte below $1000),
         ; or arbitrary original LOAD $1000-$1FFF. Stage normalized at $1000
         ; before committing and still copied unchanged at playback.
@@ -781,7 +785,9 @@ mix10_bpa_done
 mix10_fast_next
         lda mix10_ready
         cmp #1
-        bne mix10_no_ready
+        beq mix46_ready_now
+        jmp mix10_no_ready
+mix46_ready_now
         sei
         lda #0
         sta $dc0e
