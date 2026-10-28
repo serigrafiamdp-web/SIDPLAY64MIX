@@ -1,18 +1,18 @@
 ; TEST13 -- generic 19 PSID disk prefetch via Krill raw PSID loader.
-; Original Glenn GUI, CIA TOD 01:00 prefetch, manual RETURN via Krill.
-; All 19 PSIDs: load $1000, init $1000, play $1003, size <= $1A00.
+; Original Glenn GUI, CIA TOD 00:05 prefetch, manual RETURN via Krill.
+; TEST43: original PSID v2, LOAD $1000, dynamic INIT/PLAY $1000-$2FFF; stage <=8192 bytes.
 ; Input PSID first bytes 'PS' encode Krill load target $5350.
 ; Raw bytes 2+ appear at $5350; SID body begins $53CC.
 ; Keep TEST11 3 tunes VICE PASS frozen independently.
 ; TEST10 — KRILL LIVE SYMBIONT IN GLENN'S ORIGINAL PLAYER
-; Built for the provided curated SID files, all load at $1000,
-; INIT=$1000, PLAY=$1003 and code ends before $3000.
+; The driver reads INIT/PLAY from each original PSID header;
+; LOAD remains $1000, music code/bank stays below $3000.
 ;
 ; $3000-$35FF: symbiont independent of Glenn's relocatable screen.
 ; $6000: Krill v184 installer, loaded AFTER Glenn has decompressed.
 ; $8800-$89FF: backup resident, held while Glenn main starts at $9000.
 ; $9000-$91FF: live Krill resident, copied after Glenn relocates off $9000.
-; TEST41: $5000-$6FFF: 8192-byte SID staging bank; only $1000/$1000/$1003 at playback.
+; TEST43: $5000-$6FFF: 8192-byte SID staging bank; LOAD=$1000, dynamic INIT/PLAY in $1000-$2FFF.
 ; 1541 protocol remains ordinary DOS until first real SID is KERNAL-loaded.
 ;
 mix10_staged       .byte 0       ; DOS loads of Krill files complete
@@ -486,7 +486,7 @@ mix10_zero_byte
         plp
         bcs mix10_stage_bad
 
-        ; Validate original SID header, offset, load, INIT and PLAY.
+        ; Validate original PSID header, load and safe dynamic INIT/PLAY vectors.
         ; PSID bytes [2]='I',[3]='D' land at 5350/5351.
         lda $5350
         cmp #$49
@@ -502,17 +502,22 @@ mix10_zero_byte
         lda $5356                  ; big endian load address $0000
         ora $5357
         bne mix10_stage_bad
-        lda $5358                  ; big endian init $1000
+        ; TEST43: retain LOAD=$1000 and max 8 KB, but accept original
+        ; INIT/PLAY vectors ANYWHERE in the independent music bank
+        ; $1000-$2FFF.  Do not rewrite or relocate a SID's code.
+        ; A zero PLAY address (RSID/own IRQ) is deliberately rejected.
+        ; The original per-song vectors are installed in
+        ; mix37_commit_metadata immediately before Glenn restartTune.
+        lda $5358                  ; big-endian INIT high byte
         cmp #$10
-        bne mix10_stage_bad
-        lda $5359
-        bne mix10_stage_bad
-        lda $535a                  ; big endian play $1003
+        bcc mix10_stage_bad
+        cmp #$30
+        bcs mix10_stage_bad
+        lda $535a                  ; big-endian PLAY high byte
         cmp #$10
-        bne mix10_stage_bad
-        lda $535b
-        cmp #$03
-        bne mix10_stage_bad
+        bcc mix10_stage_bad
+        cmp #$30
+        bcs mix10_stage_bad
         lda $53ca                  ; embedded little endian body load $1000
         bne mix10_stage_bad
         lda $53cb
@@ -567,9 +572,9 @@ mix10_bpa_done
         rts
 
 ; Glenn has already advanced the directory cursor and used its
-; original timer. All three curated SID payloads share the same
-; load/init/play addresses; copy the ready payload in RAM and
-; re-use Glenn's real restartTune, IRQ, timer and screen.
+; original timer. Music LOAD is $1000, but INIT/PLAY can differ by SID;
+; copy the ready payload in RAM, patch Glenn's jump vectors from its
+; ORIGINAL PSID header, then reuse its IRQ, timer and screen.
 mix10_fast_next
         lda mix10_ready
         cmp #1
@@ -694,7 +699,7 @@ mix38_normalized
 ; doheaderstuff: that routine also relocates code and stack-jumps.
 ; Called with IRQs disabled at the safe change-song boundary.
 mix37_commit_metadata
-        ; Static Glenn INIT / PLAY vectors (big endian source fields).
+        ; TEST43: dynamic Glenn INIT / PLAY vectors (original PSID big-endian fields).
         lda mix37_header_cache+$0b
         sta initMus+1
         lda mix37_header_cache+$0a
