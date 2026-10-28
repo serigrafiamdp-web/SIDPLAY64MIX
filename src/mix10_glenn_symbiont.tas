@@ -91,6 +91,8 @@ mix10_prepare
         sta $3ffb
         sta $3ffc
         sta $3ffd
+        sta $3ffe
+        sta $3fff
         rts
 
 ; Called from Glenn original load code AFTER SID header and body
@@ -422,7 +424,11 @@ mix10_trim_byte
 ; Stage 26 pages at $5000-$69FF; PSCIIDSK2 uses ~6435 bytes.
 ; Clear scratch $5300-$6DFF BEFORE loading so tail zero padding is safe.
 mix10_stage_pending
+        lda #$10
+        sta $3ff7                 ; stage was entered
         jsr mix10_make_filename
+        lda #$20
+        sta $3ff7                 ; filename returned
         lda #7
         sta $d020
         sei                   ; scratch pointer $FB/$FC also used by some SIDs
@@ -442,10 +448,19 @@ mix10_zero_byte
         dex
         bne mix10_zero_page
 
+        lda #$30
+        sta $3ff7                 ; scratch cleared
         cli                   ; Krill read must overlap live Glenn SID IRQ
+        lda #$40
+        sta $3ff7                 ; about to call Krill
+        lda #0                    ; preserve original loader A input
         ldx #<mix10_filename
         ldy #>mix10_filename
         jsr $9000                  ; foreground Krill, IRQ SID playback
+        php
+        lda #$50
+        sta $3ff7                 ; Krill returned
+        plp
         bcs mix10_stage_bad
 
         ; Validate original SID header, offset, load, INIT and PLAY.
@@ -503,9 +518,13 @@ mix10_stage_cp_byte
         dex
         bne mix10_stage_cp_page
         cli
+        lda #$60
+        sta $3ff7                 ; PSID staging finished
         clc
         rts
 mix10_stage_bad
+        lda #$e0
+        sta $3ff7                 ; failed header / loader
         sec
         rts
 
