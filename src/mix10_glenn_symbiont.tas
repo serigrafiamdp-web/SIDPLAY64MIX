@@ -179,8 +179,8 @@ mix10_activate_failed
         sta $d020
         rts
 
-; Scan only SID rows 1..maxfile-1. The D64 has SIDPLAY64MIX
-; as entry 0, followed by 19 original SID files. Match against
+; Scan SID rows 1..maxfile-1. SD2IEC folder must place the launch
+; PRG at directory entry 0, then playable SID files. Match against
 ; the filename Glenn actually KERNAL-loaded (fname at $0200).
 ; Return A = 0..18 and C clear; otherwise C set.
 ; IRQ disabled ONLY while banked-out directory name is compared.
@@ -287,7 +287,8 @@ mix10_music_out_done
 ; Start at 00:05 by reading CIA TOD seconds ($DC09, BCD 05);
 ; DO NOT CHANGE Glenn's song-end/next-playlist timer.
 ; This follows the two-byte patch verified in the TEST19 D64.
-; Single PRG in directory position 0, followed by 19 original SID files.
+; Single PRG in directory position 0, followed by SID files.
+; TEST39 SD2IEC loose-file mode: up to Glenn's maxentries-1 SID entries.
 ; Original Glenn IRQ keeps SID audio alive.
 mix10_service
         ; Inspect the real states even when no precache attempt occurs.
@@ -317,7 +318,13 @@ mix10_service
         lda mix10_current
         clc
         adc #1
-        cmp #19
+        ; TEST39 SD2IEC: maxfile includes the launcher at index 0.
+        ; Number of playable SID files = maxfile-1. Current is 0-based.
+        ; Wrap when current+1 >= playable count.
+        ; Compare current+2 against maxfile without subtracting ZP.
+        clc
+        adc #1
+        cmp maxfile
         bcc mix10_service_target_ok
         lda #0
 mix10_service_target_ok
@@ -355,7 +362,8 @@ mix10_manual_active
         clc
         adc pos_cursor
         beq mix10_manual_exit
-        cmp #20
+        ; TEST39: Glenn read up to maxentries, no fixed 19-song cap.
+        cmp maxfile
         bcs mix10_manual_exit
         sec
         sbc #1
@@ -375,7 +383,7 @@ mix10_manual_exit
         jmp (wjp_fileselect)
 
 ; Read one filename from original Glenn directory RAM under I/O.
-; Directory: index 0 SIDPLAY64MIX; entries 1..19 are original SIDs.
+; Directory: entry 0 launcher PRG; entries 1..maxfile-1 are SID files.
 ; Bounded 16 chars, preserve embedded spaces, strip trailing padding.
 mix10_make_filename
         ; TEST34: code for getpos and the directory both live in RAM
