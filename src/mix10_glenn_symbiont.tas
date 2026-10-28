@@ -649,6 +649,28 @@ mix37_capture_loop
         inx
         cpx #$7a
         bne mix37_capture_loop
+
+        ; TEST38: original Glenn load-iec-serial.tas/getheada converts
+        ; ONLY header text bytes offsets $16..$75:
+        ; null -> $20, ASCII >= $60 -> (byte & $1F).
+        ; PSID header on disk is ASCII with null padding; copying it
+        ; straight to C64 video RAM displayed @/garbage after names.
+        ldy #$75
+mix38_normalize_text
+        lda mix37_header_cache,y
+        bne mix38_nonzero
+        lda #$20
+        bne mix38_normalized
+mix38_nonzero
+        cmp #$60
+        bcc mix38_normalized
+        and #$1f
+mix38_normalized
+        sta mix37_header_cache,y
+        dey
+        cpy #$15
+        bne mix38_normalize_text
+
         lda #$71
         sta $3ffe                 ; header cached before music bank copy
         rts
@@ -765,6 +787,29 @@ mix37_system_loop
         jsr printhexnum
         lda mix37_header_cache+$0c
         jsr printhexnum
+
+        ; Update the current PSID filename on the cover.
+        ; The filename already lives in mix10_filename from the Krill
+        ; stage, but TEST37 only refreshed the song title underneath it.
+        ; Same $042E/$C42E address + convert_letter as the original
+        ; Glenn src/load-iec-serial.tas / loadfile logic.
+        lda #$2e
+        sta gzp
+        lda screenpos
+        sta gzp+1
+        ldy #15
+mix38_filename_loop
+        lda mix10_filename,y
+        beq mix38_filename_space
+        cmp #$a0
+        bne mix38_filename_convert
+mix38_filename_space
+        lda #$20
+mix38_filename_convert
+        jsr convert_letter
+        sta (gzp),y
+        dey
+        bpl mix38_filename_loop
 
         pla
         sta $01                   ; leave C64 memory mapping intact
