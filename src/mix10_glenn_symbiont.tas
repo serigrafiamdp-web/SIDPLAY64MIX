@@ -18,13 +18,14 @@
 mix10_staged       .byte 0       ; DOS loads of Krill files complete
 mix10_active       .byte 0       ; Krill owns 1541
 mix10_ready        .byte 0       ; $5000 music bank validated
-mix10_current      .byte 0       ; 0..18: currently playing original PSID directory track
-mix10_pending      .byte 0       ; 0..18: staged original PSID track
+mix10_current      .byte 0       ; 0..maxfile-2: currently playing PSID index
+mix10_pending      .byte 0       ; 0..maxfile-2: staged target index
 mix10_filename     .fill 17,0   ; exact Glenn directory 16-char filename + NUL
 mix10_savevalid    .byte 0
 mix31_scan_idx     .byte 0  ; filename match index
 mix10_loader_zp    .fill 22,0
 mix10_music_zp     .fill 22,0
+mix40_sid_count    .byte 0      ; dynamic number of playable entries (maxfile-1)
 
 ; All driver hooks reuse existing 3-byte JSR/JMP footprints to respect
 ; Glenn's strict relocator boundary ($CF84).
@@ -182,7 +183,7 @@ mix10_activate_failed
 ; Scan SID rows 1..maxfile-1. SD2IEC folder must place the launch
 ; PRG at directory entry 0, then playable SID files. Match against
 ; the filename Glenn actually KERNAL-loaded (fname at $0200).
-; Return A = 0..18 and C clear; otherwise C set.
+; Return A = 0..maxfile-2 and C clear; otherwise C set.
 ; IRQ disabled ONLY while banked-out directory name is compared.
 mix31_find_loaded_index
         lda #1
@@ -315,20 +316,25 @@ mix10_service
         bcc mix10_service_done
         lda #$03
         sta $3ff2                  ; five-second path reached
-        ; TEST39: maxfile includes entry 0 (launcher).
-        ; Next music index is current+1, unless current+2 == maxfile.
-        lda mix10_current
+        ; TEST40: directory entry 0 is the player, music entries
+        ; are 1..maxfile-1. NEVER compare with a hardcoded 19.
+        ; Determine modulo dynamically, even after manual ENTER on
+        ; an arbitrary high directory index.
+        lda maxfile
+        cmp #2                     ; no music available
+        bcc mix10_service_done
+        sec
+        sbc #1
+        sta mix40_sid_count        ; count of playable SID files
+
+        lda mix10_current         ; 0-based actual SID index
         clc
         adc #1
-        tax
-        clc
-        adc #1
-        cmp maxfile
+        cmp mix40_sid_count
         bcc mix10_service_target_ok
-        ldx #0
+        lda #0                    ; wrap ONLY after the actual last SID
 mix10_service_target_ok
-        stx mix10_pending
-        txa
+        sta mix10_pending
         sta $3ff5                  ; song being prefetched
         jsr mix10_stage_pending
         bcs mix10_service_failed
@@ -584,7 +590,7 @@ mix10_fast_next
         sta $fc
         lda #$10
         sta $fe
-        ldx #$1a                 ; full 26 pages for all 19 original SIDs
+        ldx #$1a                 ; 26 pages for PSIDs compatible with current engine
 mix10_cp_page
         ldy #0
 mix10_cp_byte
