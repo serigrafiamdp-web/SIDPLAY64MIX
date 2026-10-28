@@ -1,0 +1,43 @@
+name: TEST42 SD2IEC two SID IEC playback diagnostic
+on:
+  push:
+    branches:
+      - test/test42-sd2iec-two-sid-iec-probe
+    paths:
+      - TESTS/TEST42/test42_sd2iec_iec_2sid.asm
+      - .github/workflows/test42-sd2iec-iec-probe.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install assembler
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends 64tass
+      - name: Assemble probe
+        run: |
+          64tass --m6502 -a TESTS/TEST42/test42_sd2iec_iec_2sid.asm -o TESTS/TEST42/00player.prg -l TESTS/TEST42/test42.labels
+          python3 - <<'PY'
+          from pathlib import Path
+          x=Path('TESTS/TEST42/00player.prg').read_bytes()
+          assert x[:2]==bytes([1,8]),'PRG must load at BASIC $0801'
+          assert len(x)<2100,'Do not overwrite song at $1000'
+          print('Assembled raw two-SID IEC probe:',len(x),'bytes')
+          PY
+      - name: Archive standalone PRG and assembler labels
+        uses: actions/upload-artifact@v4
+        with:
+          name: test42_sd2iec_iec_probe
+          path: |
+            TESTS/TEST42/00player.prg
+            TESTS/TEST42/test42.labels
+      - name: Publish test PRG in isolated branch
+        run: |
+          git add TESTS/TEST42/00player.prg TESTS/TEST42/test42.labels
+          git -c user.name='SIDPLAY TEST42 CI' -c user.email='test42@users.noreply.github.com' commit -m 'test42: assemble two-song SD2IEC diagnostic PRG' || true
+          git push origin HEAD:test/test42-sd2iec-two-sid-iec-probe
