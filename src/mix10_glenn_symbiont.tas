@@ -12,8 +12,8 @@
 ; $6000: Krill v184 installer, loaded AFTER Glenn has decompressed.
 ; $8800-$89FF: backup resident, held while Glenn main starts at $9000.
 ; $9000-$91FF: live Krill resident, copied after Glenn relocates off $9000.
-; TEST45: staging $5000-$6FFF, exact arbitrary LOAD $1000-$1FFF,
-; original INIT/PLAY inside $1000-$2FFF; byte-accurate bank shift.
+; TEST46: stage $5000-$6FFF; LOAD $0FFF or arbitrary $1000-$1FFF.
+; $0FFF holds the genuine initial byte; no SID byte rewriting; INIT may be $0FFF.
 ; 1541 protocol remains ordinary DOS until first real SID is KERNAL-loaded.
 ;
 mix10_staged       .byte 0       ; DOS loads of Krill files complete
@@ -505,11 +505,39 @@ mix44_krill_ok
         lda $5356                  ; big endian load address $0000
         ora $5357
         bne mix44_bad_header
-        ; TEST45: accept byte-accurate original embedded LOAD address
-        ; in $1000..$1FFF.  The staged 8KB image is aligned to $1000
+        ; TEST46: allow special LOAD=$0FFF (exact 1 byte below $1000),
+        ; or arbitrary original LOAD $1000-$1FFF. Stage normalized at $1000
         ; before committing and still copied unchanged at playback.
         ; Original PSID INIT/PLAY are restored by mix37_commit_metadata.
         ; Reject self-IRQ PLAY=0 or vectors outside bank $1000-$2FFF.
+        ; Single-byte exception: LOAD/INIT=$0FFF, valid PLAY $1000-$2FFF.
+        lda $53ca
+        cmp #$ff
+        bne mix46_regular_load
+        lda $53cb
+        cmp #$0f
+        bne mix44_bad_header
+        lda $5358
+        cmp #$0f
+        bne mix44_bad_header
+        lda $5359
+        cmp #$ff
+        bne mix44_bad_header
+        lda $535a
+        cmp #$10
+        bcc mix44_bad_header
+        cmp #$30
+        bcs mix44_bad_header
+        lda #1
+        sta mix46_is_low
+        lda #$10
+        sta mix44_load_hi
+        lda #0
+        sta mix45_load_lo
+        jmp mix44_header_ok
+mix46_regular_load
+        lda #0
+        sta mix46_is_low
         lda $5358                  ; big-endian INIT high byte
         cmp #$10
         bcc mix44_bad_header
@@ -546,7 +574,17 @@ mix44_header_ok
 
         ; TEST35: use self-modifying absolute,Y accesses in place
         ; of $FB-$FE indirect ZP, permitting the active SID IRQ to run.
-        ; TEST41: $53CC + 32 pages -> $5000 + 32 pages.
+        ; TEST46: for LOAD=$0FFF, save byte 0 from the original SID.
+        ; The remaining 8191 bytes begin at $53CD and belong at $1000.
+        ; For every other LOAD, preserve TEST45's original $53CC source.
+        lda #$cc
+        ldx mix46_is_low
+        beq mix46_copy_source_ready
+        lda $53cc
+        sta mix46_first_byte
+        lda #$cd
+mix46_copy_source_ready
+        sta mix10_stage_cp_byte+1
         lda #$53
         sta mix10_stage_cp_byte+2
         lda #$50
@@ -720,6 +758,8 @@ mix45_overflow
         rts
 
 mix45_load_lo        .byte 0
+mix46_is_low         .byte 0     ; 1 only for original LOAD=$0FFF, INIT=$0FFF
+mix46_first_byte     .byte 0     ; literal original SID code byte at $0FFF
 
 ; Called before Glenn clears $0C-$FF at playlist auto-advance.
 mix10_before_plt_advance
@@ -771,6 +811,15 @@ mix10_cp_byte
         inc $fe
         dex
         bne mix10_cp_page
+
+        ; Special $0FFF entry point: restore the ORIGINAL first code byte
+        ; immediately before updating Glenn's vectors and invoking INIT.
+        ; IRQs are disabled during this short commit as in TEST45.
+        lda mix46_is_low
+        beq mix46_handoff_normal
+        lda mix46_first_byte
+        sta $0fff
+mix46_handoff_normal
 
         ; Adopt the exact chosen/prefetched song, not an internal
         ; A/B/C counter disconnected from Glenn's directory.
