@@ -440,26 +440,25 @@ mix10_stage_pending
         sta $3ff7                 ; filename returned
         lda #7
         sta $d020
-        sei                   ; scratch pointer $FB/$FC also used by some SIDs
-        lda #$00
-        sta $fb
+        ; TEST35: no long SEI section here. 27 x 256 bytes cleared
+        ; with absolute indexed addressing, which uses NO zero-page
+        ; pointers that SID IRQs might overwrite. Do not stop music.
         lda #$53
-        sta $fc
+        sta mix10_zero_byte+2     ; reset self-modifying STA $5300,Y
         ldx #27
 mix10_zero_page
         ldy #0
-mix10_zero_byte
         lda #0
-        sta ($fb),y
+mix10_zero_byte
+        sta $5300,y
         iny
         bne mix10_zero_byte
-        inc $fc
+        inc mix10_zero_byte+2
         dex
         bne mix10_zero_page
 
         lda #$30
-        sta $3ff7                 ; scratch cleared
-        cli                   ; Krill read must overlap live Glenn SID IRQ
+        sta $3ff7                 ; scratch cleared; IRQs stayed enabled
         lda #$40
         sta $3ff7                 ; about to call Krill
         lda #0                    ; preserve original loader A input
@@ -505,28 +504,26 @@ mix10_zero_byte
         cmp #$10
         bne mix10_stage_bad
 
-        sei                   ; preserve pointers during fast 26-page bank copy
-        lda #$cc                   ; $53CC -> $5000
-        sta $fb
+        ; TEST35: use self-modifying absolute,Y accesses in place
+        ; of $FB-$FE indirect ZP, permitting the active SID IRQ to run.
+        ; $53CC + 26 pages -> $5000 + 26 pages.
         lda #$53
-        sta $fc
-        lda #$00
-        sta $fd
+        sta mix10_stage_cp_byte+2
         lda #$50
-        sta $fe
-        ldx #$1a                   ; 26 full pages, length <=6656
+        sta mix10_stage_store+2
+        ldx #$1a
 mix10_stage_cp_page
         ldy #0
 mix10_stage_cp_byte
-        lda ($fb),y
-        sta ($fd),y
+        lda $53cc,y
+mix10_stage_store
+        sta $5000,y
         iny
         bne mix10_stage_cp_byte
-        inc $fc
-        inc $fe
+        inc mix10_stage_cp_byte+2
+        inc mix10_stage_store+2
         dex
         bne mix10_stage_cp_page
-        cli
         lda #$60
         sta $3ff7                 ; PSID staging finished
         clc
@@ -592,6 +589,10 @@ mix10_cp_byte
         ; A/B/C counter disconnected from Glenn's directory.
         lda mix10_pending
         sta mix10_current
+        sta $3ff4                   ; TEST35: real currently playing song, not stale trace
+        lda #0
+        sta $3ff2                   ; reset old prefetch state for next 5-second cycle
+        lda mix10_current
         clc
         adc #1                     ; Glenn list includes SIDPLAY64MIX at index 0
         cmp #15
