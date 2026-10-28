@@ -1,7 +1,7 @@
 name: TEST38 normalize cover text, update filename on song change
 on:
   push:
-    branches: [test/test38-sync-psid-metadata]
+    branches: [test/test38-normalize-cover-and-file]
     paths:
       - '.github/workflows/test38-normalize-cover.yml'
       - 'sidplay64.tas'
@@ -114,4 +114,4 @@ jobs:
           cp build/test38/SIDPLAY64MIX_TEST38.D64 build/test38/SIDPLAY64MIX_TEST38_PROYECTO_COMPLETO.zip build/test38/REPORT.json build/test38/SIDPLAY64MIX.PRG TESTS/TEST38/
           git add TESTS/TEST38/
           git -c user.name='SIDPLAY64 native build bot' -c user.email='sidplay64-build@users.noreply.github.com' commit -m 'test38: build 1 Glenn+Krill PRG + 19 original SID (VICE pending)' || true
-          git push origin HEAD:test/test38-sync-psid-metadata
+          git push origin HEAD:test/test38-normalize-cover-and-file
