@@ -1,0 +1,70 @@
+name: TEST36 audit SID compatibility without modifying MASTER
+on:
+  push:
+    branches: [test/test36-generic-sid-auditor]
+    paths:
+      - '.github/workflows/test36-sid-audit.yml'
+      - 'tools/test36_sid_audit.py'
+      - 'TESTS/TEST36/PLAN_COMPATIBILIDAD.md'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Audit original TEST35 D64 (must classify all 19)
+        run: |
+          mkdir -p build/test36
+          python3 tools/test36_sid_audit.py TESTS/TEST35/SIDPLAY64MIX_TEST35.D64 --json build/test36/MASTER_19_SIDS_AUDIT.json > /dev/null
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path('build/test36/MASTER_19_SIDS_AUDIT.json').read_text())
+          assert r['count']==19, r['count']
+          assert r['categories']['TEST35_LAYOUT_CANDIDATE']==19, r['categories']
+          print('TEST36: Original 19 SID layout audit PASS')
+          PY
+      - name: Check alternate LOAD/INIT/PLAY, PSID v1 and RSID classification
+        run: |
+          python3 - <<'PY'
+          import importlib.util
+          from pathlib import Path
+          import json
+          p=Path('tools/test36_sid_audit.py')
+          spec=importlib.util.spec_from_file_location('sidcompat',p)
+          mod=importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(mod)
+          def sid(version=2,load=0,init=0x2000,play=0x2003,rsid=False):
+              off=0x76 if version==1 else 0x7c
+              h=bytearray(off)
+              h[:4]=b'RSID' if rsid else b'PSID'
+              for index,value in [(4,version),(6,off),(8,load),(10,init),(12,play),(14,1),(16,1)]:
+                  h[index:index+2]=value.to_bytes(2,'big')
+              body=(0x2000).to_bytes(2,'little')+bytes([0xea])*256 if load==0 else bytes([0xea])*256
+              return bytes(h)+body
+          checks=[
+              ('v1_header_address',sid(version=1,load=0x2000),'TEST37_DYNAMIC_ADDRESS_CANDIDATE'),
+              ('v2_embedded_load',sid(),'TEST37_DYNAMIC_ADDRESS_CANDIDATE'),
+              ('v2_self_irq',sid(play=0),'NEEDS_NEW_ENGINE'),
+              ('rsid_own_irq',sid(rsid=True,play=0),'NEEDS_NEW_ENGINE'),
+              ('invalid',b'ABCD','INVALID'),
+          ]
+          result={}
+          for name,data,expected in checks:
+              found=mod.audit(data,name)['status']
+              assert found==expected,(name,found,expected)
+              result[name]={'observed':found,'expected':expected,'pass':True}
+          Path('build/test36/SYNTHETIC_FORMAT_CHECKS.json').write_text(json.dumps(result,indent=2))
+          print('TEST36: 5 synthetic audit cases PASS')
+          PY
+      - name: Upload static reports (not a VICE PASS)
+        uses: actions/upload-artifact@v4
+        with:
+          name: TEST36-STATIC-SID-COMPATIBILITY
+          path: |
+            build/test36/MASTER_19_SIDS_AUDIT.json
+            build/test36/SYNTHETIC_FORMAT_CHECKS.json
+            TESTS/TEST36/PLAN_COMPATIBILIDAD.md
+            tools/test36_sid_audit.py
