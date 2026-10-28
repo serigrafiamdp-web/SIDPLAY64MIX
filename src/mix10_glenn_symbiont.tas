@@ -10,10 +10,9 @@
 ;
 ; $3000-$35FF: symbiont independent of Glenn's relocatable screen.
 ; $6000: Krill v184 installer, loaded AFTER Glenn has decompressed.
-; $8800-$89FF: backup resident, held while Glenn main starts at $9000.
-; $9000-$91FF: live Krill resident, copied after Glenn relocates off $9000.
-; TEST49: add LOAD $8000-$8FFF that ends below Krill live resident $9000;
-; protect pristine Krill resident image at $3C00 before first song load.
+; $8800-$89FF: rebased Krill resident copied at PREPARE to $3C00-$3DEE.
+; $9000-$9FFF: now available for music.
+; TEST50: relocate resident Krill to $3C00-$3DEE; reclaim $9000-$9FFF for music.
 ; Keep all TEST48/47/46 classes and original SID bytes.
 ; 1541 protocol remains ordinary DOS until first real SID is KERNAL-loaded.
 ;
@@ -96,11 +95,8 @@ mix10_prepare
         sta $3ffd
         sta $3ffe
         sta $3fff
-        ; TEST49: first selected original SID can span $8800-$89ff!
-        ; Secure 512-byte pristine Krill resident payload now, before
-        ; Glenn KERNAL-loads any SID into RAM.  $3c00-$3dff is reserved
-        ; and does not overlap the symbiont ($3000-$37ff), persistent
-        ; header ($3e00-$3e7b), or diagnostic counters ($3ff0-$3fff).
+        ; TEST50: Krill resident binary has been rebased to $3C00 at build time.
+        ; Copy before KERNAL loads any SID, so $8800 may be overwritten.
         ldx #0
 mix49_save_resident
         lda $8800,x
@@ -146,17 +142,11 @@ mix31_activate_first
         lda #$11
         sta $3ff1
 
+        ; TEST50: Krill is already active at $3C00 from PREPARE.
+        ; Never overwrite original SID music at $9000.
         sei
         lda #$36
         sta $01
-        ldx #0
-mix10_copy_resident
-        lda $3c00,x
-        sta $9000,x
-        lda $3d00,x
-        sta $9100,x
-        inx
-        bne mix10_copy_resident
         lda #8
         sta $ae
         sta $ba
@@ -494,7 +484,7 @@ mix10_zero_byte
         lda #0                    ; preserve original loader A input
         ldx #<mix10_filename
         ldy #>mix10_filename
-        jsr $9000                  ; foreground Krill, IRQ SID playback
+        jsr $3c00                  ; relocated Krill, IRQ SID playback
         php
         lda #$50
         sta $3ff7                 ; Krill returned
@@ -609,13 +599,12 @@ mix48_play_ok
 mix48_bad_basic
         jmp mix44_bad_header
 mix48_not_basic
-        ; TEST49: low bank $8000-$8FFF only, leaves live Krill at $9000
-        ; untouched.  Original LOAD can be byte-unaligned.  The lower
-        ; 4 KB of virtual 8KB staging is copied to real $8000.
+        ; TEST50: full $8000-$9FFF class, because active Krill moved
+        ; to $3C00. Music is original, LOAD may be byte-unaligned.
         lda $53cb
         cmp #$80
         bcc mix49_not_8000
-        cmp #$90
+        cmp #$a0
         bcs mix49_not_8000
         sta mix49_real_load_hi
         lda $53ca
@@ -623,12 +612,12 @@ mix48_not_basic
         lda $5358
         cmp mix49_real_load_hi
         bcc mix49_bad_8000
-        cmp #$90
+        cmp #$a0
         bcs mix49_bad_8000
         lda $535a
         cmp mix49_real_load_hi
         bcc mix49_bad_8000
-        cmp #$90
+        cmp #$a0
         bcs mix49_bad_8000
         lda $5358
         cmp mix49_real_load_hi
@@ -646,7 +635,7 @@ mix49_init_ok
 mix49_play_ok
         lda mix49_real_load_hi
         sec
-        sbc #$70                   ; virtual $80 -> $10, $8f -> $1f
+        sbc #$70                   ; virtual $80 -> $10, $9f -> $2f
         sta mix44_load_hi
         lda #0
         sta mix46_is_low
@@ -768,12 +757,8 @@ mix47_low_stage
         bcs mix10_stage_bad
         jsr mix45_shift_low
         bcs mix10_stage_bad
-        lda mix49_8000
-        beq mix47_stage_done
-        ; Krill lives in $9000-$91ff.  Reject any real nonzero
-        ; body bytes past $8fff instead of overwriting that loader.
-        jsr mix49_check_tail
-        bcs mix10_stage_bad
+        ; TEST50: $9000 is now free. Existing TEST44/45 overflow checks
+        ; enforce the full $8000-$9FFF 8KB destination.
 mix47_stage_done
         lda #$60
         sta $3ff7                 ; PSID staging finished
@@ -923,27 +908,7 @@ mix45_overflow
         rts
 
 mix45_load_lo        .byte 0
-; TEST49: only $8000-$8FFF available; zero tail in stage $6000-$6FFF.
-mix49_check_tail
-        lda #$60
-        sta mix49_tail_byte+2
-        ldx #$10
-mix49_tail_page
-        ldy #0
-mix49_tail_each
-mix49_tail_byte
-        lda $6000,y
-        bne mix49_tail_bad
-        iny
-        bne mix49_tail_each
-        inc mix49_tail_byte+2
-        dex
-        bne mix49_tail_page
-        clc
-        rts
-mix49_tail_bad
-        sec
-        rts
+; TEST50: full 8KB $8000-$9FFF, no 4KB tail scan.
 mix49_8000          .byte 0
 mix49_real_load_hi  .byte 0
 mix48_basic          .byte 0  ; 1= original LOAD $A000-$BFFF
@@ -1033,8 +998,8 @@ mix48_low_handoff
         lda mix49_8000
         beq mix49_low_handoff
         lda #$80
-        sta $fe                  ; original $8000-$8fff only
-        ldx #$10                 ; exactly 16 pages, Krill $9000 safe
+        sta $fe                  ; original $8000-$9FFF bank
+        ldx #$20                 ; 32 pages, Krill safe at $3C00
         jmp mix10_cp_page
 mix49_low_handoff
         lda #$10
