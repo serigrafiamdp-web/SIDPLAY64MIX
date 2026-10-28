@@ -1,0 +1,59 @@
+TEST43 ADAPTADOS LIMPIOS - no PASS de playback en VICE aun.
+
+FUENTE CANONICA DE PRUEBA (reemplaza la lista experimental de 72):
+- 72 archivos clasificados por SHA de archivo entero -> 44 musicas por identidad de CODIGO MUSICAL (payload + LOAD, INIT, PLAY).
+- Excluir definitivamente del grupo de adaptados las DOS copias de Cool Tune: 47_cool_tune.sid, 48_cool_tune.sid (usuario confirma corrupcion/cuelgue).
+- Resultado: 43 SID adaptados distintos, originales, sin modificar bytes.
+- Hay 12 duplicados de codigo musical adicionales en los 91 previos: 79 distintos.
+- Catalogo conjunto depurado: 79 + 43 = 122 temas distintos.
+- Conservar TEST41 PASS y TEST43 compilado; no alterar reproduccion.
+- No usar conteo por SHA del SID completo: cabeceras distintas pueden contener CODIGO MUSICAL IDENTICO.
+- Una sola numeracion inicial, 01..99 dos digitos; 100+ tres digitos; todo en minusculas, extension .sid.
+- Al regenerar D81 no introducir nuevamente cool tune ni ninguna copia del mismo contenido.
+- Manifest de imagen adaptados D81 SHA256: c919a0f3828b7d0cddfa991abfeabba2884b8eb7db1166e694130b841388bbbe
+- Manifest conjunto D81 SHA256: e9f3e6826b16bfa19a8f73477c95b25e8c367dfaa2e8b274d5414be54f9cfaa2
+
+43 archivos adaptados (nombres canonicos del disco nuevo):
+01_ikari_int.sid
+02_cant_stop.sid
+03_ikari_int.sid
+04_beastie_b.sid
+05_public_en.sid
+06_zoids.sid
+07_ii.sid
+08_twistin_8.sid
+09_chicken_s.sid
+10_rwe_intro.sid
+11_scorpion.sid
+12_kaos.sid
+13_one_man_a.sid
+14_ikari_int.sid
+15_strike_fo.sid
+16_flash_gor.sid
+17_unitrax_8.sid
+18_darkland.sid
+19_housemani.sid
+20_fantasy.sid
+21_boys_dont.sid
+22_bullet_tu.sid
+23_chilly_ba.sid
+24_cosmail_t.sid
+25_ahead_cra.sid
+26_game_musi.sid
+27_cat.sid
+28_final_syn.sid
+29_gr_hyster.sid
+30_r1d1.sid
+31_think_twi.sid
+32_traz.sid
+33_funkytown.sid
+34_nexion.sid
+35_spijkerho.sid
+36_crazy_sam.sid
+37_shadow_of.sid
+38_geoff_cap.sid
+39_rhaa_love.sid
+40_warhawk.sid
+41_fruchtbae.sid
+42_ghosts_n.sid
+43_cyberspa.sid
