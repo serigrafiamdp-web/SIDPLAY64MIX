@@ -445,6 +445,7 @@ mix10_trim_byte
 ; address from first two bytes 'P','S'. Remaining header goes at $5350.
 ; Off $7C and load-address WORD $1000 => music body at $53CC.
 ; TEST41: Stage 32 pages at $5000-$6FFF; accepts <=8192 bytes from LOAD=$1000.
+; TEST41 shipping build: publish 00PLAYER.PRG alongside original SID folder (no SID rewrites).
 ; Clear scratch $5300-$73FF BEFORE loading so tail zero padding is safe.
 mix10_stage_pending
         lda #$10
