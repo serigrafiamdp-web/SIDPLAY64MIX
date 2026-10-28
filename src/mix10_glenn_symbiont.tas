@@ -504,6 +504,10 @@ mix10_zero_byte
         cmp #$10
         bne mix10_stage_bad
 
+        ; TEST37: capture original 124-byte PSID header before the
+        ; following 26-page copy overwrites $5350-$53CB.
+        jsr mix37_capture_header
+
         ; TEST35: use self-modifying absolute,Y accesses in place
         ; of $FB-$FE indirect ZP, permitting the active SID IRQ to run.
         ; $53CC + 26 pages -> $5000 + 26 pages.
@@ -608,6 +612,9 @@ mix10_scroll_down
         lda #14
         sta pos_cursor
 mix10_display_synced
+        ; TEST37: refresh Glenn's cover and metadata from the staged PSID.
+        ; This runs at song transition, not during prefetch; no disk read.
+        jsr mix37_commit_metadata
         ; Krill's loader ZP must survive Glenn restartTune's CIA reset.
         ldx #21
 mix10_commit_loader_zp
@@ -625,6 +632,145 @@ mix10_no_ready
         ; Stage not ready. No drive access, no forced old-KERNAL LOAD.
         ; Return to Glenn UI and let service continue only if incomplete.
         jmp (wjp_fileselect)
+
+; TEST37 -- Original file bytes 00-7B are cached in RAM at $3E00.
+; Krill treats the leading "PS" as a PRG load word and begins placing
+; bytes at file offset +2 into $5350. Cache the header before copying
+; music bytes to $5000, which would overwrite the staging buffer.
+mix37_capture_header
+        lda #$50
+        sta mix37_header_cache
+        lda #$53
+        sta mix37_header_cache+1
+        ldx #0
+mix37_capture_loop
+        lda $5350,x
+        sta mix37_header_cache+2,x
+        inx
+        cpx #$7a
+        bne mix37_capture_loop
+        lda #$71
+        sta $3ffe                 ; header cached before music bank copy
+        rts
+
+; Refresh the same screen fields as doheaderstuff, but do NOT invoke
+; doheaderstuff: that routine also relocates code and stack-jumps.
+; Called with IRQs disabled at the safe change-song boundary.
+mix37_commit_metadata
+        ; Static Glenn INIT / PLAY vectors (big endian source fields).
+        lda mix37_header_cache+$0b
+        sta initMus+1
+        lda mix37_header_cache+$0a
+        sta initMus+2
+        lda mix37_header_cache+$0d
+        sta playMus+1
+        lda mix37_header_cache+$0c
+        sta playMus+2
+
+        ; Glenn's subtune list and speed flags belong to new PSID.
+        lda mix37_header_cache+$0f
+        sec
+        sbc #1
+        sta maxtune
+        lda mix37_header_cache+$11
+        sec
+        sbc #1
+        sta tune
+        ldx #3
+mix37_speed_copy
+        lda mix37_header_cache+$12,x
+        sta speedtimer,x
+        dex
+        bpl mix37_speed_copy
+
+        lda mix37_header_cache+$77
+        and #$0c
+        lsr
+        lsr
+        sta tunesystem
+
+        ; UI strings and printhexnum live at $D000 in RAM under IO.
+        ; Bank all RAM only during this short, transition-time paint.
+        lda $01
+        pha
+        lda #$34
+        sta $01
+        lda #$80                  ; title base at $0480 / $C480
+        sta gzp
+        lda screenpos
+        sta gzp+1
+        ldy #30
+mix37_title_loop
+        lda mix37_header_cache+$16,y
+        sta (gzp),y
+        dey
+        bpl mix37_title_loop
+
+        ldx #30
+        ldy #70
+mix37_author_loop
+        lda mix37_header_cache+$36,x
+        sta (gzp),y
+        dey
+        dex
+        bpl mix37_author_loop
+
+        ldx #30
+        ldy #110
+mix37_release_loop
+        lda mix37_header_cache+$56,x
+        sta (gzp),y
+        dey
+        dex
+        bpl mix37_release_loop
+
+        ; SID 6581 / 8580 model label from the original Glenn table.
+        lda mix37_header_cache+$77
+        and #$30
+        lsr
+        lsr
+        tax
+        ldy #160
+mix37_chip_loop
+        lda chiptype,x
+        sta (gzp),y
+        inx
+        iny
+        cpy #164
+        bne mix37_chip_loop
+
+        ; PAL / NTSC label from the original Glenn table.
+        lda mix37_header_cache+$77
+        and #$0c
+        tax
+        ldy #200
+mix37_system_loop
+        lda system,x
+        sta (gzp),y
+        inx
+        iny
+        cpy #204
+        bne mix37_system_loop
+
+        ; INIT / PLAY address numbers, same coordinates as Glenn's
+        ; original doheaderstuff routine.
+        ldy #243
+        lda mix37_header_cache+$0b
+        jsr printhexnum
+        lda mix37_header_cache+$0a
+        jsr printhexnum
+        inc gzp+1
+        ldy #27
+        lda mix37_header_cache+$0d
+        jsr printhexnum
+        lda mix37_header_cache+$0c
+        jsr printhexnum
+
+        pla
+        sta $01                   ; leave C64 memory mapping intact
+        lda #$72
+        sta $3fff                 ; new song metadata rendered
+        rts
 
 mix10_insta      .byte $49,$4e,$53,$54,$41
 mix10_insta_end
