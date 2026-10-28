@@ -1,7 +1,7 @@
 name: TEST52V2 sequential NEXT on long playlists (SD2IEC/VICE)
 on:
   push:
-    branches: [test/test52v2v2-preserve-installer-tail]
+    branches: [test/test52v2-preserve-installer-tail]
     paths:
       - '.github/workflows/test52v2-installer-tail.yml'
       - 'sidplay64.tas'
@@ -192,4 +192,4 @@ jobs:
           cp build/test52v2/sidplay64mix.prg TESTS/TEST52V2/00player.prg
           git add TESTS/TEST52V2/
           git -c user.name='SIDPLAY64 native build bot' -c user.email='sidplay64-build@users.noreply.github.com' commit -m 'test52v2: SD2IEC 00player.prg dynamic SID list, static checks only' || true
-          git push origin HEAD:test/test52v2v2-preserve-installer-tail
+          git push origin HEAD:test/test52v2-preserve-installer-tail
