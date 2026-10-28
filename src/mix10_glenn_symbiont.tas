@@ -12,8 +12,8 @@
 ; $6000: Krill v184 installer, loaded AFTER Glenn has decompressed.
 ; $8800-$89FF: backup resident, held while Glenn main starts at $9000.
 ; $9000-$91FF: live Krill resident, copied after Glenn relocates off $9000.
-; TEST44: staging $5000-$6FFF, LOAD $1000 or page-aligned $1100-$1F00,
-; dynamic original INIT/PLAY inside the independent $1000-$2FFF music bank.
+; TEST45: staging $5000-$6FFF, exact arbitrary LOAD $1000-$1FFF,
+; original INIT/PLAY inside $1000-$2FFF; byte-accurate bank shift.
 ; 1541 protocol remains ordinary DOS until first real SID is KERNAL-loaded.
 ;
 mix10_staged       .byte 0       ; DOS loads of Krill files complete
@@ -505,8 +505,8 @@ mix44_krill_ok
         lda $5356                  ; big endian load address $0000
         ora $5357
         bne mix44_bad_header
-        ; TEST44: accept page-aligned original embedded LOAD address
-        ; in $1000..$1F00.  The staged 8KB image is aligned to $1000
+        ; TEST45: accept byte-accurate original embedded LOAD address
+        ; in $1000..$1FFF.  The staged 8KB image is aligned to $1000
         ; before committing and still copied unchanged at playback.
         ; Original PSID INIT/PLAY are restored by mix37_commit_metadata.
         ; Reject self-IRQ PLAY=0 or vectors outside bank $1000-$2FFF.
@@ -520,15 +520,15 @@ mix44_krill_ok
         bcc mix44_bad_header
         cmp #$30
         bcs mix44_bad_header
-        lda $53ca                  ; TEST44: page-aligned embedded LOAD low byte
-        bne mix44_bad_header
+        lda $53ca                  ; TEST45: preserve any original LOAD low byte
+        sta mix45_load_lo
         lda $53cb                  ; high byte $10..$1f inclusive
         cmp #$10
         bcc mix44_bad_header
         cmp #$20
         bcs mix44_bad_header
         sta mix44_load_hi          ; record before copy overwrites PSID header
-        ; No INIT/PLAY may point before the declared LOAD page.
+        ; Keep INIT/PLAY from falling below the declared LOAD page.
         lda $5358
         cmp mix44_load_hi
         bcc mix44_bad_header
@@ -568,6 +568,9 @@ mix10_stage_store
         ; PSID bytes on disk.  Tail check rejects files that would
         ; overwrite resident symbiont RAM at $3000 and above.
         jsr mix44_align_staging
+        bcs mix10_stage_bad
+        ; TEST45 fine shift by LOAD low byte, keeping IRQ/music alive.
+        jsr mix45_shift_low
         bcs mix10_stage_bad
         lda #$60
         sta $3ff7                 ; PSID staging finished
@@ -659,6 +662,64 @@ mix44_clear_byte
 mix44_load_hi       .byte $10
 mix44_offset_pages  .byte 0
 mix44_copy_pages    .byte 0
+
+; TEST45: finish relocation of the STAGED bank by the low byte of
+; the original LOAD address.  TEST44 has already shifted whole pages.
+; Verify that no nonzero bytes would fall above music range $2FFF.
+; Copy backwards with absolute indexed addressing while music IRQs run;
+; avoid any $FB-$FE / Krill zero-page changes during the stage.
+mix45_shift_low
+        lda mix45_load_lo
+        bne mix45_needed
+        clc                        ; page-aligned music: exactly TEST44
+        rts
+mix45_needed
+        lda #0
+        sec
+        sbc mix45_load_lo
+        tay                        ; first byte of the final LOAD-low tail
+mix45_tail_check
+        lda $6f00,y
+        bne mix45_overflow
+        iny
+        bne mix45_tail_check
+
+        lda #$6f
+        sta mix45_read_byte+2
+        sta mix45_write_byte+2
+        lda mix45_load_lo
+        sta mix45_write_byte+1
+        ldx #$20                   ; 32 pages, last to first
+mix45_shift_page
+        ldy #$ff
+mix45_shift_each
+mix45_read_byte
+        lda $6f00,y
+mix45_write_byte
+        sta $6f00,y
+        dey
+        cpy #$ff
+        bne mix45_shift_each
+        dec mix45_read_byte+2
+        dec mix45_write_byte+2
+        dex
+        bne mix45_shift_page
+
+        ldy #0
+        ldx mix45_load_lo
+        lda #0
+mix45_clear_prefix
+        sta $5000,y
+        iny
+        dex
+        bne mix45_clear_prefix
+        clc
+        rts
+mix45_overflow
+        sec
+        rts
+
+mix45_load_lo        .byte 0
 
 ; Called before Glenn clears $0C-$FF at playlist auto-advance.
 mix10_before_plt_advance
