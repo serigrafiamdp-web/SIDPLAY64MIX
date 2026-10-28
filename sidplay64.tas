@@ -320,10 +320,10 @@ endstacker
 
 
 .if DEF_MIX10
-; TEST45: reserved symbiont overlay $3000-$37ff, away from $3e00 metadata.
+; TEST49: symbiont overlay $3000-$3bff, away from protected resident $3c00 and header $3e00.
         * = $3000
 .include src/mix10_glenn_symbiont.tas
-.cerror *>$3800,"TEST45 symbiont must fit in $3000-$37ff"
+.cerror *>$3c00,"TEST49 symbiont must fit in $3000-$3bff; $3c00-$3dff reserved for Krill backup"
         ; TEST37: persistent 124-byte PSID header while queued music
         ; overwrites staging RAM $5350 during bank copy. Kept below
         ; $3FF0-$3FFF diagnostics, outside SID body and Krill scratch.
