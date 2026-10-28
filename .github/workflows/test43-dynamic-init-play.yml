@@ -52,13 +52,13 @@ jobs:
       - name: Assemble real Glenn+Krill into one C64 executable
         run: |
           mkdir -p build/test43
-          64tass --m6502 -D defset=4 -D DEF_SIDFX=0 -D DEF_REU=0 -D DEF_MIX03=0 -D DEF_MIX10=1 -a sidplay64.tas -o build/test43/SIDPLAY64MIX.O64 -l build/test43/SIDPLAY64MIX.labels
-          /tmp/pucrunch-src/pucrunch '-x$9000' build/test43/SIDPLAY64MIX.O64 build/test43/SIDPLAY64MIX.PRG
+          64tass --m6502 -D defset=4 -D DEF_SIDFX=0 -D DEF_REU=0 -D DEF_MIX03=0 -D DEF_MIX10=1 -a sidplay64.tas -o build/test43/sidplay64mix.o64 -l build/test43/SIDPLAY64MIX.labels
+          /tmp/pucrunch-src/pucrunch '-x$9000' build/test43/sidplay64mix.o64 build/test43/sidplay64mix.prg
       - name: "Regression: sequential NEXT for all positions in 1..162 SID lists"
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          prg=Path('build/test43/SIDPLAY64MIX.PRG').read_bytes()
+          prg=Path('build/test43/sidplay64mix.prg').read_bytes()
           assert prg[:2]==b'\x01\x08', 'Not a valid packed BASIC C64 PRG'
           source=Path('src/mix10_glenn_symbiont.tas').read_text()
           assert 'cmp mix40_sid_count' in source
@@ -87,16 +87,16 @@ jobs:
                   assert current==selected
           print('TEST43 NEXT: PASS across every position for 1,2,19,20,21,39,47,60,61,72,162 SID')
           PY
-          mkdir -p build/test43/SD2IEC_FOLDER
-          cp build/test43/SIDPLAY64MIX.PRG build/test43/SD2IEC_FOLDER/00PLAYER.PRG
-          (cd build/test43/SD2IEC_FOLDER && zip -q ../TEST43_LAUNCHER_SD2IEC.zip 00PLAYER.PRG)
+          mkdir -p build/test43/sd2iec_folder
+          cp build/test43/sidplay64mix.prg build/test43/sd2iec_folder/00player.prg
+          (cd build/test43/sd2iec_folder && zip -q ../test43_launcher.zip 00player.prg)
       - name: Include complete ASM source and resources, no Windows EXE in ZIP
         run: |
-          mkdir -p build/test43/PROJECT/src build/test43/PROJECT/bin build/test43/PROJECT/assets
+          mkdir -p build/test43/project/src build/test43/project/bin build/test43/project/assets
           python3 - <<'PY'
           from pathlib import Path
           import shutil
-          root=Path('build/test43/PROJECT')
+          root=Path('build/test43/project')
           for pat in ['src/**/*.tas','bin/*.o64']:
               for f in Path('.').glob(pat):
                   dest=root/f
@@ -109,35 +109,35 @@ jobs:
           assert not list(root.rglob('*.exe'))
           print('Included ASM sources',len(list(root.rglob('*.tas'))))
           PY
-          cp build/test43/SIDPLAY64MIX.PRG build/test43/SIDPLAY64MIX.labels build/test43/PROJECT/
-          cat > build/test43/PROJECT/LEEME.txt <<'EOF'
+          cp build/test43/sidplay64mix.prg build/test43/SIDPLAY64MIX.labels build/test43/project/
+          cat > build/test43/project/LEEME.txt <<'EOF'
           TEST43 LONG PLAYLIST NEXT from TEST38 PASS / TEST39.
           Correct NEXT dynamic modulo maxfile-1; supports up to 162 SID.
           Source and static 64tass build only; VICE and SD2IEC physical test required.
           Compiled Glenn defset=4, 1 launcher PRG + up to 162 SID in same folder.
-          Put ONLY 00PLAYER.PRG and numbered .SID files (max 16-char names) in
+          Put ONLY 00player.prg and numbered .SID files (max 16-char names) in
           one newly created SD2IEC folder. No README/ZIP/D64 mixed in.
-          LOAD"00PLAYER.PRG",8,1
+          LOAD"00player.prg",8,1
           RUN
           $3ffa = directory entries including launcher.
           Krill SD2IEC compatibility is hardware/firmware dependent.
           No success can be claimed until testing on real SD2IEC.
           MASTER TEST35, TEST38, TEST40 and TEST41 frozen; no SID files modified.
           EOF
-          (cd build/test43/PROJECT && zip -qr ../SIDPLAY64MIX_TEST43_PROYECTO_COMPLETO.zip .)
+          (cd build/test43/project && zip -qr ../test43_proyecto_completo.zip .)
       - name: Archive TEST43 for testing (not a PASS)
         uses: actions/upload-artifact@v4
         with:
           name: SIDPLAY64MIX_TEST43_SD2IEC_STATIC_ONLY
           path: |
-            build/test43/TEST43_LAUNCHER_SD2IEC.zip
-            build/test43/SIDPLAY64MIX_TEST43_PROYECTO_COMPLETO.zip
+            build/test43/test43_launcher.zip
+            build/test43/test43_proyecto_completo.zip
           if-no-files-found: error
       - name: Publish test binaries to experimental branch (never master)
         run: |
           mkdir -p TESTS/TEST43
-          cp build/test43/SIDPLAY64MIX_TEST43_PROYECTO_COMPLETO.zip build/test43/TEST43_LAUNCHER_SD2IEC.zip build/test43/SIDPLAY64MIX.PRG build/test43/SIDPLAY64MIX.labels TESTS/TEST43/
-          cp build/test43/SIDPLAY64MIX.PRG TESTS/TEST43/00PLAYER.PRG
-          git add TESTS/TEST43/
-          git -c user.name='SIDPLAY64 native build bot' -c user.email='sidplay64-build@users.noreply.github.com' commit -m 'test43: SD2IEC 00PLAYER.PRG dynamic SID list, static checks only' || true
+          cp build/test43/test43_proyecto_completo.zip build/test43/test43_launcher.zip build/test43/sidplay64mix.prg build/test43/SIDPLAY64MIX.labels tests/test43/
+          cp build/test43/sidplay64mix.prg tests/test43/00player.prg
+          git add tests/test43/
+          git -c user.name='SIDPLAY64 native build bot' -c user.email='sidplay64-build@users.noreply.github.com' commit -m 'test43: SD2IEC 00player.prg dynamic SID list, static checks only' || true
           git push origin HEAD:test/test43-dynamic-init-play
