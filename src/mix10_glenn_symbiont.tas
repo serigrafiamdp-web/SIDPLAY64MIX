@@ -315,20 +315,20 @@ mix10_service
         bcc mix10_service_done
         lda #$03
         sta $3ff2                  ; five-second path reached
+        ; TEST39: maxfile includes entry 0 (launcher).
+        ; Next music index is current+1, unless current+2 == maxfile.
         lda mix10_current
         clc
         adc #1
-        ; TEST39 SD2IEC: maxfile includes the launcher at index 0.
-        ; Number of playable SID files = maxfile-1. Current is 0-based.
-        ; Wrap when current+1 >= playable count.
-        ; Compare current+2 against maxfile without subtracting ZP.
+        tax
         clc
         adc #1
         cmp maxfile
         bcc mix10_service_target_ok
-        lda #0
+        ldx #0
 mix10_service_target_ok
-        sta mix10_pending
+        stx mix10_pending
+        txa
         sta $3ff5                  ; song being prefetched
         jsr mix10_stage_pending
         bcs mix10_service_failed
