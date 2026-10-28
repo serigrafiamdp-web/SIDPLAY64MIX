@@ -378,7 +378,16 @@ mix10_manual_exit
 ; Directory: index 0 SIDPLAY64MIX; entries 1..19 are original SIDs.
 ; Bounded 16 chars, preserve embedded spaces, strip trailing padding.
 mix10_make_filename
-        sei                   ; dir pointer $FB/$FC must survive IRQ while reading
+        ; TEST34: code for getpos and the directory both live in RAM
+        ; under $D000 I/O. Bank before calling getpos, not afterwards.
+        php                        ; preserve caller IRQ state
+        sei
+        lda $01
+        pha
+        lda #$34                   ; all RAM, including $D000-$DFFF
+        sta $01
+        lda #$21
+        sta $3ff7                  ; banked RAM selected, getpos next
         lda mix10_pending
         clc
         adc #1
@@ -386,19 +395,19 @@ mix10_make_filename
         jsr getpos
         sta $fc
         sty $fb
-        lda $01
-        pha
-        lda #$34
-        sta $01
+        lda #$22
+        sta $3ff7                  ; getpos returned correct pointer
         ldy #15
 mix10_cp_name
         lda ($fb),y
         sta mix10_filename,y
         dey
         bpl mix10_cp_name
+        lda #$23
+        sta $3ff7                  ; name copied from directory RAM
         pla
-        sta $01
-        cli
+        sta $01                    ; restore original C64 memory mapping
+        plp                        ; restore caller interrupt flag
         ldx #15
 mix10_trim_name
         lda mix10_filename,x
