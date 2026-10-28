@@ -324,6 +324,14 @@ endstacker
         * = $3000
 .include src/mix10_glenn_symbiont.tas
 .cerror *>$3600,"TEST10 symbiont must fit in $3000-$35ff"
+        ; TEST37: persistent 124-byte PSID header while queued music
+        ; overwrites staging RAM $5350 during bank copy. Kept below
+        ; $3FF0-$3FFF diagnostics, outside SID body and Krill scratch.
+        * = $3e00
+mix37_header_cache
+        .fill $7c,0
+        .cerror *>$3e80,"TEST37 header cache crossed reserved memory"
+
         ; TEST27: immutable Krill setup payloads embedded inside the
         ; SINGLE C64 PRG. Their memory is temporary: installer $6000,
         ; resident backup $8800 -> live $9000 after Glenn relocates.
