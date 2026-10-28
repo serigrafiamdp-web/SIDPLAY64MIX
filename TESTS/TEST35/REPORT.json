@@ -1,0 +1,13 @@
+{
+  "test": "TEST35",
+  "status": "STATIC PASS ONLY; VICE UNTESTED",
+  "experiment": "Original TEST19 SID physical sectors unchanged; changed only program and directory/BAM",
+  "prg_bytes": 12200,
+  "new_prg_blocks": 49,
+  "sid_count": 19,
+  "files_total": 20,
+  "all_19_sid_chains_byte_identical_to_TEST19": true,
+  "unchanged_disk_id": true,
+  "master_sha256": "b247f58ce9d3df87025d0f09ca145998bffe31e8f9e520c5c29dcfc238d66cc5",
+  "d64_sha256": "994e59747e497c7adf2e0b22851a7ddc7ced1e5b55f6998b311ac9e13ac5e040"
+}
