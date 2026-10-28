@@ -136,8 +136,8 @@ jobs:
       - name: Publish test binaries to experimental branch (never master)
         run: |
           mkdir -p TESTS/TEST43
-          cp build/test43/test43_proyecto_completo.zip build/test43/test43_launcher.zip build/test43/sidplay64mix.prg build/test43/SIDPLAY64MIX.labels tests/test43/
-          cp build/test43/sidplay64mix.prg tests/test43/00player.prg
-          git add tests/test43/
+          cp build/test43/test43_proyecto_completo.zip build/test43/test43_launcher.zip build/test43/sidplay64mix.prg build/test43/SIDPLAY64MIX.labels TESTS/TEST43/
+          cp build/test43/sidplay64mix.prg TESTS/TEST43/00player.prg
+          git add TESTS/TEST43/
           git -c user.name='SIDPLAY64 native build bot' -c user.email='sidplay64-build@users.noreply.github.com' commit -m 'test43: SD2IEC 00player.prg dynamic SID list, static checks only' || true
           git push origin HEAD:test/test43-dynamic-init-play
