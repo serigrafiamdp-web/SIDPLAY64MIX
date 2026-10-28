@@ -35,6 +35,6 @@ El Krill v184 que usamos en TEST49 ejecuta código residente en $9000–$91EE. C
 3. Probar `squamp.sid` (LOAD/INIT exactos $9000) y `galencia.sid`.
 4. Si se cuelga: registrar qué pista y si falla al iniciar, a los cinco segundos, o al pasar a siguiente.
 
-Hay **16 candidatos adicionales identificados en ALTA** que cumplen una clase de LOAD $8000–$9FFF con final <$A000, pero **no se incorporan** hasta comprobar el núcleo.
+Hay **16 candidatos identificados en ALTA** que cumplen la clase LOAD $8000–$9FFF con final <$A000: cuatro integrados en este D81 y **12 pendientes** para una segunda tanda. No se integran los doce hasta comprobar el núcleo.
 
 **NO declarar TEST50 PASS ni modificar MASTER49** sin el resultado del usuario.
