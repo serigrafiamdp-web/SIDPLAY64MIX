@@ -1,7 +1,7 @@
 name: TEST34 bank-in directory RAM before getpos in prefetch
 on:
   push:
-    branches: [test/test34-trace-stage-then-open]
+    branches: [test/test34-fix-banked-directory-name]
     paths:
       - '.github/workflows/test34-banked-directory-fix.yml'
       - 'sidplay64.tas'
@@ -114,4 +114,4 @@ jobs:
           cp build/test34/SIDPLAY64MIX_TEST34.D64 build/test34/SIDPLAY64MIX_TEST34_PROYECTO_COMPLETO.zip build/test34/REPORT.json TESTS/TEST34/
           git add TESTS/TEST34/
           git -c user.name='SIDPLAY64 native build bot' -c user.email='sidplay64-build@users.noreply.github.com' commit -m 'test34: build 1 Glenn+Krill PRG + 19 original SID (VICE pending)' || true
-          git push origin HEAD:test/test34-trace-stage-then-open
+          git push origin HEAD:test/test34-fix-banked-directory-name
