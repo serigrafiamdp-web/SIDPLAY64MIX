@@ -131,6 +131,7 @@ jobs:
         run: |
           mkdir -p TESTS/TEST41
           cp build/test41/SIDPLAY64MIX_TEST41_PROYECTO_COMPLETO.zip build/test41/TEST41_LAUNCHER_SD2IEC.zip build/test41/SIDPLAY64MIX.PRG build/test41/SIDPLAY64MIX.labels TESTS/TEST41/
+          cp build/test41/SIDPLAY64MIX.PRG TESTS/TEST41/00PLAYER.PRG
           git add TESTS/TEST41/
           git -c user.name='SIDPLAY64 native build bot' -c user.email='sidplay64-build@users.noreply.github.com' commit -m 'test41: SD2IEC 00PLAYER.PRG dynamic SID list, static checks only' || true
           git push origin HEAD:test/test41-expand-8k-bank
