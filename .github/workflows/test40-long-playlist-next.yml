@@ -54,7 +54,7 @@ jobs:
           mkdir -p build/test40
           64tass --m6502 -D defset=4 -D DEF_SIDFX=0 -D DEF_REU=0 -D DEF_MIX03=0 -D DEF_MIX10=1 -a sidplay64.tas -o build/test40/SIDPLAY64MIX.O64 -l build/test40/SIDPLAY64MIX.labels
           /tmp/pucrunch-src/pucrunch '-x$9000' build/test40/SIDPLAY64MIX.O64 build/test40/SIDPLAY64MIX.PRG
-      - name: Regression: sequential NEXT for all positions in 1..162 SID lists
+      - name: "Regression: sequential NEXT for all positions in 1..162 SID lists"
         run: |
           python3 - <<'PY'
           from pathlib import Path
