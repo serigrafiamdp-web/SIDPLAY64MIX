@@ -28,6 +28,12 @@ mix31_scan_idx     .byte 0  ; filename match index
 mix10_loader_zp    .fill 22,0
 mix10_music_zp     .fill 22,0
 mix40_sid_count    .byte 0      ; dynamic number of playable entries (maxfile-1)
+; TEST52 V2: first-load Hawkeye starts $7AE0, overwriting 6 final
+; bytes of Krill v184 installer ($6000-$7AE5). Protect them during
+; KERNAL load, swap back only while installer executes, then restore
+; exact SID bytes before its first INIT. No SID bytes modified on disk.
+mix52_inst_suffix   .fill 6,0
+mix52_song_suffix   .fill 6,0
 
 ; All driver hooks reuse existing 3-byte JSR/JMP footprints to respect
 ; Glenn's strict relocator boundary ($CF84).
@@ -106,6 +112,13 @@ mix49_save_resident
         sta $3d00,x
         inx
         bne mix49_save_resident
+        ; Save original installer tail BEFORE KERNAL loads first tune.
+        ldx #5
+mix52_keep_inst_tail
+        lda $7ae0,x
+        sta mix52_inst_suffix,x
+        dex
+        bpl mix52_keep_inst_tail
         rts
 
 ; Called from Glenn original load code AFTER SID header and body
@@ -151,7 +164,26 @@ mix31_activate_first
         lda #8
         sta $ae
         sta $ba
+        ; TEST52 V2: stash original SID code under installer tail.
+        ; Restore original Krill version bytes during installer call;
+        ; restore SID exactly after installer returns, preserving C.
+        ldx #5
+mix52_swap_inst
+        lda $7ae0,x
+        sta mix52_song_suffix,x
+        lda mix52_inst_suffix,x
+        sta $7ae0,x
+        dex
+        bpl mix52_swap_inst
         jsr $6000
+        php
+        ldx #5
+mix52_restore_song
+        lda mix52_song_suffix,x
+        sta $7ae0,x
+        dex
+        bpl mix52_restore_song
+        plp
         bcs mix10_activate_failed
         lda #$12
         sta $3ff1
