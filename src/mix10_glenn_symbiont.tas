@@ -491,18 +491,18 @@ mix10_zero_byte
         ; PSID bytes [2]='I',[3]='D' land at 5350/5351.
         lda $5350
         cmp #$49
-        bne mix10_stage_bad
+        bne mix44_bad_header
         lda $5351
         cmp #$44
-        bne mix10_stage_bad
+        bne mix44_bad_header
         lda $5354                  ; big endian data offset $007C
-        bne mix10_stage_bad
+        bne mix44_bad_header
         lda $5355
         cmp #$7c
-        bne mix10_stage_bad
+        bne mix44_bad_header
         lda $5356                  ; big endian load address $0000
         ora $5357
-        bne mix10_stage_bad
+        bne mix44_bad_header
         ; TEST44: accept page-aligned original embedded LOAD address
         ; in $1000..$1F00.  The staged 8KB image is aligned to $1000
         ; before committing and still copied unchanged at playback.
@@ -510,30 +510,34 @@ mix10_zero_byte
         ; Reject self-IRQ PLAY=0 or vectors outside bank $1000-$2FFF.
         lda $5358                  ; big-endian INIT high byte
         cmp #$10
-        bcc mix10_stage_bad
+        bcc mix44_bad_header
         cmp #$30
-        bcs mix10_stage_bad
+        bcs mix44_bad_header
         lda $535a                  ; big-endian PLAY high byte
         cmp #$10
-        bcc mix10_stage_bad
+        bcc mix44_bad_header
         cmp #$30
-        bcs mix10_stage_bad
+        bcs mix44_bad_header
         lda $53ca                  ; TEST44: page-aligned embedded LOAD low byte
-        bne mix10_stage_bad
+        bne mix44_bad_header
         lda $53cb                  ; high byte $10..$1f inclusive
         cmp #$10
-        bcc mix10_stage_bad
+        bcc mix44_bad_header
         cmp #$20
-        bcs mix10_stage_bad
+        bcs mix44_bad_header
         sta mix44_load_hi          ; record before copy overwrites PSID header
         ; No INIT/PLAY may point before the declared LOAD page.
         lda $5358
         cmp mix44_load_hi
-        bcc mix10_stage_bad
+        bcc mix44_bad_header
         lda $535a
         cmp mix44_load_hi
-        bcc mix10_stage_bad
+        bcc mix44_bad_header
 
+        jmp mix44_header_ok
+mix44_bad_header
+        jmp mix10_stage_bad
+mix44_header_ok
         ; TEST37: capture original 124-byte PSID header before the
         ; following 26-page copy overwrites $5350-$53CB.
         jsr mix37_capture_header
