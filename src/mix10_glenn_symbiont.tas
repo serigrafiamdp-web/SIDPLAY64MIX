@@ -1,6 +1,7 @@
 ; TEST13 -- generic 19 PSID disk prefetch via Krill raw PSID loader.
 ; Original Glenn GUI, CIA TOD 00:05 prefetch, manual RETURN via Krill.
-; TEST43: original PSID v2, LOAD $1000, dynamic INIT/PLAY $1000-$2FFF; stage <=8192 bytes.
+; TEST52: independent 9KB stage for unmodified PSIDs with LOAD $7A00-$7FFF;
+; keep old 8KB bank, Krill $3C00, header and 199 previously tested SID.
 ; Input PSID first bytes 'PS' encode Krill load target $5350.
 ; Raw bytes 2+ appear at $5350; SID body begins $53CC.
 ; Keep TEST11 3 tunes VICE PASS frozen independently.
@@ -460,12 +461,13 @@ mix10_stage_pending
         sta $3ff7                 ; filename returned
         lda #7
         sta $d020
-        ; TEST41: no long SEI section here. 33 x 256 bytes cleared
+        ; TEST52: no long SEI section here. 37 x 256 bytes cleared
         ; with absolute indexed addressing, which uses NO zero-page
         ; pointers that SID IRQs might overwrite. Do not stop music.
+        ; Scratch $5300-$77FF is below supported new tune LOAD $7A00.
         lda #$53
         sta mix10_zero_byte+2     ; reset self-modifying STA $5300,Y
-        ldx #33
+        ldx #37
 mix10_zero_page
         ldy #0
         lda #0
@@ -514,6 +516,7 @@ mix46_early_bad
         jmp mix44_bad_header
 mix46_early_ok
         lda #0
+        sta mix52_long
         sta mix49_8000
         sta mix48_basic
         ; TEST47: music in RAM under KERNAL ROM, but never over the
@@ -548,6 +551,48 @@ mix46_early_ok
 mix47_bad_high
         jmp mix44_bad_header
 mix47_not_e000
+        ; TEST52: long original SID class, LOAD in $7A00-$7FFF
+        ; and INIT/PLAY below $A000 (never Glenn main or resident).
+        ; Raw PSID payload is staged $4000-$63FF (9KB), then copied
+        ; unshifted to the exact original LOAD at NEXT.
+        lda $53cb
+        cmp #$7a
+        bcc mix52_not_long
+        cmp #$80
+        bcs mix52_not_long
+        sta mix52_load_hi
+        lda $53ca
+        sta mix52_load_lo
+        lda $5358
+        cmp mix52_load_hi
+        bcc mix52_bad_long
+        cmp #$a0
+        bcs mix52_bad_long
+        lda $535a
+        cmp mix52_load_hi
+        bcc mix52_bad_long
+        cmp #$a0
+        bcs mix52_bad_long
+        lda $5358
+        cmp mix52_load_hi
+        bne mix52_init_ok
+        lda $5359
+        cmp mix52_load_lo
+        bcc mix52_bad_long
+mix52_init_ok
+        lda $535a
+        cmp mix52_load_hi
+        bne mix52_play_ok
+        lda $535b
+        cmp mix52_load_lo
+        bcc mix52_bad_long
+mix52_play_ok
+        lda #1
+        sta mix52_long
+        jmp mix44_header_ok
+mix52_bad_long
+        jmp mix44_bad_header
+mix52_not_long
         ; TEST48: new independent class, original PSID embedded LOAD
         ; anywhere in $A000-$BFFF (including offset within a page).
         ; Existing TEST44/45 staged-bank shift supports this unchanged
@@ -711,6 +756,36 @@ mix44_header_ok
         ; TEST37: capture original 124-byte PSID header before the
         ; following 26-page copy overwrites $5350-$53CB.
         jsr mix37_capture_header
+        lda mix52_long
+        beq mix52_regular_stage
+        ; TEST52: copy 36 pages source $53CC..$77CB into stage
+        ; $4000..$63FF.  Destination stays BELOW source, so forward
+        ; copy is safe even with the source/destination overlapping.
+        ; Source tail was zeroed at $5300-$77FF before Krill load.
+        lda #$cc
+        sta mix52_source+1
+        lda #$53
+        sta mix52_source+2
+        lda #$40
+        sta mix52_store+2
+        ldx #$24
+mix52_copy_page
+        ldy #0
+mix52_source
+        lda $53cc,y
+mix52_store
+        sta $4000,y
+        iny
+        bne mix52_source
+        inc mix52_source+2
+        inc mix52_store+2
+        dex
+        bne mix52_copy_page
+        lda #$62
+        sta $3ff7
+        clc
+        rts
+mix52_regular_stage
 
         ; TEST35: use self-modifying absolute,Y accesses in place
         ; of $FB-$FE indirect ZP, permitting the active SID IRQ to run.
@@ -908,6 +983,9 @@ mix45_overflow
         rts
 
 mix45_load_lo        .byte 0
+mix52_long           .byte 0  ; 1: 9KB load to real $7A00-$7FFF
+mix52_load_lo        .byte 0
+mix52_load_hi        .byte 0
 ; TEST50: full 8KB $8000-$9FFF, no 4KB tail scan.
 mix49_8000          .byte 0
 mix49_real_load_hi  .byte 0
@@ -977,6 +1055,18 @@ mix46_ready_now
         sta $fd                  ; destination offset 0 (either $1000 or $E000)
         lda #$50
         sta $fc
+        lda mix52_long
+        beq mix52_regular_handoff
+        ; TEST52 direct 9KB transfer, copy EXACT original load address.
+        lda #$40
+        sta $fc
+        lda mix52_load_lo
+        sta $fd
+        lda mix52_load_hi
+        sta $fe
+        ldx #$24
+        jmp mix10_cp_page
+mix52_regular_handoff
         lda mix47_high
         beq mix47_low_handoff
         lda #$35
