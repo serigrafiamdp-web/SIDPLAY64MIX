@@ -3,7 +3,7 @@ on:
   push:
     branches: [test/test41-expand-8k-bank]
     paths:
-      - '.github/workflows/test41-long-playlist-next.yml'
+      - '.github/workflows/test41-expand-8k-bank.yml'
       - 'sidplay64.tas'
       - 'src/mix10_glenn_symbiont.tas'
   workflow_dispatch:
