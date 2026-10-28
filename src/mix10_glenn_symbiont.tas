@@ -12,7 +12,7 @@
 ; $6000: Krill v184 installer, loaded AFTER Glenn has decompressed.
 ; $8800-$89FF: backup resident, held while Glenn main starts at $9000.
 ; $9000-$91FF: live Krill resident, copied after Glenn relocates off $9000.
-; $5000-$62FF: queued 4864-byte SID payload with exact load address $5000.
+; TEST41: $5000-$6FFF: 8192-byte SID staging bank; only $1000/$1000/$1003 at playback.
 ; 1541 protocol remains ordinary DOS until first real SID is KERNAL-loaded.
 ;
 mix10_staged       .byte 0       ; DOS loads of Krill files complete
@@ -444,8 +444,8 @@ mix10_trim_byte
 ; File begins ASCII PSID, so Krill PRG loader interprets $5350 as
 ; address from first two bytes 'P','S'. Remaining header goes at $5350.
 ; Off $7C and load-address WORD $1000 => music body at $53CC.
-; Stage 26 pages at $5000-$69FF; PSCIIDSK2 uses ~6435 bytes.
-; Clear scratch $5300-$6DFF BEFORE loading so tail zero padding is safe.
+; TEST41: Stage 32 pages at $5000-$6FFF; accepts <=8192 bytes from LOAD=$1000.
+; Clear scratch $5300-$73FF BEFORE loading so tail zero padding is safe.
 mix10_stage_pending
         lda #$10
         sta $3ff7                 ; stage was entered
@@ -454,12 +454,12 @@ mix10_stage_pending
         sta $3ff7                 ; filename returned
         lda #7
         sta $d020
-        ; TEST35: no long SEI section here. 27 x 256 bytes cleared
+        ; TEST41: no long SEI section here. 33 x 256 bytes cleared
         ; with absolute indexed addressing, which uses NO zero-page
         ; pointers that SID IRQs might overwrite. Do not stop music.
         lda #$53
         sta mix10_zero_byte+2     ; reset self-modifying STA $5300,Y
-        ldx #27
+        ldx #33
 mix10_zero_page
         ldy #0
         lda #0
@@ -524,12 +524,12 @@ mix10_zero_byte
 
         ; TEST35: use self-modifying absolute,Y accesses in place
         ; of $FB-$FE indirect ZP, permitting the active SID IRQ to run.
-        ; $53CC + 26 pages -> $5000 + 26 pages.
+        ; TEST41: $53CC + 32 pages -> $5000 + 32 pages.
         lda #$53
         sta mix10_stage_cp_byte+2
         lda #$50
         sta mix10_stage_store+2
-        ldx #$1a
+        ldx #$20
 mix10_stage_cp_page
         ldy #0
 mix10_stage_cp_byte
@@ -590,7 +590,7 @@ mix10_fast_next
         sta $fc
         lda #$10
         sta $fe
-        ldx #$1a                 ; 26 pages for PSIDs compatible with current engine
+        ldx #$20                 ; TEST41: 32 pages (8192 bytes), music stays below $3000
 mix10_cp_page
         ldy #0
 mix10_cp_byte
