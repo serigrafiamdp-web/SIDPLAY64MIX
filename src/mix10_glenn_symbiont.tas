@@ -12,8 +12,8 @@
 ; $6000: Krill v184 installer, loaded AFTER Glenn has decompressed.
 ; $8800-$89FF: backup resident, held while Glenn main starts at $9000.
 ; $9000-$91FF: live Krill resident, copied after Glenn relocates off $9000.
-; TEST47: add original LOAD=$E000, INIT/PLAY=$E000-$F7FF, 6KB safe zone.
-; Preserve all TEST46 LOAD classes and unmodified SID data. No font overwrite.
+; TEST48: add original LOAD=$A000-$BFFF and INIT/PLAY in RAM under BASIC.
+; Keep TEST47 $E000 and TEST46 low LOAD families. No original SID changes.
 ; 1541 protocol remains ordinary DOS until first real SID is KERNAL-loaded.
 ;
 mix10_staged       .byte 0       ; DOS loads of Krill files complete
@@ -509,6 +509,8 @@ mix44_krill_ok
 mix46_early_bad
         jmp mix44_bad_header
 mix46_early_ok
+        lda #0
+        sta mix48_basic
         ; TEST47: music in RAM under KERNAL ROM, but never over the
         ; Glenn character font at $F800-$FFFF.  Stage only into $5000;
         ; the exact original PSID bytes are committed to $E000 on NEXT.
@@ -541,6 +543,57 @@ mix46_early_ok
 mix47_bad_high
         jmp mix44_bad_header
 mix47_not_e000
+        ; TEST48: new independent class, original PSID embedded LOAD
+        ; anywhere in $A000-$BFFF (including offset within a page).
+        ; Existing TEST44/45 staged-bank shift supports this unchanged
+        ; after mapping $A0 onto virtual $10 (subtract $90).
+        lda $53cb
+        cmp #$a0
+        bcc mix48_not_basic
+        cmp #$c0
+        bcs mix48_not_basic
+        sta mix48_real_load_hi
+        lda $53ca
+        sta mix45_load_lo
+        ; INIT and PLAY must be within actual original BASIC-RAM zone
+        ; and must not precede the source LOAD page.
+        lda $5358
+        cmp mix48_real_load_hi
+        bcc mix48_bad_basic
+        cmp #$c0
+        bcs mix48_bad_basic
+        lda $535a
+        cmp mix48_real_load_hi
+        bcc mix48_bad_basic
+        cmp #$c0
+        bcs mix48_bad_basic
+        ; If same LOAD page, require vector low byte >= LOAD low byte.
+        lda $5358
+        cmp mix48_real_load_hi
+        bne mix48_init_ok
+        lda $5359
+        cmp mix45_load_lo
+        bcc mix48_bad_basic
+mix48_init_ok
+        lda $535a
+        cmp mix48_real_load_hi
+        bne mix48_play_ok
+        lda $535b
+        cmp mix45_load_lo
+        bcc mix48_bad_basic
+mix48_play_ok
+        lda mix48_real_load_hi
+        sec
+        sbc #$90                ; virtual LOAD high $10..$2F
+        sta mix44_load_hi
+        lda #0
+        sta mix46_is_low
+        lda #1
+        sta mix48_basic
+        jmp mix44_header_ok
+mix48_bad_basic
+        jmp mix44_bad_header
+mix48_not_basic
         ; TEST46: allow special LOAD=$0FFF (exact 1 byte below $1000),
         ; or arbitrary original LOAD $1000-$1FFF. Stage normalized at $1000
         ; before committing and still copied unchanged at playback.
@@ -802,6 +855,8 @@ mix45_overflow
         rts
 
 mix45_load_lo        .byte 0
+mix48_basic          .byte 0  ; 1= original LOAD $A000-$BFFF
+mix48_real_load_hi   .byte 0  ; actual high byte before virtual remap
 ; TEST47: staged 8KB bank is $5000-$6FFF; the high memory destination
 ; is $E000-$F7FF. Test all bytes $6800-$6FFF before touching RAM.
 mix47_check_tail
@@ -875,6 +930,15 @@ mix46_ready_now
         ldx #$18                 ; 24 pages only, font $F800 untouched
         jmp mix10_cp_page
 mix47_low_handoff
+        lda mix48_basic
+        beq mix48_low_handoff
+        lda #$35
+        sta $01                  ; BASIC ROM disabled, I/O remains available
+        lda #$a0
+        sta $fe                  ; $A000-$BFFF RAM, byte-aligned staging
+        ldx #$20
+        jmp mix10_cp_page
+mix48_low_handoff
         lda #$10
         sta $fe
         ldx #$20                 ; TEST46 path: full 32 pages to $1000
