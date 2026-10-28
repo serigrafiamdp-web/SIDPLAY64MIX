@@ -485,7 +485,9 @@ mix10_zero_byte
         lda #$50
         sta $3ff7                 ; Krill returned
         plp
-        bcs mix10_stage_bad
+        bcc mix44_krill_ok
+        jmp mix10_stage_bad
+mix44_krill_ok
 
         ; Validate original PSID header, load and safe dynamic INIT/PLAY vectors.
         ; PSID bytes [2]='I',[3]='D' land at 5350/5351.
