@@ -1,7 +1,7 @@
 name: TEST40 sequential NEXT on long playlists (SD2IEC/VICE)
 on:
   push:
-    branches: [test/test40-sd2iec-loose-files-72]
+    branches: [test/test40-long-playlist-next-fix]
     paths:
       - '.github/workflows/test40-long-playlist-next.yml'
       - 'sidplay64.tas'
@@ -131,4 +131,4 @@ jobs:
           cp build/test40/SIDPLAY64MIX_TEST40_PROYECTO_COMPLETO.zip build/test40/TEST40_LAUNCHER_SD2IEC.zip build/test40/SIDPLAY64MIX.PRG build/test40/SIDPLAY64MIX.labels TESTS/TEST40/
           git add TESTS/TEST40/
           git -c user.name='SIDPLAY64 native build bot' -c user.email='sidplay64-build@users.noreply.github.com' commit -m 'test40: SD2IEC 00PLAYER.PRG dynamic SID list, static checks only' || true
-          git push origin HEAD:test/test40-sd2iec-loose-files-72
+          git push origin HEAD:test/test40-long-playlist-next-fix
