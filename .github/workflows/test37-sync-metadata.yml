@@ -1,7 +1,7 @@
 name: TEST37 refresh SID title, author, release and technical metadata during NEXT
 on:
   push:
-    branches: [test/test37-irq-friendly-prefetch]
+    branches: [test/test37-sync-psid-metadata]
     paths:
       - '.github/workflows/test37-sync-metadata.yml'
       - 'sidplay64.tas'
@@ -114,4 +114,4 @@ jobs:
           cp build/test37/SIDPLAY64MIX_TEST37.D64 build/test37/SIDPLAY64MIX_TEST37_PROYECTO_COMPLETO.zip build/test37/REPORT.json TESTS/TEST37/
           git add TESTS/TEST37/
           git -c user.name='SIDPLAY64 native build bot' -c user.email='sidplay64-build@users.noreply.github.com' commit -m 'test37: build 1 Glenn+Krill PRG + 19 original SID (VICE pending)' || true
-          git push origin HEAD:test/test37-irq-friendly-prefetch
+          git push origin HEAD:test/test37-sync-psid-metadata
