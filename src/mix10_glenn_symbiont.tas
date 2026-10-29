@@ -1,5 +1,6 @@
 ; TEST13 -- generic 19 PSID disk prefetch via Krill raw PSID loader.
 ; Original Glenn GUI, CIA TOD 00:05 prefetch, manual RETURN via Krill.
+; TEST53: offset-aware high $E000-$F7FF PSIDs using TEST44/45 staging shift.
 ; TEST52: independent 9KB stage for unmodified PSIDs with LOAD $7A00-$7FFF;
 ; keep old 8KB bank, Krill $3C00, header and 199 previously tested SID.
 ; Input PSID first bytes 'PS' encode Krill load target $5350.
@@ -516,6 +517,7 @@ mix46_early_bad
         jmp mix44_bad_header
 mix46_early_ok
         lda #0
+        sta mix53_high_shift
         sta mix52_long
         sta mix49_8000
         sta mix48_basic
@@ -551,6 +553,59 @@ mix46_early_ok
 mix47_bad_high
         jmp mix44_bad_header
 mix47_not_e000
+        ; TEST53: high PSID originals with unaligned LOAD in
+        ; $E000-$F7FF.  Earlier TEST47 fast path for exact $E000
+        ; remains untouched. These require font relocated to $F800.
+        lda $53cb
+        cmp #$e0
+        bcc mix53_not_high
+        cmp #$f8
+        bcs mix53_not_high
+        lda fontpos
+        cmp #$f8
+        bne mix53_high_bad
+        lda $53cb
+        sta mix53_actual_hi
+        lda $53ca
+        sta mix45_load_lo
+        lda $5358
+        cmp mix53_actual_hi
+        bcc mix53_high_bad
+        cmp #$f8
+        bcs mix53_high_bad
+        lda $535a
+        cmp mix53_actual_hi
+        bcc mix53_high_bad
+        cmp #$f8
+        bcs mix53_high_bad
+        ; Same-page INIT and PLAY must be >= original LOAD offset.
+        lda $5358
+        cmp mix53_actual_hi
+        bne mix53_init_ok
+        lda $5359
+        cmp mix45_load_lo
+        bcc mix53_high_bad
+mix53_init_ok
+        lda $535a
+        cmp mix53_actual_hi
+        bne mix53_play_ok
+        lda $535b
+        cmp mix45_load_lo
+        bcc mix53_high_bad
+mix53_play_ok
+        lda mix53_actual_hi
+        sec
+        sbc #$d0                 ; E000 -> virtual $1000, E8FF -> $18FF
+        sta mix44_load_hi
+        lda #0
+        sta mix46_is_low
+        lda #1
+        sta mix53_high_shift
+        sta mix47_high
+        jmp mix44_header_ok
+mix53_high_bad
+        jmp mix44_bad_header
+mix53_not_high
         ; TEST52: long original SID class, LOAD in $7A00-$7FFF
         ; and INIT/PLAY below $A000 (never Glenn main or resident).
         ; Raw PSID payload is staged $4000-$63FF (9KB), then copied
@@ -823,6 +878,15 @@ mix10_stage_store
         ; over the font at $F800.
         lda mix47_high
         beq mix47_low_stage
+        ; TEST53: align offset high SIDs into the virtual $1000 bank.
+        ; Never modify TEST47's exact-$E000 stage (flag stays zero).
+        lda mix53_high_shift
+        beq mix53_high_aligned
+        jsr mix44_align_staging
+        bcs mix10_stage_bad
+        jsr mix45_shift_low
+        bcs mix10_stage_bad
+mix53_high_aligned
         jsr mix47_check_tail
         bcs mix10_stage_bad
         jmp mix47_stage_done
@@ -1014,6 +1078,8 @@ mix47_tail_bad
         sec
         rts
 mix47_high           .byte 0
+mix53_high_shift     .byte 0    ; high $E000-$F7FF but nonzero offset
+mix53_actual_hi      .byte 0
 mix46_is_low         .byte 0     ; 1 only for original LOAD=$0FFF, INIT=$0FFF
 mix46_first_byte     .byte 0     ; literal original SID code byte at $0FFF
 
