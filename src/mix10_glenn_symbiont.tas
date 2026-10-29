@@ -1,5 +1,7 @@
 ; TEST13 -- generic 19 PSID disk prefetch via Krill raw PSID loader.
 ; Original Glenn GUI, CIA TOD 00:05 prefetch, manual RETURN via Krill.
+; TEST59: preserve up to 128 original bytes from LOAD $0F80-$0FFE,
+; with a 16-bit carry-aware $53CC staging source. Keep all MASTER58 paths.
 ; TEST58: add PSID original $4000-$4FFF (body strictly below $5000),
 ; and relocate the TEST52 9KB stage from $4000 to $5000 to prevent
 ; overwriting a live $4000 song during background prefetch.
@@ -811,14 +813,14 @@ mix49_not_8000
         ; Original PSID INIT/PLAY are restored by mix37_commit_metadata.
         ; Reject self-IRQ PLAY=0 or vectors outside bank $1000-$2FFF.
         ; Single-byte exception: LOAD/INIT=$0FFF, valid PLAY $1000-$2FFF.
-        ; TEST57: allow 2..16 original bytes at $0FF0-$0FFE.
+        ; TEST59: allow 2..128 original bytes at $0F80-$0FFE.
         ; Retain TEST46 $0FFF unchanged; restore all extra bytes at
         ; NEXT while IRQs are disabled, before invoking original INIT.
         lda $53cb
         cmp #$0f
         bne mix57_old_low_check
         lda $53ca
-        cmp #$f0
+        cmp #$80
         bcc mix57_reject
         cmp #$ff
         beq mix57_old_low_check
@@ -844,7 +846,7 @@ mix57_init_ok
         sta mix57_restore_lo
         lda #0
         sec
-        sbc $53ca                 ; 2..16 prefix bytes
+        sbc $53ca                 ; 2..128 prefix bytes
         sta mix57_prefix_len
         lda #0
         sta mix46_is_low
@@ -957,8 +959,8 @@ mix52_regular_stage
         lda #$cc
         ldx mix57_prefix_len
         beq mix57_no_prefix
-        ; Save original prefix, then copy the remaining 8KB from
-        ; $53CC + (number of prefix bytes) to staging $5000.
+        ; Save original prefix, then copy 8KB from the corrected
+        ; 16-bit $53CC + prefix_len source address to staging $5000.
         ldx #0
 mix57_save_loop
         lda $53cc,x
@@ -966,10 +968,16 @@ mix57_save_loop
         inx
         cpx mix57_prefix_len
         bne mix57_save_loop
+        ; TEST59: source + prefix can cross $53FF; propagate
+        ; carry into source HIGH instead of accidentally reading $53xx.
         lda #$cc
         clc
         adc mix57_prefix_len
-        jmp mix46_copy_source_ready
+        sta mix10_stage_cp_byte+1
+        lda #$53
+        adc #$00
+        sta mix10_stage_cp_byte+2
+        jmp mix59_copy_store_ready
 mix57_no_prefix
         ldx mix46_is_low
         beq mix46_copy_source_ready
@@ -980,6 +988,7 @@ mix46_copy_source_ready
         sta mix10_stage_cp_byte+1
         lda #$53
         sta mix10_stage_cp_byte+2
+mix59_copy_store_ready
         lda #$50
         sta mix10_stage_store+2
         ldx #$20
@@ -1239,10 +1248,11 @@ mix56_high_shift     .byte 0    ; non-aligned high PSID
 mix56_actual_hi      .byte 0
 mix46_is_low         .byte 0     ; 1 only for original LOAD=$0FFF, INIT=$0FFF
 mix46_first_byte     .byte 0     ; literal original SID code byte at $0FFF
-; TEST57: 2–16-byte original LOAD prefix, the other data remains untouched.
+; TEST59 extends TEST57 original LOAD prefix from 16 to 128 bytes.
+; Single-byte TEST46 $0FFF remains on its independent path.
 mix57_prefix_len      .byte 0
 mix57_restore_lo      .byte 0
-mix57_prefix_bytes    .fill 16,0
+mix57_prefix_bytes    .fill 128,0
 
 ; Called before Glenn clears $0C-$FF at playlist auto-advance.
 mix10_before_plt_advance
@@ -1341,7 +1351,7 @@ mix10_cp_byte
         dex
         bne mix10_cp_page
 
-        ; TEST57: restore original 2–16-byte prefix to $0FF0-$0FFF.
+        ; TEST59: restore original 2–128-byte prefix to $0F80-$0FFF.
         ; Do this only after normal $1000-$2FFF music handoff.
         lda mix57_prefix_len
         beq mix57_prefix_done
