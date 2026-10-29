@@ -1,5 +1,8 @@
 ; TEST13 -- generic 19 PSID disk prefetch via Krill raw PSID loader.
 ; Original Glenn GUI, CIA TOD 00:05 prefetch, manual RETURN via Krill.
+; TEST58: add PSID original $4000-$4FFF (body strictly below $5000),
+; and relocate the TEST52 9KB stage from $4000 to $5000 to prevent
+; overwriting a live $4000 song during background prefetch.
 ; TEST57: protect up to 16 original bytes below $1000 for SID LOAD
 ; $0FF0-$0FFE without shifting the already-passed $0FFF branch.
 ; TEST56: add non-aligned upper memory $E001-$F7FF, without changing
@@ -523,6 +526,7 @@ mix46_early_bad
         jmp mix44_bad_header
 mix46_early_ok
         lda #0
+        sta mix58_mid
         sta mix57_prefix_len
         sta mix56_high_shift
         sta mix52_long
@@ -655,6 +659,55 @@ mix52_play_ok
 mix52_bad_long
         jmp mix44_bad_header
 mix52_not_long
+        ; TEST58: original PSID RAM $4000-$4FFF only when the complete
+        ; music lies below $5000 (stage + scratch start at $5000).
+        ; Virtualize $4000 to the already-proven $1000 stage bank.
+        lda $53cb
+        cmp #$40
+        bcc mix58_not_mid
+        cmp #$50
+        bcs mix58_not_mid
+        sta mix58_real_hi
+        lda $53ca
+        sta mix45_load_lo
+        ; INIT/PLAY must both remain in $4000-$4FFF and must not
+        ; precede the exact original LOAD (including its low byte).
+        lda $5358
+        cmp mix58_real_hi
+        bcc mix58_bad
+        cmp #$50
+        bcs mix58_bad
+        lda $535a
+        cmp mix58_real_hi
+        bcc mix58_bad
+        cmp #$50
+        bcs mix58_bad
+        lda $5358
+        cmp mix58_real_hi
+        bne mix58_init_ok
+        lda $5359
+        cmp mix45_load_lo
+        bcc mix58_bad
+mix58_init_ok
+        lda $535a
+        cmp mix58_real_hi
+        bne mix58_play_ok
+        lda $535b
+        cmp mix45_load_lo
+        bcc mix58_bad
+mix58_play_ok
+        lda mix58_real_hi
+        sec
+        sbc #$30                 ; real $4000 => virtual $1000
+        sta mix44_load_hi
+        lda #0
+        sta mix46_is_low
+        lda #1
+        sta mix58_mid
+        jmp mix44_header_ok
+mix58_bad
+        jmp mix44_bad_header
+mix58_not_mid
         ; TEST48: new independent class, original PSID embedded LOAD
         ; anywhere in $A000-$BFFF (including offset within a page).
         ; Existing TEST44/45 staged-bank shift supports this unchanged
@@ -872,7 +925,10 @@ mix44_header_ok
         sta mix52_source+1
         lda #$53
         sta mix52_source+2
-        lda #$40
+        ; TEST58 moves TEST52 9KB stage to $5000-$73FF. All writes
+        ; remain below source $53CC-$77CB (safe forward overlap),
+        ; avoiding live $4000-$4FFF songs during background prefetch.
+        lda #$50
         sta mix52_store+2
         ldx #$24
 mix52_copy_page
@@ -964,6 +1020,14 @@ mix47_low_stage
         bcs mix10_stage_bad
         jsr mix45_shift_low
         bcs mix10_stage_bad
+        ; In the TEST58 $4000-$4FFF class the final 4KB of our
+        ; virtual $1000-$2FFF stage must be entirely zero: never
+        ; overwrite anything at $5000 or above during handoff.
+        lda mix58_mid
+        beq mix58_stage_ok
+        jsr mix58_verify_tail
+        bcs mix10_stage_bad
+mix58_stage_ok
         ; TEST50: $9000 is now free. Existing TEST44/45 overflow checks
         ; enforce the full $8000-$9FFF 8KB destination.
 mix47_stage_done
@@ -1114,6 +1178,31 @@ mix45_overflow
         sec
         rts
 
+; TEST58 verifies $6000-$6FFF zero before committing a $4000-$4FFF SID.
+; This check runs after TEST44/45 shifting, while music IRQ stays active.
+mix58_verify_tail
+        lda #$60
+        sta mix58_tail_byte+2
+        ldx #$10
+mix58_tail_page
+        ldy #0
+mix58_tail_loop
+mix58_tail_byte
+        lda $6000,y
+        bne mix58_tail_bad
+        iny
+        bne mix58_tail_loop
+        inc mix58_tail_byte+2
+        dex
+        bne mix58_tail_page
+        clc
+        rts
+mix58_tail_bad
+        sec
+        rts
+mix58_mid            .byte 0
+mix58_real_hi        .byte 0
+
 mix45_load_lo        .byte 0
 mix52_long           .byte 0  ; 1: 9KB load to real $7A00-$7FFF
 mix52_load_lo        .byte 0
@@ -1195,8 +1284,8 @@ mix46_ready_now
         sta $fc
         lda mix52_long
         beq mix52_regular_handoff
-        ; TEST52 direct 9KB transfer, copy EXACT original load address.
-        lda #$40
+        ; TEST58: 9KB stage now $5000-$73FF (same original LOAD).
+        lda #$50
         sta $fc
         lda mix52_load_lo
         sta $fd
@@ -1230,6 +1319,13 @@ mix48_low_handoff
         ldx #$20                 ; 32 pages, Krill safe at $3C00
         jmp mix10_cp_page
 mix49_low_handoff
+        lda mix58_mid
+        beq mix58_normal_low
+        lda #$40
+        sta $fe                  ; original $4000-$4FFF, no staging overlap
+        ldx #$10                 ; exactly 16 pages, no data beyond $4FFF
+        jmp mix10_cp_page
+mix58_normal_low
         lda #$10
         sta $fe
         ldx #$20                 ; TEST46 path: full 32 pages to $1000
