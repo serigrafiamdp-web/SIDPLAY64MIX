@@ -1,6 +1,6 @@
 # TEST57 — Compatibilidad universal con LOAD $0FF0–$0FFE
 
-**Estado:** compilación + controles estáticos PASS (GitHub Actions run `40808517835`); imagen D81 auditada; **pendiente de prueba de audio en VICE**. Rama derivada de `MASTER-TEST56-213SID-UNIVERSAL-HIGH-PASS`, que se mantiene congelado.
+**Estado:** **PASS funcional confirmado por el usuario en VICE** (respuesta expresa «pass»). GitHub Actions `40808517835` compilación y controles estáticos PASS; D81 auditado. **MASTER57 congelado: no modificar.** Rama derivada de `MASTER-TEST56-213SID-UNIVERSAL-HIGH-PASS`, que se mantiene congelado.
 
 ## Objetivo
 
@@ -31,6 +31,6 @@ Todos deben ejecutarse con exactamente el mismo `00player.prg` de TEST57; `00pla
 
 ## Comprobaciones
 
-La primera compilación falló **solo por saltos de 6502 fuera del alcance de branch** y se corrigió con un trampolín local `mix57_reject`. La compilación corregida **PASS**. Esto NO acredita reproducción musical: probar en VICE la referencia inicial, los diez nuevos, los seis anteriores, NEXT manual y la precarga de cinco segundos. Si todos PASS, elevar el nuevo MASTER universal a **223 SID** (213+10), sin sumar los seis del TEST55 aislado. Si FAIL, conservar MASTER56 y solicitar `r` + `m $3ff0 $3fff` del monitor.
+La primera compilación falló **solo por saltos de 6502 fuera del alcance de branch** y se corrigió con un trampolín local `mix57_reject`. La compilación corregida **PASS**. Esto NO acredita reproducción musical: probar en VICE la referencia inicial, los diez nuevos, los seis anteriores, NEXT manual y la precarga de cinco segundos. **Todos PASS según confirmación del usuario. Nuevo MASTER universal = 223 SID (213+10)**, sin sumar los seis del TEST55 aislado. Si FAIL, conservar MASTER56 y solicitar `r` + `m $3ff0 $3fff` del monitor.
 
 El experimento TEST55 ($3000–$3BFF) continúa congelado e independiente y no forma parte de este ONEFILE. 
