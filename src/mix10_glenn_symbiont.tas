@@ -1,5 +1,7 @@
 ; TEST13 -- generic 19 PSID disk prefetch via Krill raw PSID loader.
 ; Original Glenn GUI, CIA TOD 00:05 prefetch, manual RETURN via Krill.
+; TEST57: protect up to 16 original bytes below $1000 for SID LOAD
+; $0FF0-$0FFE without shifting the already-passed $0FFF branch.
 ; TEST56: add non-aligned upper memory $E001-$F7FF, without changing
 ; the TEST54/TEST52/TEST50 universal paths.
 ; TEST54: permit standard original PSID LOAD $2000-$2FFF when its
@@ -521,6 +523,7 @@ mix46_early_bad
         jmp mix44_bad_header
 mix46_early_ok
         lda #0
+        sta mix57_prefix_len
         sta mix56_high_shift
         sta mix52_long
         sta mix49_8000
@@ -755,6 +758,48 @@ mix49_not_8000
         ; Original PSID INIT/PLAY are restored by mix37_commit_metadata.
         ; Reject self-IRQ PLAY=0 or vectors outside bank $1000-$2FFF.
         ; Single-byte exception: LOAD/INIT=$0FFF, valid PLAY $1000-$2FFF.
+        ; TEST57: allow 2..16 original bytes at $0FF0-$0FFE.
+        ; Retain TEST46 $0FFF unchanged; restore all extra bytes at
+        ; NEXT while IRQs are disabled, before invoking original INIT.
+        lda $53cb
+        cmp #$0f
+        bne mix57_old_low_check
+        lda $53ca
+        cmp #$f0
+        bcc mix44_bad_header
+        cmp #$ff
+        beq mix57_old_low_check
+        ; INIT must be $0Fxx..$2FFF and not precede actual LOAD.
+        lda $5358
+        cmp #$0f
+        bcc mix44_bad_header
+        cmp #$30
+        bcs mix44_bad_header
+        cmp #$0f
+        bne mix57_init_ok
+        lda $5359
+        cmp $53ca
+        bcc mix44_bad_header
+mix57_init_ok
+        ; Preserve same nonzero PLAY requirements as TEST46.
+        lda $535a
+        cmp #$10
+        bcc mix44_bad_header
+        cmp #$30
+        bcs mix44_bad_header
+        lda $53ca
+        sta mix57_restore_lo
+        lda #0
+        sec
+        sbc $53ca                 ; 2..16 prefix bytes
+        sta mix57_prefix_len
+        lda #0
+        sta mix46_is_low
+        sta mix45_load_lo
+        lda #$10
+        sta mix44_load_hi
+        jmp mix44_header_ok
+mix57_old_low_check
         lda $53ca
         cmp #$ff
         bne mix46_regular_load
@@ -852,6 +897,22 @@ mix52_regular_stage
         ; The remaining 8191 bytes begin at $53CD and belong at $1000.
         ; For every other LOAD, preserve TEST45's original $53CC source.
         lda #$cc
+        ldx mix57_prefix_len
+        beq mix57_no_prefix
+        ; Save original prefix, then copy the remaining 8KB from
+        ; $53CC + (number of prefix bytes) to staging $5000.
+        ldx #0
+mix57_save_loop
+        lda $53cc,x
+        sta mix57_prefix_bytes,x
+        inx
+        cpx mix57_prefix_len
+        bne mix57_save_loop
+        lda #$cc
+        clc
+        adc mix57_prefix_len
+        jmp mix46_copy_source_ready
+mix57_no_prefix
         ldx mix46_is_low
         beq mix46_copy_source_ready
         lda $53cc
@@ -1087,6 +1148,10 @@ mix56_high_shift     .byte 0    ; non-aligned high PSID
 mix56_actual_hi      .byte 0
 mix46_is_low         .byte 0     ; 1 only for original LOAD=$0FFF, INIT=$0FFF
 mix46_first_byte     .byte 0     ; literal original SID code byte at $0FFF
+; TEST57: 2–16-byte original LOAD prefix, the other data remains untouched.
+mix57_prefix_len      .byte 0
+mix57_restore_lo      .byte 0
+mix57_prefix_bytes    .fill 16,0
 
 ; Called before Glenn clears $0C-$FF at playlist auto-advance.
 mix10_before_plt_advance
@@ -1178,6 +1243,21 @@ mix10_cp_byte
         dex
         bne mix10_cp_page
 
+        ; TEST57: restore original 2–16-byte prefix to $0FF0-$0FFF.
+        ; Do this only after normal $1000-$2FFF music handoff.
+        lda mix57_prefix_len
+        beq mix57_prefix_done
+        lda mix57_restore_lo
+        sta mix57_restore_byte+1
+        ldx #0
+mix57_restore_loop
+        lda mix57_prefix_bytes,x
+mix57_restore_byte
+        sta $0f00,x
+        inx
+        cpx mix57_prefix_len
+        bne mix57_restore_loop
+mix57_prefix_done
         ; Special $0FFF entry point: restore the ORIGINAL first code byte
         ; immediately before updating Glenn's vectors and invoking INIT.
         ; IRQs are disabled during this short commit as in TEST45.
