@@ -3,7 +3,7 @@ on:
   push:
     branches: [test/test55-relocate-symbiont-8000]
     paths:
-      - '.github/workflows/test55-middle-2000-2fff.yml'
+      - '.github/workflows/test55-relocate-symbiont.yml'
       - 'sidplay64.tas'
       - 'src/mix10_glenn_symbiont.tas'
       - 'tools/test50_relocate_krill.py'
@@ -114,7 +114,7 @@ jobs:
           assert 'lda $7c00,x' in source and 'lda $7d00,x' in source
           assert 'ldx #$0c' in source
           assert 'lda $53cb                  ; high byte $10..$2f inclusive' in source
-          assert 'cmp #$30                  ; TEST55 extends original LOAD to $2000-$2FFF' in source
+          assert 'cmp #$30                  ; TEST54 extends original LOAD to $2000-$2FFF' in source
           assert 'jsr mix44_align_staging' in source
           assert 'jsr mix45_shift_low' in source
           assert 'mix44_scan_byte' in source, 'must reject every body that crosses $3000'
@@ -167,8 +167,8 @@ jobs:
           PY
           cp build/test55/sidplay64mix.prg build/test55/SIDPLAY64MIX.labels build/test55/project/
           cat > build/test55/project/LEEME.txt <<'EOF'
-          TEST55: additional PSID LOAD $2000-$2FFF using TEST44/45, while keeping TEST52 9KB.
-          TEST55: Krill prefetch, retain LOAD in A000-BFFF, E000-F7FF, 8000-9FFF and low classes.
+          TEST55: test original PSID LOAD $3000-$3BFF via relocated symbiont at $8000; preserve other code paths for regression.
+          TEST55 isolated proof for $3000-$3BFF. Not compatible with original $8000-$9FFF tunes in this build.
           Source and static 64tass build only; VICE and SD2IEC physical test required.
           Compiled Glenn defset=4, 1 launcher PRG + up to 162 SID in same folder.
           Put ONLY 00player.prg and original .SID files (max 16-char names) in
@@ -196,4 +196,4 @@ jobs:
           cp build/test55/sidplay64mix.prg TESTS/TEST55/00player.prg
           git add TESTS/TEST55/
           git -c user.name='SIDPLAY64 native build bot' -c user.email='sidplay64-build@users.noreply.github.com' commit -m 'test55: middle LOAD 2000-2FFF, static compile; VICE pending' || true
-          git push origin HEAD:test/test55-middle-2000-2fff
+          git push origin HEAD:test/test55-relocate-symbiont-8000
