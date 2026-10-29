@@ -46,3 +46,12 @@ En caso de borde rojo, congelamiento o retorno a portada, abrir monitor e inform
 ### Notas de reproducibilidad
 
 No se modificó el código en la rama TEST60, porque la finalidad de esta prueba es aislar una regresión entre DOS binarios preexistentes. Las imágenes son datos de ensayo; pueden reconstruirse a partir de los D81 previamente confirmados; están preparadas para VICE o 1581 y no requieren archivos SID sueltos. Nunca alegar que VICE pasó solo por verificaciones estáticas.
+
+## Primer resultado A / control — PASS de regresiones
+
+**Reportado por el usuario en VICE 2026-10-29:** «disco A recorrió todo con preload hasta magnificent que no cargó», aclarado enseguida: «no cuelga el programa solo no carga».
+
+- Los **primeros 11 SID** de familias ya confirmadas recorrieron el disco con precarga, incluido `hawkeye.sid` (9 KB). **CONTROL A: PASS de regresión**.
+- `magnificent.sid` (LOAD $0F80) **no carga**, pero el reproductor **permanece operativo, sin JAM ni cuelgue**. Esto es comportamiento esperado porque el MASTER58 no tiene soporte para $0F80. **No declarar ese no-load como regresión de MASTER58.**
+- Esta observación discrimina claramente «rechazo de carga sin cuelgue» de «bloqueo de CPU» y sirve de referencia para probar B con los mismos archivos.
+- **TEST60 disco B aún pendiente de resultado del usuario.** No declarar PASS B ni resolver TEST59 todavía.
