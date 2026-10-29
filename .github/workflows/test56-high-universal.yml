@@ -1,0 +1,202 @@
+name: TEST56 sequential NEXT on long playlists (SD2IEC/VICE)
+on:
+  push:
+    branches: [test/test56-high-universal]
+    paths:
+      - '.github/workflows/test56-high-universal.yml'
+      - 'sidplay64.tas'
+      - 'src/mix10_glenn_symbiont.tas'
+      - 'tools/test50_relocate_krill.py'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checkout frozen TEST19 disk for Krill payloads and SID data
+        uses: actions/checkout@v4
+        with:
+          ref: master
+          path: frozen-master
+          persist-credentials: false
+      - name: Install original assembler and packer
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends 64tass build-essential zip
+          git clone --depth=1 https://github.com/mist64/pucrunch.git /tmp/pucrunch-src
+          make -C /tmp/pucrunch-src
+      - name: Extract Krill installer and resident exactly from PASS TEST19
+        run: |
+          python3 - <<'PY'
+          import hashlib
+          from pathlib import Path
+          from tools.test31_pack import files
+          root=Path('frozen-master/MASTERS/2026-10-27_PASS/TEST19_MULTIPLES_ARCHIVOS_KRILL_5_SEGUNDOS.d64')
+          b=root.read_bytes()
+          assert hashlib.sha256(b).hexdigest() == 'b247f58ce9d3df87025d0f09ca145998bffe31e8f9e520c5c29dcfc238d66cc5'
+          fs=dict(files(b))
+          assert fs['INSTA'][:2]==b'\x00\x60' and len(fs['INSTA'])==6888
+          assert fs['RESIDENT'][:2]==b'\x00\x90' and len(fs['RESIDENT'])==497
+          Path('assets').mkdir(exist_ok=True)
+          Path('assets/krill_insta_payload.bin').write_bytes(fs['INSTA'][2:])
+          Path('assets/krill_resident_payload.bin').write_bytes(fs['RESIDENT'][2:])
+          print('Krill installer: $6000',len(fs['INSTA'])-2,'bytes')
+          print('Krill resident: compiled for $9000, staged at $8800',len(fs['RESIDENT'])-2,'bytes')
+          PY
+      - name: Rebase original Krill v184 $9000 to $3c00
+        run: python3 tools/test50_relocate_krill.py
+      - name: Normalize only legacy 64tass include syntax in working source
+        run: |
+          printf '27.10.2026 00:00\r\n' > timedate.clk
+          python3 tools/normalize_tass_includes.py
+      - name: Assemble real Glenn+Krill into one C64 executable
+        run: |
+          mkdir -p build/test56
+          64tass --m6502 -D defset=4 -D DEF_SIDFX=0 -D DEF_REU=0 -D DEF_MIX03=0 -D DEF_MIX10=1 -a sidplay64.tas -o build/test56/sidplay64mix.o64 -l build/test56/SIDPLAY64MIX.labels
+          /tmp/pucrunch-src/pucrunch '-x$9000' build/test56/sidplay64mix.o64 build/test56/sidplay64mix.prg
+      - name: "Regression: sequential NEXT for all positions in 1..162 SID lists"
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          prg=Path('build/test56/sidplay64mix.prg').read_bytes()
+          assert prg[:2]==b'\x01\x08', 'Not a valid packed BASIC C64 PRG'
+          source=Path('src/mix10_glenn_symbiont.tas').read_text()
+          assert 'cmp mix40_sid_count' in source
+          assert 'sta mix40_sid_count' in source
+          assert 'cmp #19' not in source and 'cmp #20' not in source
+          assert 'ldx #37' in source, 'TEST56 scratch must clear 37 pages ($5300-$77FF)'
+          assert source.count('ldx #$20') >= 2, 'TEST56 must stage and commit 32 pages (8192 bytes)'
+          assert 'lda $5358                  ; big-endian INIT high byte' in source
+          assert 'lda $535a                  ; big-endian PLAY high byte' in source
+          assert 'sta initMus+1' in source and 'sta initMus+2' in source
+          assert 'sta playMus+1' in source and 'sta playMus+2' in source
+          assert 'cmp #$30' in source, 'vectors must stay in music bank $1000-$2FFF'
+          assert 'jsr mix44_align_staging' in source
+          assert 'sta mix44_load_hi' in source
+          assert 'mix44_shift_read' in source and 'mix44_shift_write' in source
+          assert 'mix44_scan_byte' in source, 'overflow check must reject 8k SID beyond music bank'
+          assert 'jsr mix45_shift_low' in source
+          assert 'mix45_tail_check' in source and 'mix45_overflow' in source
+          assert 'sta mix45_load_lo' in source
+          assert 'sta mix46_is_low' in source
+          assert 'sta mix46_first_byte' in source
+          assert 'sta $0fff' in source, 'original first byte must reach real $0FFF'
+          assert 'sta mix10_stage_cp_byte+1' in source, 'must skip embedded low byte when staging'
+          assert 'lda #$cd' in source, 'LOAD=$0FFF needs $53CD body staging'
+          assert 'mix46_handoff_normal' in source
+          assert 'mix47_high' in source
+          assert 'jsr mix47_check_tail' in source
+          assert 'mix47_tail_bad' in source
+          assert 'lda fontpos' in source and 'cmp #$f8' in source
+          assert 'ldx #$18' in source, 'high $E000 music must copy exactly 24 pages'
+          assert 'sta $01                  ; RAM under KERNAL, I/O visible' in source
+          assert 'mix47_low_handoff' in source
+          assert 'mix48_basic' in source
+          assert 'mix48_real_load_hi' in source
+          assert 'sbc #$90' in source, 'A000 PSID must map onto existing virtual bank $1000'
+          assert 'lda #$a0' in source and 'sta $fe' in source
+          assert 'mix48_bad_basic' in source
+          assert 'mix49_save_resident' in source
+          assert 'sta $3c00,x' in source and 'sta $3d00,x' in source
+          assert 'lda $3c00,x' not in source, 'Krill must not be copied back to $9000'
+          assert 'jsr $3c00' in source
+          assert 'mix52_long' in source and 'mix52_load_hi' in source and 'mix52_load_lo' in source
+          assert 'ldx #$24' in source, '36 pages = 9216 bytes for long stage'
+          assert 'sta $4000,y' in source and 'lda $53cc,y' in source
+          assert 'mix52_regular_handoff' in source
+          assert 'lda #$40' in source
+          assert 'sta mix52_long' in source and 'mix52_not_long' in source
+          assert 'mix52_regular_stage' in source
+          assert 'mix56_high_shift' in source and 'mix56_actual_hi' in source
+          assert 'mix56_high_bad' in source and 'mix56_not_high' in source
+          assert 'mix56_high_aligned' in source and 'sbc #$d0' in source
+          assert 'jsr mix47_check_tail' in source
+          assert 'cmp #$f8' in source and 'lda fontpos' in source
+
+          assert 'lda $53cb                  ; high byte $10..$2f inclusive' in source
+          assert 'cmp #$30                  ; TEST54 extends original LOAD to $2000-$2FFF' in source
+          assert 'jsr mix44_align_staging' in source
+          assert 'jsr mix45_shift_low' in source
+          assert 'mix44_scan_byte' in source, 'must reject every body that crosses $3000'
+
+
+          assert 'jsr $9000' not in source
+          assert 'mix49_check_tail' not in source, '8KB $8000-$9FFF must be allowed'
+          assert 'ldx #$20                 ; 32 pages, Krill safe at $3C00' in source
+          assert 'mix49_8000' in source
+          assert 'sbc #$70' in source
+          assert 'sta $01                  ; BASIC ROM disabled, I/O remains available' in source
+          assert 'bne mix44_bad_header' not in source.split('lda $53ca')[1].split('lda $53cb')[0]
+          assert 'cmp #$03\n        bne mix10_stage_bad' not in source, 'old PLAY=$1003 guard must be gone'
+          for maxfile in [2,3,20,21,22,40,48,61,62,73,163]:
+              count=maxfile-1
+              # Validate every manual ENTER start position, then a
+              # complete playlist cycle including last->first.
+              for selected in range(count):
+                  current=selected
+                  for step in range(count):
+                      expected=(current+1)%count
+                      pending=current+1
+                      if pending>=count: pending=0
+                      assert pending==expected,(count,selected,step,pending,expected)
+                      current=pending
+                  assert current==selected
+          print('TEST56 NEXT: PASS across every position for 1,2,19,20,21,39,47,60,61,72,162 SID')
+          PY
+          mkdir -p build/test56/sd2iec_folder
+          cp build/test56/sidplay64mix.prg build/test56/sd2iec_folder/00player.prg
+          (cd build/test56/sd2iec_folder && zip -q ../test56_launcher.zip 00player.prg)
+      - name: Include complete ASM source and resources, no Windows EXE in ZIP
+        run: |
+          mkdir -p build/test56/project/src build/test56/project/bin build/test56/project/assets
+          python3 - <<'PY'
+          from pathlib import Path
+          import shutil
+          root=Path('build/test56/project')
+          for pat in ['src/**/*.tas','bin/*.o64']:
+              for f in Path('.').glob(pat):
+                  dest=root/f
+                  dest.parent.mkdir(parents=True,exist_ok=True)
+                  shutil.copy2(f,dest)
+          for f in ['sidplay64.tas','sidplay64.cfg','timedate.clk','tools/normalize_tass_includes.py','tools/test50_relocate_krill.py','tools/test31_pack.py','assets/krill_insta_payload.bin','assets/krill_resident_payload.bin']:
+              dest=root/f
+              dest.parent.mkdir(parents=True,exist_ok=True)
+              shutil.copy2(f,dest)
+          assert not list(root.rglob('*.exe'))
+          print('Included ASM sources',len(list(root.rglob('*.tas'))))
+          PY
+          cp build/test56/sidplay64mix.prg build/test56/SIDPLAY64MIX.labels build/test56/project/
+          cat > build/test56/project/LEEME.txt <<'EOF'
+          TEST56: PSID E001-F7FF with byte/page alignment and strict F800 font protection. Retain TEST54 $2000-$2FFF + TEST52 9KB.
+          TEST56: Krill prefetch, retain LOAD in A000-BFFF, E000-F7FF, 8000-9FFF and low classes.
+          Source and static 64tass build only; VICE and SD2IEC physical test required.
+          Compiled Glenn defset=4, 1 launcher PRG + up to 162 SID in same folder.
+          Put ONLY 00player.prg and original .SID files (max 16-char names) in
+          one newly created SD2IEC folder. No README/ZIP/D64 mixed in.
+          LOAD"00player.prg",8,1
+          RUN
+          $3ffa = directory entries including launcher.
+          Krill SD2IEC compatibility is hardware/firmware dependent.
+          No success can be claimed until testing on real SD2IEC.
+          Keep frozen MASTER54 (207 SID user PASS); TEST56 universal experiment builds on its 2000-2FFF path. No original SID modified.
+          EOF
+          (cd build/test56/project && zip -qr ../test56_proyecto_completo.zip .)
+      - name: Archive TEST56 for testing (not a PASS)
+        uses: actions/upload-artifact@v4
+        with:
+          name: SIDPLAY64MIX_TEST56_SD2IEC_STATIC_ONLY
+          path: |
+            build/test56/test56_launcher.zip
+            build/test56/test56_proyecto_completo.zip
+          if-no-files-found: error
+      - name: Publish test binaries to experimental branch (never master)
+        run: |
+          mkdir -p TESTS/TEST56
+          cp build/test56/test56_proyecto_completo.zip build/test56/test56_launcher.zip build/test56/sidplay64mix.prg build/test56/SIDPLAY64MIX.labels TESTS/TEST56/
+          cp build/test56/sidplay64mix.prg TESTS/TEST56/00player.prg
+          git add TESTS/TEST56/
+          git -c user.name='SIDPLAY64 native build bot' -c user.email='sidplay64-build@users.noreply.github.com' commit -m 'test56: middle LOAD 2000-2FFF, static compile; VICE pending' || true
+          git push origin HEAD:test/test56-high-universal
