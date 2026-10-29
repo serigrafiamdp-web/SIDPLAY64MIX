@@ -27,3 +27,33 @@ y opcionalmente `r`.
 Valores que se escriben en $3FF7 al pasar por los estados de staging: $10 entró, $20 nombre listo, $30 scratch borrado, $40 antes de Krill, $50 retorno de Krill, $60 staging normal completado, $62 staging 9KB completado, $E0 fallo de validación o lectura. $3FF2 cambia a $FF tras el error, y $3FFC indica modo activo. Examinar esos bytes para diferenciar fallos de carga, cabecera, staging y ejecución.
 
 No congelar esta rama ni incorporar candidatos hasta que haya una prueba real PASS. Mantener MASTER58 como baseline.
+
+
+## Diagnóstico aportado por usuario (magnificent.sid)
+
+Síntoma reproducido por usuario: selecciona `magnificent.sid`; intenta cargarlo, **no reproduce música y vuelve a la portada del player**.
+
+Monitor de VICE inmediatamente después:
+
+```text
+(C:$c9b2) m $3ff0 $3fff
+>C:3ff0  01 11 00 00  01 00 02 00
+>C:3ff8  02 00 14 01  00 00 00 00
+(C:$4000)
+```
+
+Significado basado en los **marcadores de la fuente exacta TEST59**:
+
+- `$3FF0=$01`: `mix10_prepare` ejecutado (payload Krill preparado).
+- `$3FF1=$11`: `mix10_activate` encontró el archivo inicial en directorio (`mix31_find_loaded_index`); todavía no alcanzó el marcador $12 de la instalación de Krill.
+- `$3FF4=$01` y `$3FF6=$02`: se seleccionó canción índice 1, directorio índice 2: `magnificent.sid`.
+- `$3FFA=$14`: 20 entradas de directorio detectadas (00player + 19 SID).
+- `$3FFB=$01`: payload inicial preparado.
+- `$3FFC=$00`: Krill todavía **no activo**.
+- `$3FF7=$00`: no se ha iniciado `mix10_stage_pending` (que marca $10, $20, $30, $40, $50, $60, $E0).
+
+**Conclusión diagnóstica acotada:** fallo ocurre **durante la carga inicial/instalación de Krill, ANTES del nuevo tratamiento TEST59 de prefijos**. El programa deja `$3FF1=$11` justo antes del `JSR $6000` del instalador; si este regresara normalmente, la rutina escribiría $12 (éxito) o $E0 (error). No alcanza ninguno. No afirmar causa física/raíz sin nueva evidencia.
+
+**Próxima prueba discriminatoria SIN modificar nada:** reiniciar VICE con el D81 actual, seleccionar **`capriphol.sid` como primer tema** (primera entrada musical, ya PASS), comprobar si `$3FF1=$12` y `$3FFC=$01`; después seleccionar `magnificent.sid` y observar si se activa la rutina de precarga (`$3FF7` cambia). Esto separa el problema del instalador inicial de las rutas de carga posteriores. Si también falla con capriphol, volver a comparar ejecutable TEST58 vs TEST59 y la ubicación del instalador o tamaño total, antes de tocar la nueva ruta de prefijos.
+
+**MASTER58 sigue intacto y válido; TEST59 sigue FAIL.**
