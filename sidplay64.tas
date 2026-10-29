@@ -320,10 +320,12 @@ endstacker
 
 
 .if DEF_MIX10
-; TEST49: symbiont overlay $3000-$3bff, away from protected resident $3c00 and header $3e00.
-        * = $3000
+; TEST55 EXPERIMENT: relocate executable symbiont to $8000-$8bff, freeing
+; $3000-$3bff for original SID music. This test variant cannot play
+; original $8000-$9fff SIDs; do NOT promote as universal MASTER.
+        * = $8000
 .include src/mix10_glenn_symbiont.tas
-.cerror *>$3c00,"TEST49 symbiont must fit in $3000-$3bff; $3c00-$3dff reserved for Krill backup"
+.cerror *>$8c00,"TEST55 relocated symbiont crossed $8bff"
         ; TEST37: persistent 124-byte PSID header while queued music
         ; overwrites staging RAM $5350 during bank copy. Kept below
         ; $3FF0-$3FFF diagnostics, outside SID body and Krill scratch.
@@ -340,9 +342,9 @@ mix37_header_cache
         * = $6000
         .binary "assets/krill_insta_payload.bin"
         .cerror *>$7b00,"Krill installer exceeded reserved startup region"
-        * = $8800
+        * = $7c00
         .binary "assets/krill_resident_payload.bin"
-        .cerror *>$8a00,"Krill resident backup exceeded reserved region"
+        .cerror *>$7e00,"TEST55 original Krill backup at $7c00 crossed $7dff"
 .fi
 
 .if DEF_MIX03
