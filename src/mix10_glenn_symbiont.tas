@@ -766,27 +766,27 @@ mix49_not_8000
         bne mix57_old_low_check
         lda $53ca
         cmp #$f0
-        bcc mix44_bad_header
+        bcc mix57_reject
         cmp #$ff
         beq mix57_old_low_check
         ; INIT must be $0Fxx..$2FFF and not precede actual LOAD.
         lda $5358
         cmp #$0f
-        bcc mix44_bad_header
+        bcc mix57_reject
         cmp #$30
-        bcs mix44_bad_header
+        bcs mix57_reject
         cmp #$0f
         bne mix57_init_ok
         lda $5359
         cmp $53ca
-        bcc mix44_bad_header
+        bcc mix57_reject
 mix57_init_ok
         ; Preserve same nonzero PLAY requirements as TEST46.
         lda $535a
         cmp #$10
-        bcc mix44_bad_header
+        bcc mix57_reject
         cmp #$30
-        bcs mix44_bad_header
+        bcs mix57_reject
         lda $53ca
         sta mix57_restore_lo
         lda #0
@@ -799,6 +799,8 @@ mix57_init_ok
         lda #$10
         sta mix44_load_hi
         jmp mix44_header_ok
+mix57_reject
+        jmp mix44_bad_header
 mix57_old_low_check
         lda $53ca
         cmp #$ff
