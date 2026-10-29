@@ -1,6 +1,6 @@
 # TEST56 — PSID altos no alineados, en el MISMO ONEFILE universal
 
-**Estado:** compilación GitHub Actions PASS y D81 verificado byte a byte; **pendiente de prueba musical en VICE por el usuario**.
+**Estado:** **PASS en VICE confirmado expresamente por el usuario**. Compilación GitHub Actions PASS; D81 verificado byte a byte. MASTER congelado, no modificar.
 
 ## Línea de referencia y objetivo
 
@@ -33,10 +33,10 @@ Contenidos:
 
 Los 6 nuevos son originales de MUSICIANS.zip, originales sin conversión y distintos por hash de cuerpo musical de los SIDs en las pruebas anteriores. Los 4 de referencia fueron reutilizados byte a byte desde D81 que el usuario marcó PASS.
 
-## Prueba de VICE necesaria
+## Prueba de VICE realizada — PASS
 
-Reiniciar VICE, cargar el D81 nuevo, iniciar con `capriphol` y comprobar selección manual / NEXT / precarga 5 segundos entre las seis nuevas **y** las pistas `montyrun`, `hawkeye`, `danko`. Esto prueba si la nueva ruta coexiste realmente con las familias previas **en el mismo ejecutable**. Un compilado PASS NO acredita esa convivencia real.
+El usuario probó el D81 combinado en VICE y confirmó **«pass»**. Esto confirma musicalmente las seis canciones nuevas y la convivencia con `capriphol`, `montyrun`, `hawkeye` y `danko` en **el mismo ejecutable**. La compilación estática por sí sola no habría sido prueba suficiente.
 
-Si los seis nuevos y referencias funcionan, serán **213 SIDs compatibles acumulados en la línea universal** (207+6). TEST55 conserva 6 PASS en una variante aislada que aún no se integró, y no debe sumarse a un solo ONEFILE.
+**213 SIDs compatibles confirmados acumulados en la línea universal** (207+6). TEST55 conserva 6 PASS en una variante aislada que aún no se integró y **no debe sumarse** a la compatibilidad de un solo ONEFILE. Hay 219 distintos confirmados entre las dos variantes, pero solo 213 en la universal.
 
-Mantener `MASTER-TEST54-207SID-2000-2FFF-PASS` congelado hasta PASS de usuario. No ampliar selector todavía.
+Mantener `MASTER-TEST54-207SID-2000-2FFF-PASS` y esta rama `MASTER-TEST56-213SID-UNIVERSAL-HIGH-PASS` congelados. Toda mejora nueva debe partir de un MASTER en una rama de prueba. No ampliar selector todavía.
