@@ -55,3 +55,13 @@ No se modificó el código en la rama TEST60, porque la finalidad de esta prueba
 - `magnificent.sid` (LOAD $0F80) **no carga**, pero el reproductor **permanece operativo, sin JAM ni cuelgue**. Esto es comportamiento esperado porque el MASTER58 no tiene soporte para $0F80. **No declarar ese no-load como regresión de MASTER58.**
 - Esta observación discrimina claramente «rechazo de carga sin cuelgue» de «bloqueo de CPU» y sirve de referencia para probar B con los mismos archivos.
 - **TEST60 disco B aún pendiente de resultado del usuario.** No declarar PASS B ni resolver TEST59 todavía.
+
+## Resultado B — PASS confirmado por usuario
+
+**2026-10-29:** El usuario confirma textualmente «EL DISCO B ANDA TODO» tras recorrer el D81 experimental TEST59 (TEST60 B), comparándolo con el disco A. Interpretación: los **12 SIDs de la matriz** reproducen en B, incluido `hawkeye.sid` 9 KB y `magnificent.sid` LOAD $0F80, y el resto de las familias anteriores sigue reproduciendo.
+
+- **DISCO A CONTROL:** 11 SIDs históricos PASS con prefetch; `magnificent.sid` no carga, sin cuelgue: esperado porque $0F80 no está soportado en MASTER58.
+- **DISCO B EXPERIMENTAL:** 11 regresiones PASS y **`magnificent.sid` PASS** dentro de la secuencia probada. TEST60 B PASS.
+- **Total universal validado en pruebas:** 232 + 1 SID nuevo (`magnificent.sid`) = **233 SID**; otros **9 originales del TEST59** todavía no están revalidados después del FAIL inicial; NO subir la cifra a 242 todavía.
+- El primer D81 de TEST59 tuvo fallo (carga que volvía a portada y otro episodio de borde rojo en Hawkeye). El cambio de orden / secuencia del D81 en TEST60 puede explicar diferencias, pero **la causa exacta NO está establecida**. No afirmar que la versión TEST59 anterior completa pasó.
+- Próximo test: probar los otros 9 nuevos SIDs del TEST59 y hacer regresiones cruzadas; especialmente arrancar con un SID conocido para activar Krill y después seleccionar mediante Enter los nuevos y Hawkeye, y comprobar NEXT/preload. Conservar MASTER58 y ramas existentes; no modificar el reproductor en un experimento de orden/carga.
