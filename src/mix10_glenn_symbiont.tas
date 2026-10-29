@@ -1,5 +1,8 @@
 ; TEST13 -- generic 19 PSID disk prefetch via Krill raw PSID loader.
 ; Original Glenn GUI, CIA TOD 00:05 prefetch, manual RETURN via Krill.
+; TEST54: permit standard original PSID LOAD $2000-$2FFF when its
+; entire body fits below $3000 (existing TEST44/45 page and byte
+; alignment and overflow checks), preserving all TEST52 paths.
 ; TEST52: independent 9KB stage for unmodified PSIDs with LOAD $7A00-$7FFF;
 ; keep old 8KB bank, Krill $3C00, header and 199 previously tested SID.
 ; Input PSID first bytes 'PS' encode Krill load target $5350.
@@ -735,10 +738,10 @@ mix46_regular_load
         bcs mix44_bad_header
         lda $53ca                  ; TEST45: preserve any original LOAD low byte
         sta mix45_load_lo
-        lda $53cb                  ; high byte $10..$1f inclusive
+        lda $53cb                  ; high byte $10..$2f inclusive
         cmp #$10
         bcc mix44_bad_header
-        cmp #$20
+        cmp #$30                  ; TEST54 extends original LOAD to $2000-$2FFF
         bcs mix44_bad_header
         sta mix44_load_hi          ; record before copy overwrites PSID header
         ; Keep INIT/PLAY from falling below the declared LOAD page.
